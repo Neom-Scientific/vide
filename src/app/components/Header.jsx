@@ -1,6 +1,7 @@
 "use client"
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { Sun, Moon } from 'lucide-react'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const defaultAvatars = [
   "https://randomuser.me/api/portraits/men/32.jpg",
@@ -11,7 +12,7 @@ const defaultAvatars = [
   "https://randomuser.me/api/portraits/women/2.jpg",
 ];
 
-const Header = () => {
+const Header = ({ activeTab, setActiveTab }) => {
   const [darkMode, setDarkMode] = useState(
     typeof window !== "undefined" ? document.documentElement.classList.contains('dark') : false
   );
@@ -49,15 +50,40 @@ const Header = () => {
     fileInputRef.current.click();
   };
 
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setDarkMode(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <div>
-      <header className="bg-white border-black border-2 dark:border-white dark:bg-gray-900 rounded-lg py-4 shadow-md">
+      <header className="w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">My App</h1>
+          <a href="/" className="text-2xl font-bold text-orange-500">
+            Visulization Index and DashBoard Execution
+          </a>
           <nav>
             <ul className="flex space-x-4 items-center">
+              <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <TabsList className="bg-white dark:bg-gray-900 ">
+                <li>
+                    <TabsTrigger value="dashboard">DashBoard</TabsTrigger>
+                </li>
+                  <li>
+                    <TabsTrigger value="sample-register">Sample Registration</TabsTrigger>
+                  </li>
+                  <li>
+                    <TabsTrigger value="processing">Processing</TabsTrigger>
+                  </li>
+                  <li>
+                    <TabsTrigger value="reports">Reports</TabsTrigger>
+                  </li>
+                </TabsList>
+              </Tabs>
               <li>
-                <button onClick={toggleDarkMode} className="ml-4 p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-800 transition">
+                <button onClick={toggleDarkMode} className='p-2 border-2 border-black dark:border-2 dark:border-white rounded-lg cursor-pointer'>
                   {darkMode ? <Sun size={20} /> : <Moon size={20} />}
                 </button>
               </li>
@@ -94,7 +120,7 @@ const Header = () => {
                       onClick={handleUploadClick}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
                     >
-                      Upload from device 
+                      Upload from device
                     </button>
                   </div>
                 )}
@@ -103,7 +129,6 @@ const Header = () => {
           </nav>
         </div>
       </header>
-    </div>
   )
 }
 
