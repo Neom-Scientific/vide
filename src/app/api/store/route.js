@@ -32,10 +32,9 @@ export async function POST(request) {
             state,
             country,
             patient_mobile,
-            docter_mobile,
-            docter_name,
+            doctor_mobile,
+            doctor_name,
             email,
-            test_name,
             remarks,
             clinical_history,
             repeat_required,
@@ -58,8 +57,9 @@ export async function POST(request) {
 
         const date = new Date();
         
+
         const year = date.getFullYear();
-        const month = date.getMonth() + 1;
+        const month = String(date.getMonth() + 1).padStart(2, '0'); // Pad month to two digits
         const counter = await pool.query('select count(*) as count from master_sheet where hospital_id = $1 and EXTRACT(YEAR FROM registration_date) = $2 and EXTRACT(MONTH FROM registration_date) = $3', [hospital_id, year, month]);
         const counterValue = counter.rows[0]?.count || 0; // Default to 0 if no count exists
         const internal_id = `${year}${month}${String(counterValue + 1).padStart(3, '0')}`;
@@ -90,8 +90,8 @@ export async function POST(request) {
                 state,
                 country,
                 patient_mobile,
-                docter_mobile,
-                docter_name,
+                doctor_mobile,
+                doctor_name,
                 email,
                 test_name,
                 remarks,
@@ -136,10 +136,10 @@ export async function POST(request) {
             state,
             country,
             patient_mobile,
-            docter_mobile,
-            docter_name,
+            doctor_mobile,
+            doctor_name,
             email,
-            test_name,
+            selectedTestName,
             remarks,
             clinical_history,
             repeat_required,

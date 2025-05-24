@@ -9,6 +9,7 @@ import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { toast, ToastContainer } from 'react-toastify'
 import Dialogbox from '@/app/components/Dialogbox'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 
 const formSchema = z.object({
   sample_id: z.string().min(1, 'Sample ID is required'),
@@ -18,7 +19,7 @@ const formSchema = z.object({
   email: z.string()
     .min(1, 'Email is required')
     .email('Invalid email address'),
-  test_name: z.string().min(1, 'Test Name is required'),
+  // test_name: z.string().min(1, 'Test Name is required'),
   selectedTestName: z.string().min(1, 'Add the test name to confirm'),
   registration_date: z.string().min(1, 'Registration Date is required'),
   hospital_id: z.string().min(1, 'Hospital ID is required'),
@@ -34,6 +35,12 @@ export const SampleRegistration = () => {
   const [newTestName, setNewTestName] = useState('');
   const [trfFile, setTrfFile] = useState(null);
   const [trfUrl, setTrfUrl] = useState('');
+  const [selectedTests, setSelectedTests] = useState([]);
+  const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
+  const [pendingTestToAdd, setPendingTestToAdd] = useState('');
+
+
+
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
   const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
@@ -79,6 +86,17 @@ export const SampleRegistration = () => {
     }
   })
 
+  const allTests = [
+    'WES',
+    'CS',
+    'Myeloid',
+    'SHS',
+    'SolidTumor Panel',
+    'Cardio Comprehensive (Screening Test)',
+    'Cardio Metabolic Syndrome (Screening Test)',
+    'Cardio Comprehensive Myopathy'
+  ];
+
   const dob = form.watch('DOB');
   const selectedTestName = form.watch('selectedTestName');
   const testName = form.watch('test_name');
@@ -105,6 +123,7 @@ export const SampleRegistration = () => {
       console.log(error);
     }
   };
+
   useEffect(() => {
     if (dob) {
       const birthDate = new Date(dob);
@@ -167,25 +186,67 @@ export const SampleRegistration = () => {
     const allData = form.getValues();
     console.log(allData);
 
-    const res = await axios.post('/api/store', allData);
-    if (res.status === 200) {
-      toast.success('Sample registered successfully');
-      // form.reset();
-    } else {
-      toast.error('Sample registration failed');
-    }
+    // const res = await axios.post('/api/store', allData);
+    // if (res.status === 200) {
+    //   toast.success('Sample registered successfully');
+    //   // form.reset();
+    // } else {
+    //   toast.error('Sample registration failed');
+    // }
   }
 
 
   const handleAddTestName = () => {
-    form.setValue('selectedTestName', testName);
+    if (!testName) {
+      toast.error('Please select a test name');
+      return;
+    }
+
+    if (selectedTests.includes(testName)) {
+      toast.warning(`${testName} is already added`);
+      return;
+    }
+
+    const updated = [...selectedTests, testName];
+    setSelectedTests(updated);
+    form.setValue('selectedTestName', updated.join(', '));
+    toast.success(`${testName} added`);
     setShowTestModal(false);
+    form.setValue('test_name', ''); // <-- Reset here
   };
 
   const handleRemoveTestName = () => {
-    form.setValue('selectedTestName', '');
+    if (!selectedTestName) {
+      toast.error('Please select a test to remove');
+      return;
+    }
+    const updated = selectedTests.filter(test => test !== selectedTestName);
+    setSelectedTests(updated);
+    form.setValue('selectedTestName', updated.join(', '));
     setShowRemoveModal(false);
+    toast.warning(`${selectedTestName} removed`);
+    // Reset hasSelectedFirstTest if no tests remain
+    if (updated.length === 0) {
+      setHasSelectedFirstTest(false);
+      form.setValue('test_name', ''); // Optionally reset test_name select
+    }
   };
+
+  useEffect(() => {
+    if (selectedTestName) {
+      setSelectedTests(selectedTestName.split(',').map(t => t.trim()));
+    }
+  }, []);
+
+  // useEffect(() => {
+  //   if (pendingTestToAdd) {
+  //     form.setValue('test_name', pendingTestToAdd);
+  //     setShowTestModal(true);
+  //     setPendingTestToAdd('');
+  //   }
+  // }, [pendingTestToAdd]);
+
+
 
 
   return (
@@ -715,72 +776,184 @@ export const SampleRegistration = () => {
               />
             </div>
 
-            <div className="flex items-center gap-2 my-2 w-[25%]">
-              <FormField
-                control={form.control}
-                name='test_name'
-                render={({ field }) => (
-                  <FormItem className='my-2 flex-1'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Test Name</FormLabel>
-                      {form.formState.errors.test_name && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.test_name.message}
-                        </p>
-                      )}
-                    </div>
-                    <select
-                      className='dark:bg-gray-800 my-2 border rounded-md p-2'
-                      {...field}
-                    >
-                      <option value=''>Select Test Name</option>
-                      <option value='WES'>WES</option>
-                      <option className='dark:text-white' value='CS'>CS</option>
-                      <option className='dark:text-white' value='Myeloid'>Myeloid</option>
-                      <option className='dark:text-white' value='Cardio'>Cardio</option>
-                      <option className='dark:text-white' value='SHS'>SHS</option>
-                      <option className='dark:text-white' value='SolidTumor Panel'>SolidTumor Panel</option>
-                      <option className='dark:text-white' value='Cardio Comprehensive'>Cardio Comprehensive (Screening Test)</option>
-                      <option className='dark:text-white' value='Cardio Metabolic Syndrome'>Cardio Metabolic Syndrome (Screening Test)</option>
-                      <option className='dark:text-white' value='Cardio Comprehensive Myopathy'>Cardio Comprehensive Myopathy</option>
-                    </select>
-                  </FormItem>
-                )}
-              />
+            <div className="grid grid-cols-2 gap-10 ">
 
-              <Button
-                type="button"
-                className="h-10 mt-6"
-                onClick={() => {
-                  if (!testName) {
-                    toast.error('Please select a test name');
-                    return;
-                  }
-                  setShowTestModal(true);
-                }}
-              >
-                Add Test
-              </Button>
+
+              <div className="flex gap-4 items-end my-2 w-[60%]">
+                <FormField
+                  control={form.control}
+                  name='test_name'
+                  render={({ field }) => (
+                    <FormItem className='flex-1'>
+                      <div className="flex justify-between items-center">
+                      </div>
+                      {/* <select
+                        className="dark:bg-gray-800 border rounded-md p-2 w-full"
+                        value={testName}
+                        onChange={(e) => {
+                          const selected = e.target.value;
+                          form.setValue('test_name', selected);
+
+                          if (!hasSelectedFirstTest && selected) {
+                            if (!selectedTests.includes(selected)) {
+                              const updated = [...selectedTests, selected];
+                              setSelectedTests(updated);
+                              form.setValue('selectedTestName', updated.join(', '));
+                              toast.success(`${selected} added`);
+                              setHasSelectedFirstTest(true);
+                              form.setValue('test_name', ''); // <-- Reset here
+                            } else {
+                              toast.warning(`${selected} already added`);
+                            }
+                          }
+                        }}
+                      >
+                        <option value="">Select Test Name</option>
+                        {allTests
+                          .filter(test => !selectedTests.includes(test))
+                          .map(test => (
+                            <option key={test} value={test} className="dark:text-white">
+                              {test}
+                            </option>
+                          ))}
+                      </select> */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            className="h-10 bg-gray-800 text-white"
+                          >
+                            Add Test
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="min-w-[250px]">
+                          {allTests
+                            .filter(test => !selectedTests.includes(test))
+                            .map(test => (
+                              <DropdownMenuItem
+                                key={test}
+                                onSelect={(e) => {
+                                  e.preventDefault(); // Prevent dropdown auto close
+
+                                  if (!hasSelectedFirstTest) {
+                                    const updated = [...selectedTests, test];
+                                    setSelectedTests(updated);
+                                    form.setValue('selectedTestName', updated.join(', '));
+                                    toast.success(`${test} added`);
+                                    setHasSelectedFirstTest(true);
+                                  } else {
+                                    setPendingTestToAdd(test);
+                                  }
+                                }}
+                              >
+                                <div className="flex justify-between items-center w-full">
+                                  <span className="text-sm">{test}</span>
+                                  {hasSelectedFirstTest && (
+                                    <span className="ml-2 text-xs px-2 py-1 rounded bg-orange-500 text-white">
+                                      Add
+                                    </span>
+                                  )}
+                                </div>
+                              </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+
+
+                    </FormItem>
+                  )}
+                />
+
+
+              </div>
+
+              {/* </div> */}
+
+              <div>
+                {/* Selected Test Name with Remove Button */}
+                <div className="flex gap-4 items-end my-2 w-[60%]">
+                  <FormField
+                    control={form.control}
+                    name='selectedTestName'
+                    render={({ field }) => (
+                      <FormItem className='flex-1'>
+                        <div className="flex justify-between items-center mb-1">
+                          <FormLabel>Test Added</FormLabel>
+                          {form.formState.errors.selectedTestName && (
+                            <p className='text-red-500 text-sm'>
+                              {form.formState.errors.selectedTestName.message}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2 min-h-[42px] border rounded-md p-2 dark:bg-gray-800">
+                          {selectedTests.length === 0 && (
+                            <span className="text-gray-400 dark:text-white">No test added</span>
+                          )}
+                          {selectedTests.map((test, idx) => (
+                            <span
+                              key={test}
+                              className="flex items-center bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-semibold"
+                            >
+                              {test}
+                              <button
+                                type="button"
+                                className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
+                                onClick={() => {
+                                  const updated = selectedTests.filter(t => t !== test);
+                                  setSelectedTests(updated);
+                                  field.onChange(updated.join(', '));
+                                  if (updated.length === 0) setHasSelectedFirstTest(false);
+                                }}
+                                aria-label={`Remove ${test}`}
+                              >
+                                ×
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                {/* Remove Test Name Dialog */}
+                <Dialogbox
+                  open={showRemoveModal}
+                  setOpen={setShowRemoveModal}
+                  testName={selectedTestName}
+                  type="remove"
+                  onRemove={handleRemoveTestName}
+                />
+              </div>
+
 
             </div>
 
             {/* Add Test Name Dialog */}
+
             <Dialogbox
               open={showTestModal}
               setOpen={setShowTestModal}
               type="add"
-              testName={testName}
-              onAdd={handleAddTestName}
+              testName={form.watch('test_name')}
+              onAdd={() => {
+                const testName = form.getValues('test_name');
+                if (!testName || selectedTests.includes(testName)) return;
+
+                const updated = [...selectedTests, testName];
+                setSelectedTests(updated);
+                form.setValue('selectedTestName', updated.join(', '));
+                toast.success(`${testName} added`);
+                setShowTestModal(false);
+                form.setValue('test_name', '');
+              }}
             />
 
-            {/* Remove Test Name Dialog */}
-            <Dialogbox
-              open={showRemoveModal}
-              setOpen={setShowRemoveModal}
-              testName={selectedTestName}
-              type="remove"
-              onRemove={handleRemoveTestName}
-            />
+
+
+
+
 
             <div className='grid grid-cols-2 gap-10'>
 
@@ -867,211 +1040,181 @@ export const SampleRegistration = () => {
               )}
             </div>
 
-            {/* Selected Test Name with Remove Button */}
-            <div className="flex items-center gap-2 my-2 w-[25%]">
-              <FormField
-                control={form.control}
-                name='selectedTestName'
-                render={({ field }) => (
-                  <FormItem className='my-2 flex-1'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Selected Test Name</FormLabel>
-                      {form.formState.errors.selectedTestName && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.selectedTestName.message}
-                        </p>
+
+
+            {[
+              "Cardio Comprehensive (Screening Test)",
+              "Cardio Metabolic Syndrome (Screening Test)",
+              "Cardio Comprehensive Myopathy"
+            ].some(test => selectedTests.includes(test)) && (
+                <div className="my-8">
+                  {/* Cardio-specific fields */}
+                  <div className="grid grid-cols-3 gap-8">
+                    <FormField
+                      control={form.control}
+                      name="systolic_bp"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>Systolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
+                          <Input {...field} placeholder="90-200" type="number" min={90} max={200} />
+                          <p className="text-xs text-gray-500">Value must be between 90-200</p>
+                          {form.formState.errors.systolic_bp && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.systolic_bp.message}</p>
+                          )}
+                        </FormItem>
                       )}
-                    </div>
-                    <Input
-                      placeholder='Selected Test Name'
-                      className='my-2 font-bold text-black dark:text-white'
-                      disabled
-                      {...field}
                     />
-                  </FormItem>
-                )}
-              />
-              {selectedTestName && (
-                <Button
-                  type="button"
-                  variant="destructive"
-                  className="h-10 mt-6"
-                  onClick={() => setShowRemoveModal(true)}
-                >
-                  Remove
-                </Button>
+                    <FormField
+                      control={form.control}
+                      name="diastolic_bp"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>Diastolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
+                          <Input {...field} placeholder="60-130" type="number" min={60} max={130} />
+                          <p className="text-xs text-gray-500">Value must be between 60-130</p>
+                          {form.formState.errors.diastolic_bp && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.diastolic_bp.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="total_cholesterol"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>Total Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
+                          <Input {...field} placeholder="130-320" type="number" min={130} max={320} />
+                          <p className="text-xs text-gray-500">Value must be between 130 - 320</p>
+                          {form.formState.errors.total_cholesterol && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.total_cholesterol.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="hdl_cholesterol"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>HDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
+                          <Input {...field} placeholder="20-100" type="number" min={20} max={100} />
+                          <p className="text-xs text-gray-500">Value must be between 20 - 100</p>
+                          {form.formState.errors.hdl_cholesterol && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.hdl_cholesterol.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="ldl_cholesterol"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>LDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
+                          <Input {...field} placeholder="30-300" type="number" min={30} max={300} />
+                          <p className="text-xs text-gray-500">Value must be between 30 - 300</p>
+                          {form.formState.errors.ldl_cholesterol && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.ldl_cholesterol.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* Yes/No and multi-choice buttons */}
+                  <div className="grid grid-cols-2 gap-8 mt-6">
+                    <FormField
+                      control={form.control}
+                      name="diabetes"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>History of Diabetes? <span className="text-orange-500">*</span></FormLabel>
+                          <div className="flex gap-2">
+                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                          </div>
+                          {form.formState.errors.diabetes && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.diabetes.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="smoker"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>Smoker? <span className="text-orange-500">*</span></FormLabel>
+                          <div className="flex gap-2">
+                            {["current", "former", "never"].map(opt => (
+                              <Button
+                                key={opt}
+                                type="button"
+                                variant={field.value === opt ? "default" : "outline"}
+                                onClick={() => field.onChange(opt)}
+                              >
+                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                              </Button>
+                            ))}
+                          </div>
+                          {form.formState.errors.smoker && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.smoker.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="hypertension_treatment"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>On Hypertension Treatment? <span className="text-orange-500">*</span></FormLabel>
+                          <div className="flex gap-2">
+                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                          </div>
+                          {form.formState.errors.hypertension_treatment && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.hypertension_treatment.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="statin"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>On a Statin? <span className="text-orange-500">*</span></FormLabel>
+                          <div className="flex gap-2">
+                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                          </div>
+                          {form.formState.errors.statin && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.statin.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="aspirin_therapy"
+                      render={({ field }) => (
+                        <FormItem className="my-2">
+                          <FormLabel>On Aspirin Therapy? <span className="text-orange-500">*</span></FormLabel>
+                          <div className="flex gap-2">
+                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                          </div>
+                          {form.formState.errors.aspirin_therapy && (
+                            <p className="text-red-500 text-sm">{form.formState.errors.aspirin_therapy.message}</p>
+                          )}
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
               )}
-            </div>
-
-            {/* Cardio-specific fields */}
-            {["Cardio Comprehensive", "Cardio Metabolic Syndrome", "Cardio Comprehensive Myopathy"].includes(selectedTestName) && (
-              <div className="my-8">
-                <div className="grid grid-cols-3 gap-8">
-                  <FormField
-                    control={form.control}
-                    name="systolic_bp"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>Systolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
-                        <Input {...field} placeholder="90-200" type="number" min={90} max={200} />
-                        <p className="text-xs text-gray-500">Value must be between 90-200</p>
-                        {form.formState.errors.systolic_bp && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.systolic_bp.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="diastolic_bp"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>Diastolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
-                        <Input {...field} placeholder="60-130" type="number" min={60} max={130} />
-                        <p className="text-xs text-gray-500">Value must be between 60-130</p>
-                        {form.formState.errors.diastolic_bp && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.diastolic_bp.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="total_cholesterol"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>Total Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                        <Input {...field} placeholder="130-320" type="number" min={130} max={320} />
-                        <p className="text-xs text-gray-500">Value must be between 130 - 320</p>
-                        {form.formState.errors.total_cholesterol && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.total_cholesterol.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="hdl_cholesterol"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>HDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                        <Input {...field} placeholder="20-100" type="number" min={20} max={100} />
-                        <p className="text-xs text-gray-500">Value must be between 20 - 100</p>
-                        {form.formState.errors.hdl_cholesterol && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.hdl_cholesterol.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="ldl_cholesterol"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>LDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                        <Input {...field} placeholder="30-300" type="number" min={30} max={300} />
-                        <p className="text-xs text-gray-500">Value must be between 30 - 300</p>
-                        {form.formState.errors.ldl_cholesterol && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.ldl_cholesterol.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Yes/No and multi-choice buttons */}
-                <div className="grid grid-cols-2 gap-8 mt-6">
-                  <FormField
-                    control={form.control}
-                    name="diabetes"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>History of Diabetes? <span className="text-orange-500">*</span></FormLabel>
-                        <div className="flex gap-2">
-                          <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                          <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                        </div>
-                        {form.formState.errors.diabetes && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.diabetes.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="smoker"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>Smoker? <span className="text-orange-500">*</span></FormLabel>
-                        <div className="flex gap-2">
-                          {["current", "former", "never"].map(opt => (
-                            <Button
-                              key={opt}
-                              type="button"
-                              variant={field.value === opt ? "default" : "outline"}
-                              onClick={() => field.onChange(opt)}
-                            >
-                              {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                            </Button>
-                          ))}
-                        </div>
-                        {form.formState.errors.smoker && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.smoker.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="hypertension_treatment"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>On Hypertension Treatment? <span className="text-orange-500">*</span></FormLabel>
-                        <div className="flex gap-2">
-                          <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                          <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                        </div>
-                        {form.formState.errors.hypertension_treatment && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.hypertension_treatment.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="statin"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>On a Statin? <span className="text-orange-500">*</span></FormLabel>
-                        <div className="flex gap-2">
-                          <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                          <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                        </div>
-                        {form.formState.errors.statin && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.statin.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="aspirin_therapy"
-                    render={({ field }) => (
-                      <FormItem className="my-2">
-                        <FormLabel>On Aspirin Therapy? <span className="text-orange-500">*</span></FormLabel>
-                        <div className="flex gap-2">
-                          <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                          <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                        </div>
-                        {form.formState.errors.aspirin_therapy && (
-                          <p className="text-red-500 text-sm">{form.formState.errors.aspirin_therapy.message}</p>
-                        )}
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </div>
-            )}
 
             <div className="my-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
               <div className="font-semibold mb-1">Note</div>

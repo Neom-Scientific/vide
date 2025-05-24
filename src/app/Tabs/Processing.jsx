@@ -3,17 +3,6 @@ import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 
 const Processing = () => {
-  const [filters, setFilters] = useState({
-    sampleId: '',
-    testName: '',
-    fromDate: '',
-    toDate: '',
-    runId: '',
-    sampleStatus: '',
-    sampleIndicator: '',
-    doctorName: '',
-    deptName: '',
-  });
 
   // Dummy data for table
   const rows = [
@@ -30,8 +19,6 @@ const Processing = () => {
           <div>
             <label className="block font-semibold mb-1">Sample id</label>
             <Input
-              value={filters.sampleId}
-              onChange={e => setFilters(f => ({ ...f, sampleId: e.target.value }))}
               placeholder="Sample id"
               className="my-1"
             />
@@ -41,8 +28,7 @@ const Processing = () => {
             <div className='flex gap-10'>
 
               <select
-                value={filters.testName}
-                onChange={e => setFilters(f => ({ ...f, testName: e.target.value }))}
+
                 className="w-full border rounded-md p-2 dark:bg-gray-800"
               >
                 <option value="">Select the Test Name</option>
@@ -62,8 +48,6 @@ const Processing = () => {
           <div>
             <label className="block font-semibold mb-1">Sample Status</label>
             <select
-              value={filters.sampleStatus}
-              onChange={e => setFilters(f => ({ ...f, sampleStatus: e.target.value }))}
               className="w-full border rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
@@ -74,8 +58,6 @@ const Processing = () => {
           <div>
             <label className="block font-semibold mb-1">Sample Indicator</label>
             <select
-              value={filters.sampleIndicator}
-              onChange={e => setFilters(f => ({ ...f, sampleIndicator: e.target.value }))}
               className="w-full border rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select the Sample Indicator</option>
@@ -91,8 +73,6 @@ const Processing = () => {
             <label className="block font-semibold mb-1 mt-2">From Date</label>
             <Input
               type="date"
-              value={filters.fromDate}
-              onChange={e => setFilters(f => ({ ...f, fromDate: e.target.value }))}
               className="my-1"
             />
           </div>
@@ -100,8 +80,6 @@ const Processing = () => {
             <label className="block font-semibold mb-1 mt-2">To Date</label>
             <Input
               type="date"
-              value={filters.toDate}
-              onChange={e => setFilters(f => ({ ...f, toDate: e.target.value }))}
               className="my-1"
             />
           </div>
@@ -109,8 +87,6 @@ const Processing = () => {
           <div>
             <label className="block font-semibold mb-1 mt-2">Doctor's Name</label>
             <Input
-              value={filters.doctorName}
-              onChange={e => setFilters(f => ({ ...f, doctorName: e.target.value }))}
               placeholder="Doctor's Name"
               className="my-1"
             />
@@ -119,8 +95,6 @@ const Processing = () => {
           <div>
             <label className="block font-semibold mb-1 mt-2">Dept. Name</label>
             <Input
-              value={filters.deptName}
-              onChange={e => setFilters(f => ({ ...f, deptName: e.target.value }))}
               placeholder="Dept. Name"
               className="my-1"
             />
@@ -130,15 +104,17 @@ const Processing = () => {
           <div>
             <label className="block font-semibold mb-1">Run id</label>
             <Input
-              value={filters.runId}
-              onChange={e => setFilters(f => ({ ...f, runId: e.target.value }))}
               placeholder="Run id"
               className="my-1"
             />
           </div>
 
           <div>
-            <Button className="mt-6 bg-gray-700 text-white hover:bg-gray-800 w-full">Retrieve</Button>
+            <Button
+              type='submit'
+              className="mt-6 bg-gray-700 text-white hover:bg-gray-800 w-full">
+              Retrieve
+            </Button>
           </div>
         </div>
       </div>
