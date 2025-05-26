@@ -1,3 +1,4 @@
+
 "use client"
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
@@ -27,6 +28,16 @@ const formSchema = z.object({
   trf: z.string().min(1, 'TRF is required'),
   specimen_quality: z.string().min(1, 'Specimen Quality is required'),
   selectedTestName: z.string().min(1, 'Selected Test Name is required'),
+  systolic_bp: z.string().optional(),
+  diastolic_bp: z.string().optional(),
+  total_cholesterol: z.string().optional(),
+  hdl_cholesterol: z.string().optional(),
+  ldl_cholesterol: z.string().optional(),
+  diabetes: z.string().optional(),
+  smoker: z.string().optional(),
+  hypertension_treatment: z.string().optional(),
+  statin: z.string().optional(),
+  aspirin_therapy: z.string().optional(),
 })
 
 export const SampleRegistration = () => {
@@ -83,6 +94,16 @@ export const SampleRegistration = () => {
       repeat_reason: '',
       repeat_date: '',
       selectedTestName: '',
+      systolic_bp: '',
+      diastolic_bp: '',
+      total_cholesterol: '',
+      hdl_cholesterol: '',
+      ldl_cholesterol: '',
+      diabetes: '',
+      smoker: '',
+      hypertension_treatment: '',
+      statin: '',
+      aspirin_therapy: '',
     }
   })
 
@@ -90,7 +111,7 @@ export const SampleRegistration = () => {
     'WES',
     'CS',
     'Myeloid',
-    'SHS',
+    'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -232,11 +253,11 @@ export const SampleRegistration = () => {
     }
   };
 
-  useEffect(() => {
-    if (selectedTestName) {
-      setSelectedTests(selectedTestName.split(',').map(t => t.trim()));
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (selectedTestName) {
+  //     setSelectedTests(selectedTestName.split(',').map(t => t.trim()));
+  //   }
+  // }, []);
 
   // useEffect(() => {
   //   if (pendingTestToAdd) {
@@ -787,36 +808,6 @@ export const SampleRegistration = () => {
                     <FormItem className='flex-1'>
                       <div className="flex justify-between items-center">
                       </div>
-                      {/* <select
-                        className="dark:bg-gray-800 border rounded-md p-2 w-full"
-                        value={testName}
-                        onChange={(e) => {
-                          const selected = e.target.value;
-                          form.setValue('test_name', selected);
-
-                          if (!hasSelectedFirstTest && selected) {
-                            if (!selectedTests.includes(selected)) {
-                              const updated = [...selectedTests, selected];
-                              setSelectedTests(updated);
-                              form.setValue('selectedTestName', updated.join(', '));
-                              toast.success(`${selected} added`);
-                              setHasSelectedFirstTest(true);
-                              form.setValue('test_name', ''); // <-- Reset here
-                            } else {
-                              toast.warning(`${selected} already added`);
-                            }
-                          }
-                        }}
-                      >
-                        <option value="">Select Test Name</option>
-                        {allTests
-                          .filter(test => !selectedTests.includes(test))
-                          .map(test => (
-                            <option key={test} value={test} className="dark:text-white">
-                              {test}
-                            </option>
-                          ))}
-                      </select> */}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
@@ -832,35 +823,27 @@ export const SampleRegistration = () => {
                             .map(test => (
                               <DropdownMenuItem
                                 key={test}
-                                onSelect={(e) => {
-                                  e.preventDefault(); // Prevent dropdown auto close
-
+                                onClick={() => {
                                   if (!hasSelectedFirstTest) {
+                                    // First test: add directly
                                     const updated = [...selectedTests, test];
                                     setSelectedTests(updated);
                                     form.setValue('selectedTestName', updated.join(', '));
                                     toast.success(`${test} added`);
                                     setHasSelectedFirstTest(true);
+                                    form.setValue('test_name', ''); // Reset if needed
                                   } else {
-                                    setPendingTestToAdd(test);
+                                    // Subsequent tests: open dialog
+                                    form.setValue('test_name', test);
+                                    setShowTestModal(true);
                                   }
                                 }}
                               >
-                                <div className="flex justify-between items-center w-full">
-                                  <span className="text-sm">{test}</span>
-                                  {hasSelectedFirstTest && (
-                                    <span className="ml-2 text-xs px-2 py-1 rounded bg-orange-500 text-white">
-                                      Add
-                                    </span>
-                                  )}
-                                </div>
+                                <span className="text-sm">{test}</span>
                               </DropdownMenuItem>
                             ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-
-
-
                     </FormItem>
                   )}
                 />
@@ -937,17 +920,7 @@ export const SampleRegistration = () => {
               setOpen={setShowTestModal}
               type="add"
               testName={form.watch('test_name')}
-              onAdd={() => {
-                const testName = form.getValues('test_name');
-                if (!testName || selectedTests.includes(testName)) return;
-
-                const updated = [...selectedTests, testName];
-                setSelectedTests(updated);
-                form.setValue('selectedTestName', updated.join(', '));
-                toast.success(`${testName} added`);
-                setShowTestModal(false);
-                form.setValue('test_name', '');
-              }}
+              onAdd={() => { handleAddTestName() }}
             />
 
 
