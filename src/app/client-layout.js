@@ -12,7 +12,7 @@ import { SampleRegistration } from "./Tabs/SampleRegistration";
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const showSidebar = pathname !== "/login";
-  const [activeTab, setActiveTab] = useState("sample-register");
+  const [activeTab, setActiveTab] = useState("processing");
 
   return (
     <html lang="en" suppressHydrationWarning>
