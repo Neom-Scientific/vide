@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { use, useEffect, useState } from "react";
 import {
   ColumnDef,
   SortingState,
@@ -18,6 +18,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Table,
@@ -30,6 +31,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+
 
 const Processing = () => {
 
@@ -84,6 +86,28 @@ const Processing = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
+    { key: 'Qubit_hs', label: 'Qubit HS' },
+    { key: 'conc/rxn', label: 'conc/rxn' },
+    { key: 'barcode', label: 'Barcode' },
+    { key: 'i5_index_reverse', label: 'i5 (reverse)' },
+    { key: 'i7_index', label: 'i7 index' },
+    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
+    { key: 'nM_conc', label: 'nM conc' },
+    { key: 'volumefromStock_lib', label: 'Volume from stock library for 2nM' },
+    { key: 'nfw_volu_for_2nM', label: 'NFW Volume For 2nM' },
+    { key: 'total_vol_for_2nM', label: 'Total Volume For 2nM' },
+  ];
+
+  const allTests = [
+    'WES',
+    'CS',
+    'Myeloid',
+    'Cardio',
+    'SHS',
+    'SolidTumor Panel',
+    'Cardio Comprehensive (Screening Test)',
+    'Cardio Metabolic Syndrome (Screening Test)',
+    'Cardio Comprehensive Myopathy'
   ];
 
   const rows = [
@@ -116,7 +140,7 @@ const Processing = () => {
       docter_mobile: '8888888888',
       docter_name: 'Dr. Smith',
       email: 'john@example.com',
-      test_name: 'WES,Cardio',
+      test_name: 'WES,Myeloid',
       remarks: 'N/A',
       clinical_history: 'None',
       repeat_required: 'No',
@@ -142,17 +166,10 @@ const Processing = () => {
   ];
 
   const [tableRows, setTableRows] = useState(rows);
-
-
-  const handleCheckboxChange = (rowIndex, key, checked) => {
-    setTableRows(prev =>
-      prev.map((row, idx) =>
-        idx === rowIndex
-          ? { ...row, [key]: checked ? "Yes" : "No" }
-          : row
-      )
-    );
-  };
+  const [selectedTestNames, setSelectedTestNames] = useState([]);
+  const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
+  const [getTheTestNames, setGetTheTestNames] = useState([]);
+  const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
 
   // Build columns for tanstack table
   const columns = [
@@ -187,20 +204,131 @@ const Processing = () => {
       if (
         ["dna_isolation", "lib_prep", "under_seq", "seq_completed"].includes(col.key)
       ) {
+        if (col.key === "lib_prep") {
+          return {
+            accessorKey: col.key,
+            header: col.label,
+            cell: info => {
+              const isChecked = info.getValue() === "Yes";
+              const rowIdx = info.row.index;
+              return (
+                <Checkbox
+                  checked={isChecked}
+                  disabled={isChecked}
+                  onCheckedChange={checked => {
+                    // Update the state to show/hide the columns
+                    setShowLibPrepColumns(checked);
+
+                    // Update the row data
+                    setTableRows(prev =>
+                      prev.map((row, idx) =>
+                        idx === rowIdx
+                          ? { ...row, lib_prep: checked ? "Yes" : "No" }
+                          : row
+                      )
+                    );
+                    if(checked){
+                      setSelectedSampleIndicator(col.key);
+                    }
+                    else{
+                      setSelectedSampleIndicator('');
+                    }
+                  }}
+                />
+              );
+            }
+          };
+        }
         return {
           accessorKey: col.key,
           header: col.label,
-          cell: info => (
-            <Checkbox
-              checked={info.getValue() === "Yes"}
-              onCheckedChange={checked =>
-                handleCheckboxChange(info.row.index, col.key, checked)
-              }
-            />
-          ),
+          cell: info => {
+            const isChecked = info.getValue() === "Yes";
+            return (
+              <Checkbox
+                checked={isChecked}
+                disabled={isChecked}
+                onCheckedChange={checked => {
+                  const testNames = info.row.original.test_name;
+                  setGetTheTestNames(testNames.split(',').map(name => name.trim()));
+                  setSelectedSampleIndicator(col.key);
+                  setTableRows(prev =>
+                    prev.map((row, idx) =>
+                      idx === info.row.index
+                        ? { ...row, [col.key]: checked ? "Yes" : "No" }
+                        : row
+                    )
+                  );
+                }}
+              />
+            );
+          },
         };
       }
       // Default: render as text
+      if ([
+        "Qubit_hs",
+        "conc/rxn",
+        "barcode",
+        "i5_index_reverse",
+        "i7_index",
+        "lib_qubit",
+        "nM_conc",
+        "volumefromStock_lib",
+        "nfw_volu_for_2nM",
+        "total_vol_for_2nM",
+      ].includes(col.key)) {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          cell: info => {
+            const value = info.getValue() ?? ""; // Current value from the state
+            const rowIndex = info.row.index;
+            const columnId = info.column.id;
+        
+            // Check if the row is eligible for editing
+            const testNames = info.row.original.test_name?.split(',').map(t => t.trim());
+            const isLibPrepMyeloid =
+              info.row.original.lib_prep === "Yes" && testNames.includes("Myeloid");
+        
+            if (!isLibPrepMyeloid) return value;
+        
+            return (
+              <Input
+                className="border rounded p-1 text-xs w-full"
+                value={value}
+                type="text"
+                placeholder={`Enter ${info.column.columnDef.header}`}
+                name={columnId}
+                onChange={async (e) => {
+                  const newValue = e.target.value;
+        
+                  // Update the local state
+                  info.table.options.meta?.updateData(rowIndex, columnId, newValue);
+        
+                  // Prepare the payload for the API
+                  const payload = {
+                    sample_id: info.row.original.sample_id,
+                    sample_indicator: selectedSampleIndicator,
+                    test_name: getTheTestNames.length > 0 ? getTheTestNames.join(',') : info.row.original.test_name,
+                    [columnId]: newValue, // Update only the changed column
+                  };
+        
+                  try {
+                    // Make the API call
+                    const response = await axios.post('/api/update-sample-indicator', payload);
+                    toast.success("Value updated successfully!");
+                    console.log("API Response:", response.data);
+                  } catch (error) {
+                    console.error("Error updating value:", error);
+                    toast.error("An error occurred while updating the value.");
+                  }
+                }}
+              />
+            );
+          }
+        }
+      }
       return {
         accessorKey: col.key,
         header: col.label,
@@ -229,6 +357,26 @@ const Processing = () => {
       return acc;
     }, {})
   );
+
+  // Dynamically update column visibility when `showLibPrepColumns` changes
+  useEffect(() => {
+    setColumnVisibility(prev => ({
+      ...prev,
+      Qubit_hs: showLibPrepColumns,
+      'conc/rxn': showLibPrepColumns,
+      barcode: showLibPrepColumns,
+      i5_index_reverse: showLibPrepColumns,
+      i7_index: showLibPrepColumns,
+      lib_qubit: showLibPrepColumns,
+      nM_conc: showLibPrepColumns,
+      volumefromStock_lib: showLibPrepColumns,
+      nfw_volu_for_2nM: showLibPrepColumns,
+      total_vol_for_2nM: showLibPrepColumns,
+      under_seq: !showLibPrepColumns,
+      seq_completed: !showLibPrepColumns,
+    }));
+  }, [showLibPrepColumns]);
+
   const [sorting, setSorting] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
 
@@ -247,6 +395,16 @@ const Processing = () => {
     getSortedRowModel: getSortedRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    meta: {
+  updateData: (rowIndex, columnId, value) => {
+    setTableRows(prev =>
+      prev.map((row, idx) => {
+        if (idx !== rowIndex) return row;
+        return { ...row, [columnId]: value };
+      })
+    );
+  },
+},
   });
 
   const handlesubmit = async () => {
@@ -254,7 +412,7 @@ const Processing = () => {
 
     const data = {
       sample_id: getValue('sample_id'),
-      test_name: getValue('test_name'),
+      test_name: selectedTestNames.join(','),
       sample_status: getValue('sample_status'),
       sample_indicator: getValue('sample_indicator'),
       from_date: getValue('from_date'),
@@ -268,7 +426,7 @@ const Processing = () => {
       const response = await axios.get(`/api/search`, { params: data });
       // Axios automatically parses JSON, so use response.data
       setTableRows(response.data.data);
-      toast.success("Data fetched successfully!");
+      // toast.success("Data fetched successfully!");
     } catch (error) {
       // Axios error handling
       if (error.response) {
@@ -292,7 +450,7 @@ const Processing = () => {
 
       {/* Top Filters */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-4 gap-4 mb-2">
+        <div className="grid grid-cols-5 gap-4 mb-2">
           <div>
             <label className="block font-semibold mb-1">Sample id</label>
             <Input
@@ -302,25 +460,63 @@ const Processing = () => {
             />
           </div>
           <div>
-            <label className="block font-semibold mb-1">Test name</label>
-            <div className='flex gap-10'>
-
-              <select
-                name='test_name'
-                className="w-full border rounded-md p-2 dark:bg-gray-800"
-              >
-                <option value="">Select the Test Name</option>
-                <option className='dark:text-white' value='WES'>WES</option>
-                <option className='dark:text-white' value='CS'>CS</option>
-                <option className='dark:text-white' value='Myeloid'>Myeloid</option>
-                <option className='dark:text-white' value='Cardio'>Cardio</option>
-                <option className='dark:text-white' value='SHS'>SHS</option>
-                <option className='dark:text-white' value='SolidTumor Panel'>SolidTumor Panel</option>
-                <option className='dark:text-white' value='Cardio Comprehensive'>Cardio Comprehensive (Screening Test)</option>
-                <option className='dark:text-white' value='Cardio Metabolic Syndrome'>Cardio Metabolic Syndrome (Screening Test)</option>
-                <option className='dark:text-white' value='Cardio Comprehensive Myopathy'>Cardio Comprehensive Myopathy</option>
-              </select>
-              <Button className=" bg-orange-500 text-white hover:bg-orange-600">Add</Button>
+            <label className="block font-semibold mb-1 whitespace-nowrap">Test name</label>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  className="h-10 bg-gray-800 text-white"
+                >
+                  Add Test
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="min-w-[250px]">
+                {allTests
+                  .filter(test => !selectedTestNames.includes(test))
+                  .map(test => (
+                    <DropdownMenuItem
+                      key={test}
+                      onClick={() => {
+                        if (selectedTestNames.includes(test)) {
+                          toast.warning(`${test} is already added`);
+                          return;
+                        }
+                        const updated = [...selectedTestNames, test];
+                        setSelectedTestNames(updated);
+                        toast.success(`${test} added`);
+                      }}
+                    >
+                      <span className="text-sm">{test}</span>
+                    </DropdownMenuItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+          <div>
+            <label className="block font-semibold mb-1">Selected Test Name</label>
+            <div className="flex flex-wrap gap-2 min-h-[42px] border rounded-md p-2 dark:bg-gray-800 ml-2" style={{ flex: 1 }}>
+              {selectedTestNames.length === 0 && (
+                <span className="text-gray-400 dark:text-white">No test added</span>
+              )}
+              {selectedTestNames.map((test, idx) => (
+                <span
+                  key={test}
+                  className="flex items-center bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-semibold"
+                >
+                  {test}
+                  <button
+                    type="button"
+                    className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
+                    onClick={() => {
+                      const updated = selectedTestNames.filter(t => t !== test);
+                      setSelectedTestNames(updated);
+                    }}
+                    aria-label={`Remove ${test}`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
             </div>
           </div>
           <div>
@@ -339,6 +535,10 @@ const Processing = () => {
             <select
               name='sample_indicator'
               className="w-full border rounded-md p-2 dark:bg-gray-800"
+              onChange={e => {
+                const options = Array.from(e.target.selectedOptions, option => option.value);
+                setSelectedSampleIndicator(options);
+              }}
             >
               <option value="">Select the Sample Indicator</option>
               <option value="dna">DNA Isolation</option>
@@ -456,12 +656,24 @@ const Processing = () => {
             <TableBody>
               {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id ?? row.index}>
                     {row.getVisibleCells().map(cell => (
                       <TableCell key={cell.id}>
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
+                    {/* Submit Button for rows where lib_prep columns are visible
+                    {showLibPrepColumns && (
+                      <TableCell colSpan={1}>
+                        <Button
+                          type="button"
+                          onClick={handleLibPrepMyeloidSubmit}
+                          className="bg-orange-500 text-white hover:bg-orange-600 w-full"
+                        >
+                          Submit
+                        </Button>
+                      </TableCell>
+                    )} */}
                   </TableRow>
                 ))
               ) : (
@@ -477,6 +689,7 @@ const Processing = () => {
       </div>
       <Button className="bg-gray-700 mt-5 text-white hover:bg-gray-800 min-w-[120px] h-12">Save</Button>
       <ToastContainer />
+
     </div>
   );
 };

@@ -8,6 +8,7 @@ import { useState } from "react";
 import Processing from "./Tabs/Processing";
 import Reports from "./Tabs/Reports";
 import { SampleRegistration } from "./Tabs/SampleRegistration";
+import RunSetup from "./Tabs/RunSetup";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
@@ -31,6 +32,7 @@ export default function ClientLayout({ children }) {
                     {activeTab === "sample-register" && <SampleRegistration />}
                     {activeTab === "processing" && <Processing />}
                     {activeTab === "reports" && <Reports />}
+                    {activeTab === "run-setup" && <RunSetup/>}
                   </>
                 )}
               </div>

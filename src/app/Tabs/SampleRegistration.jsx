@@ -1,9 +1,8 @@
-
 "use client"
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { set, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
@@ -49,6 +48,7 @@ export const SampleRegistration = () => {
   const [selectedTests, setSelectedTests] = useState([]);
   const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
   const [pendingTestToAdd, setPendingTestToAdd] = useState('');
+  const [testToRemove, setTestToRemove] = useState(null); // <-- Add this line
 
 
 
@@ -237,16 +237,16 @@ export const SampleRegistration = () => {
   };
 
   const handleRemoveTestName = () => {
-    if (!selectedTestName) {
+    if (!testToRemove) {
       toast.error('Please select a test to remove');
       return;
     }
-    const updated = selectedTests.filter(test => test !== selectedTestName);
+    const updated = selectedTests.filter(test => test !== testToRemove);
     setSelectedTests(updated);
     form.setValue('selectedTestName', updated.join(', '));
     setShowRemoveModal(false);
-    toast.warning(`${selectedTestName} removed`);
-    // Reset hasSelectedFirstTest if no tests remain
+    toast.warning(`${testToRemove} removed`);
+    setTestToRemove(null); // Reset
     if (updated.length === 0) {
       setHasSelectedFirstTest(false);
       form.setValue('test_name', ''); // Optionally reset test_name select
@@ -699,7 +699,6 @@ export const SampleRegistration = () => {
                       {...field}
                       className='my-2'
                       placeholder='State'
-                      disabled
                     />
                   </FormItem>
                 )}
@@ -714,7 +713,6 @@ export const SampleRegistration = () => {
                       {...field}
                       className='my-2'
                       placeholder='Country'
-                      disabled
                     />
                   </FormItem>
                 )}
@@ -824,19 +822,16 @@ export const SampleRegistration = () => {
                               <DropdownMenuItem
                                 key={test}
                                 onClick={() => {
-                                  if (!hasSelectedFirstTest) {
-                                    // First test: add directly
-                                    const updated = [...selectedTests, test];
-                                    setSelectedTests(updated);
-                                    form.setValue('selectedTestName', updated.join(', '));
-                                    toast.success(`${test} added`);
-                                    setHasSelectedFirstTest(true);
-                                    form.setValue('test_name', ''); // Reset if needed
-                                  } else {
-                                    // Subsequent tests: open dialog
-                                    form.setValue('test_name', test);
-                                    setShowTestModal(true);
+                                  if (selectedTests.includes(test)) {
+                                    toast.warning(`${test} is already added`);
+                                    return;
                                   }
+                                  const updated = [...selectedTests, test];
+                                  setSelectedTests(updated);
+                                  form.setValue('selectedTestName', updated.join(', '));
+                                  toast.success(`${test} added`);
+                                  setHasSelectedFirstTest(true);
+                                  form.setValue('test_name', ''); // Reset if needed
                                 }}
                               >
                                 <span className="text-sm">{test}</span>
@@ -883,10 +878,8 @@ export const SampleRegistration = () => {
                                 type="button"
                                 className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
                                 onClick={() => {
-                                  const updated = selectedTests.filter(t => t !== test);
-                                  setSelectedTests(updated);
-                                  field.onChange(updated.join(', '));
-                                  if (updated.length === 0) setHasSelectedFirstTest(false);
+                                  setTestToRemove(test); // <-- Set which test to remove
+                                  setShowRemoveModal(true); // <-- Open dialog
                                 }}
                                 aria-label={`Remove ${test}`}
                               >
@@ -904,7 +897,7 @@ export const SampleRegistration = () => {
                 <Dialogbox
                   open={showRemoveModal}
                   setOpen={setShowRemoveModal}
-                  testName={selectedTestName}
+                  testName={testToRemove} // <-- Use testToRemove here
                   type="remove"
                   onRemove={handleRemoveTestName}
                 />
@@ -917,7 +910,12 @@ export const SampleRegistration = () => {
 
             <Dialogbox
               open={showTestModal}
-              setOpen={setShowTestModal}
+              setOpen={(open) => {
+                setShowTestModal(open);
+                if (!open) {
+                  form.setValue('test_name', ''); // Reset test_name when dialog closes
+                }
+              }}
               type="add"
               testName={form.watch('test_name')}
               onAdd={() => { handleAddTestName() }}
