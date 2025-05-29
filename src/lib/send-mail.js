@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 
 export async function sendMail(email, subject, text) {
+    
     const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
@@ -9,9 +10,11 @@ export async function sendMail(email, subject, text) {
         },
     });
 
+    console.log('admin_email', process.env.ADMIN_EMAIL);
+
     const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to: email,
+        from: process.env.ADMIN_EMAIL,
+        to: email || process.env.ADMIN_EMAIL, // Default to admin email if no email is provided
         subject: subject,
         text: text,
     };

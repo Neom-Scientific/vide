@@ -65,7 +65,7 @@ function ReduxContent({ children, activeTab }) {
       {activeTab === "sample-register" && <SampleRegistration />}
       {activeTab === "processing" && <Processing />}
       {activeTab === "reports" && <Reports />}
-      {activeTab === "library-preparation" && <LibraryPrepration />}
+      {activeTab === "library-prepration" && <LibraryPrepration />}
       {activeTab === "run-setup" && <RunSetup />}
     </>
   );

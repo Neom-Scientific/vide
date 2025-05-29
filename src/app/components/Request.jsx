@@ -92,7 +92,7 @@ const Request = () => {
     const handleUsernamePassword = async (data) => {
         console.log('data', data);
         try {
-            const response = await axios.put('/api/request-insert', {
+            const response = await axios.post('/api/request-insert', {
                 email: data.email,
                 username: data.username,
                 hospital_name: data.hospital_name,

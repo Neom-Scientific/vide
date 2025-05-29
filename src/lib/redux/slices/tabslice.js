@@ -8,7 +8,7 @@ const initialState = {
         { value: "dashboard", name: "Home" },
         { value: "sample-register", name: "New Project" },
         { value: "processing", name: "Project Analysis" },
-        { value: "library-preparation", name: "Library Prepration" },
+        { value: "library-prepration", name: "Library Prepration" },
         { value: "run-setup", name: "Run Setup" },
         { value: "reports", name: "Reports" }
     ]

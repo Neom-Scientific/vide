@@ -127,6 +127,7 @@ const LibraryPrepration = () => {
     { key: 'barcode', label: 'Barcode' },
     { key: 'i5_index_reverse', label: 'i5 (reverse)' },
     { key: 'i7_index', label: 'i7 index' },
+    { key: 'size', label: 'Size' },
     { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'nM_conc', label: 'nM conc' },
     { key: 'volumefromStock_lib', label: 'Volume from stock library for 2nM' },
@@ -155,11 +156,13 @@ const LibraryPrepration = () => {
         "registration_date",
         "test_name",
         "client_name",
+        "sample_type",
         "Qubit_hs",
         "conc_rxn",
         "barcode",
         "i5_index_reverse",
         "i7_index",
+        "size",
         "lib_qubit",
         "nM_conc",
         "volumefromStock_lib",
@@ -255,11 +258,13 @@ const LibraryPrepration = () => {
         "registration_date",
         "test_name",
         "client_name",
+        "sample_type",
         "Qubit_hs",
         "conc_rxn",
         "barcode",
         "i5_index_reverse",
         "i7_index",
+        "size",
         "lib_qubit",
         "nM_conc",
         "volumefromStock_lib",
@@ -344,11 +349,12 @@ const LibraryPrepration = () => {
             // Apply formulas dynamically
             const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
             const total_vol_for_2nM = (parseFloat(updatedRow.total_vol_for_2nM)) || 10;
+            const size = parseFloat(updatedRow.size) || 0;
 
             if (columnId === "lib_qubit" || columnId === "total_vol_for_2nM") {
               // Calculate nM_conc
               // get the value of nM-conc till 8 decimal places
-              updatedRow.nM_conc = lib_qubit > 0 ? (lib_qubit / (350 * 660)) * 1000 : "";
+              updatedRow.nM_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : "";
 
               // Calculate volumefromStock_lib
               // round to 2 decimal places
@@ -369,13 +375,10 @@ const LibraryPrepration = () => {
             const Qubit_dna_hs = parseFloat(updatedRow.Qubit_dna_hs) || 0;
             const volume = parseFloat(updatedRow.volume) || 0;
             const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
-            const stock_ng_ul = parseFloat(updatedRow.stock_ng_ul) || 0;
-            const lib_vol_for_hyb = parseFloat(updatedRow.lib_vol_for_hyb) || 0;
+            // const stock_ng_ul = parseFloat(
+            //   columnId === "stock_ng_ul" ? value : updatedRow.stock_ng_ul
+            // ) || 0;
 
-            console.log("Column ID:", columnId);
-            console.log('library volume for hybridization', lib_vol_for_hyb);
-            console.log("Qubit Library QC (ng/ul):", qubit_lib_qc_ng_ul);
-            console.log("Stock (ng/ul):", stock_ng_ul);
             // Apply formulas dynamically
             if (columnId === "per_rxn_gdna" || columnId === "Qubit_dna_hs") {
               // Calculate gdna_volume_3x
@@ -391,14 +394,15 @@ const LibraryPrepration = () => {
             if (columnId === "qubit_lib_qc_ng_ul") {
               // Calculate stock_ng_ul
               updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
-              console.log('stock_ng_ul', updatedRow.stock_ng_ul);
             }
 
             // why does not this work?
             if (columnId === "stock_ng_ul") {
-              // Calculate lib_vol_for_hyb
-              updatedRow.lib_vol_for_hyb = stock_ng_ul > 0 ? (200 / stock_ng_ul).toFixed(2) : "";
-              console.log('lib_vol_for_hyb', updatedRow.lib_vol_for_hyb);
+              const stock = parseFloat(value) || 0;
+              updatedRow.stock_ng_ul = stock;
+              console.log('Parsed stock_ng_ul:', stock);
+              updatedRow.lib_vol_for_hyb = stock > 0 ? (200 / stock).toFixed(2) : "";
+              console.log('lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
             }
 
             return updatedRow;
@@ -426,6 +430,7 @@ const LibraryPrepration = () => {
         toast.success("Sample indicator updated successfully!");
         // remove the localStorage item after successful update
         localStorage.removeItem('libraryPreparationData');
+        window.location.reload(); // Reload the page to reflect changes
       }
     } catch (error) {
       console.error("Error updating values:", error);

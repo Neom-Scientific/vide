@@ -27,6 +27,8 @@ const formSchema = z.object({
   trf: z.string().min(1, 'TRF is required'),
   specimen_quality: z.string().min(1, 'Specimen Quality is required'),
   selectedTestName: z.string().min(1, 'Selected Test Name is required'),
+  age: z.string().min(1, 'Age is required'),
+  clinical_history: z.string().min(1, 'Clinical History is required'),
   systolic_bp: z.string().optional(),
   diastolic_bp: z.string().optional(),
   total_cholesterol: z.string().optional(),
@@ -37,6 +39,7 @@ const formSchema = z.object({
   hypertension_treatment: z.string().optional(),
   statin: z.string().optional(),
   aspirin_therapy: z.string().optional(),
+  sample_name: z.string().min(1, 'Sample Name is required'),
 })
 
 export const SampleRegistration = () => {
@@ -59,41 +62,42 @@ export const SampleRegistration = () => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      // hosptial and doctor information
       hospital_name: '',
-      dept_name: '',
-      vial_received: '',
-      specimen_quality: '',
-      registration_date: currentDate,
-      sample_date: currentDate,
-      sample_type: '',
-      trf: '',
-      collection_date_time: '',
-      storage_condition: '',
-      prority: '',
       hospital_id: '',
-      client_id: '',
-      client_name: '',
-      sample_id: '',
+      docter_name: '',
+      dept_name: '',
+      docter_mobile: '',
+      email: '',
+
+      // patient information
       patient_name: '',
       DOB: '',
       age: '',
       sex: '',
+      patient_mobile: '',
       ethnicity: '',
       father_husband_name: '',
       address: '',
       city: '',
       state: '',
       country: '',
-      patient_mobile: '',
-      docter_mobile: '',
-      docter_name: '',
-      email: '',
+      client_id: '',
+      client_name: '',
+
+      // sample details
+      sample_name: '',
+      sample_id: '',
+      registration_date: currentDate,
+      trf: '',
+      sample_type: '',
+      collection_date_time: '',
+      sample_date: currentDate,
+      specimen_quality: '',
+      prority: '',
+      storage_condition: '',
+      vial_received: '',
       test_name: '',
-      remarks: '',
-      clinical_history: '',
-      repeat_required: '',
-      repeat_reason: '',
-      repeat_date: '',
       selectedTestName: '',
       systolic_bp: '',
       diastolic_bp: '',
@@ -105,6 +109,11 @@ export const SampleRegistration = () => {
       hypertension_treatment: '',
       statin: '',
       aspirin_therapy: '',
+      remarks: '',
+      clinical_history: '',
+      repeat_required: '',
+      repeat_reason: '',
+      repeat_date: '',
     }
   })
 
@@ -121,9 +130,9 @@ export const SampleRegistration = () => {
   ];
 
   const dob = form.watch('DOB');
-  const selectedTestName = form.watch('selectedTestName');
-  const testName = form.watch('test_name');
   const repeatRequired = form.watch('repeat_required');
+  const sample_name = form.watch('sample_name');
+
 
 
   const get_state_and_country = async (city) => {
@@ -178,6 +187,13 @@ export const SampleRegistration = () => {
     }
   }, [dob, form]);
 
+
+  useEffect(() => {
+    if (sample_name) {
+      form.setValue('patient_name', sample_name);
+    }
+  }, [sample_name, form]);
+
   const uploadTrf = async (file) => {
     setTrfFile(file);
     if (file) {
@@ -218,26 +234,6 @@ export const SampleRegistration = () => {
     }
   }
 
-
-  const handleAddTestName = () => {
-    if (!testName) {
-      toast.error('Please select a test name');
-      return;
-    }
-
-    if (selectedTests.includes(testName)) {
-      toast.warning(`${testName} is already added`);
-      return;
-    }
-
-    const updated = [...selectedTests, testName];
-    setSelectedTests(updated);
-    form.setValue('selectedTestName', updated.join(', '));
-    toast.success(`${testName} added`);
-    setShowTestModal(false);
-    form.setValue('test_name', ''); // <-- Reset here
-  };
-
   const handleRemoveTestName = () => {
     if (!testToRemove) {
       toast.error('Please select a test to remove');
@@ -255,30 +251,16 @@ export const SampleRegistration = () => {
     }
   };
 
-  // useEffect(() => {
-  //   if (selectedTestName) {
-  //     setSelectedTests(selectedTestName.split(',').map(t => t.trim()));
-  //   }
-  // }, []);
-
-  // useEffect(() => {
-  //   if (pendingTestToAdd) {
-  //     form.setValue('test_name', pendingTestToAdd);
-  //     setShowTestModal(true);
-  //     setPendingTestToAdd('');
-  //   }
-  // }, [pendingTestToAdd]);
-
-
-
-
   return (
     <div className='p-4'>
       {/*  <div className=' text-orange-500 text-lg font-semibold'>Sample Detail</div> */}
       <div className='p-4'>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onFormSubmit)}>
-            <div className='grid grid-cols-2 gap-10'>
+
+            <div className='grid grid-cols-2 gap-6 col-span-3'>
+
+              {/* hospital name */}
               <FormField
                 control={form.control}
                 name='hospital_name'
@@ -316,20 +298,184 @@ export const SampleRegistration = () => {
                 )}
               />
             </div>
-            <div className='grid grid-cols-3 gap-10'>
+
+
+            <div className='mt-4 grid grid-cols-5 gap-6'>
+
+              {/* sample id */}
               <FormField
                 control={form.control}
-                name='vial_received'
+                name='sample_id'
                 render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Vial Received</FormLabel>
+                  <FormItem className='my-2 flex-1'>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Sample ID</FormLabel>
+                      {form.formState.errors.sample_id && (
+                        <p className='text-red-500 text-sm'>
+                          {form.formState.errors.sample_id.message}
+                        </p>
+                      )}
+                    </div>
                     <Input
-                      placeholder='Vial Received'
-                      className='border-2 border-orange-300 my-2'
+                      placeholder='Sample ID'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
               />
+
+              {/* sample name */}
+              <FormField
+                control={form.control}
+                name='sample_name'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Sample Name</FormLabel>
+                      {form.formState.errors.sample_name && (
+                        <p className='text-red-500 text-sm'>
+                          {form.formState.errors.sample_name.message}
+                        </p>
+                      )}
+                    </div>
+                    <Input
+                      placeholder='Sample Name'
+                      className='my-2 border-2 border-orange-300'
+                      {...field}
+                    />
+                  </FormItem>
+                )}
+              />
+
+
+
+
+              {/* DOB */}
+              <FormField
+                control={form.control}
+                name='DOB'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>DOB</FormLabel>
+                    <Input
+                      type='date'
+                      className='my-2 border-2 border-orange-300'
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+
+              {/* age */}
+              <FormField
+                control={form.control}
+                name='age'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Age</FormLabel>
+                      {form.formState.errors.age && (
+                        <p className='text-red-500 text-sm'>
+                          {form.formState.errors.age.message}
+                        </p>
+                      )}
+                    </div>
+                    <Input
+                      placeholder='Age'
+                      className='my-2 border-2 border-orange-300'
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+
+              {/* gender */}
+              <FormField
+                control={form.control}
+                name='sex'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Sex</FormLabel>
+                    <select
+                      className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
+                      {...field}>
+                      <option className='dark:text-white' value=''>Select Sex</option>
+                      <option className='dark:text-white' value='male'>Male</option>
+                      <option className='dark:text-white' value='female'>Female</option>
+                      <option className='dark:text-white' value='other'>Other</option>
+                    </select>
+                  </FormItem>
+                )}
+              />
+
+              {/* collection date time */}
+              <FormField
+                control={form.control}
+                name='collection_date_time'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Collection Date Time</FormLabel>
+                    <Input
+                      type='datetime-local'
+                      className='my-2 border-2 border-orange-300'
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+
+              {/* sample receiving date */}
+              <FormField
+                control={form.control}
+                name='sample_date'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Sample Receiving Date and Time</FormLabel>
+                    <Input
+                      type='datetime-local'
+                      className='my-2 border-2 border-orange-300'
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+
+              {/* registration data */}
+              <FormField
+                control={form.control}
+                name='registration_date'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Registration Date</FormLabel>
+                    <Input
+                      type='datetime-local'
+                      className='my-2 border-2 border-orange-300'
+                      disabled
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+
+              {/* sample type */}
+              <FormField
+                control={form.control}
+                name='sample_type'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Sample Type</FormLabel>
+                      {form.formState.errors.sample_type && (
+                        <p className='text-red-500 text-sm'>
+                          {form.formState.errors.sample_type.message}
+                        </p>
+                      )}
+                    </div>
+                    <Input
+                      placeholder='Sample Type'
+                      className='my-2 border-2 border-orange-300'
+                      {...field}
+                    />
+                  </FormItem>
+                )}
+              />
+
+              {/* specimen quality */}
               <FormField
                 control={form.control}
                 name='specimen_quality'
@@ -354,128 +500,7 @@ export const SampleRegistration = () => {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name='registration_date'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Registration Date</FormLabel>
-                    <Input
-                      type='datetime-local'
-                      className='my-2 border-2 border-orange-300'
-                      disabled
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            <div className='grid grid-cols-4 gap-10'>
-              {/* /* sample receiving date  */}
-              <FormField
-                control={form.control}
-                name='sample_date'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Sample Receiving Date and Time</FormLabel>
-                    <Input
-                      type='datetime-local'
-                      className='my-2 border-2 border-orange-300'
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-              {/* sample type */}
-              <FormField
-                control={form.control}
-                name='sample_type'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Sample Type</FormLabel>
-                      {form.formState.errors.sample_type && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.sample_type.message}
-                        </p>
-                      )}
-                    </div>
-                    <Input
-                      placeholder='Sample Type'
-                      className='my-2 border-2 border-orange-300'
-                      {...field}
-                    />
-                  </FormItem>
-                )}
-              />
-              {/* upload trf */}
-              <FormField
-                control={form.control}
-                name='trf'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Upload TRF</FormLabel>
-                      {form.formState.errors.trf && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.trf.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type='file'
-                        accept='.pdf'
-                        className='my-2 border-2 border-orange-300'
-                        onChange={e => uploadTrf(e.target.files[0])}
-                      />
-                      {trfUrl && (
-                        <Button
-                          type="button"
-                          className="ml-2"
-                          onClick={() => window.open(trfUrl, '_blank')}
-                          variant="outline"
-                        >
-                          Preview TRF
-                        </Button>
-                      )}
-                    </div>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className='grid grid-cols-3 gap-10'>
-              {/* collection date time */}
-              <FormField
-                control={form.control}
-                name='collection_date_time'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Collection Date Time</FormLabel>
-                    <Input
-                      type='datetime-local'
-                      className='my-2 border-2 border-orange-300'
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-              {/* storage condition */}
-              <FormField
-                control={form.control}
-                name='storage_condition'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Storage Condition</FormLabel>
-                    <select
-                      className=' dark:bg-gray-800 my-2  rounded-md p-2 border-2 border-orange-300'
-                      {...field}>
-                      <option className='dark:text-white' value=''>Select Storage Condition</option>
-                      <option className='dark:text-white' value='refrigerated'>Refrigerated</option>
-                      <option className='dark:text-white' value='ambient'>Ambient</option>
-                    </select>
-                  </FormItem>
-                )}
-              />
               {/* prority */}
               <FormField
                 control={form.control}
@@ -494,696 +519,55 @@ export const SampleRegistration = () => {
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className='grid grid-cols-3 gap-10'>
-
+              {/* storage condition */}
               <FormField
                 control={form.control}
-                name='dept_name'
+                name='storage_condition'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel >Department Name</FormLabel>
+                    <FormLabel>Storage Condition</FormLabel>
+                    <select
+                      className=' dark:bg-gray-800 my-2  rounded-md p-2 border-2 border-orange-300'
+                      {...field}>
+                      <option className='dark:text-white' value=''>Select Storage Condition</option>
+                      <option className='dark:text-white' value='refrigerated'>Refrigerated</option>
+                      <option className='dark:text-white' value='ambient'>Ambient</option>
+                    </select>
+                  </FormItem>
+                )}
+              />
+
+              {/* vial received */}
+              <FormField
+                control={form.control}
+                name='vial_received'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Vial Received</FormLabel>
                     <Input
-                      placeholder='Department Name'
+                      placeholder='Vial Received'
                       className='border-2 border-orange-300 my-2'
                       {...field} />
                   </FormItem>
                 )}
               />
 
-              {/* client id */}
-              <FormField
-                control={form.control}
-                name='client_id'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Client ID</FormLabel>
-                    <Input
-                      placeholder='Client ID'
-                      className='my-2 border-2 border-orange-300'
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-              {/* client name */}
-              <FormField
-                control={form.control}
-                name='client_name'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Client Name</FormLabel>
-                      {form.formState.errors.client_name && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.client_name.message}
-                        </p>
-                      )}
-                    </div>
-                    <Input
-                      placeholder='Client Name'
-                      className='my-2 border-2 border-orange-300'
-                      {...field}
-                    />
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            {/* sample id */}
-            <div className='w-[50%]'>
-              <FormField
-                control={form.control}
-                name='sample_id'
-                render={({ field }) => (
-                  <FormItem className='my-2 flex-1'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Sample ID</FormLabel>
-                      {form.formState.errors.sample_id && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.sample_id.message}
-                        </p>
-                      )}
-                    </div>
-                    <Input
-                      placeholder='Sample ID'
-                      className='my-2 border-2 border-orange-300'
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className='grid grid-cols-3 gap-10'>
-              {/* patient name */}
-              <FormField
-                control={form.control}
-                name='patient_name'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Patient Name</FormLabel>
-                      {form.formState.errors.patient_name && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.patient_name.message}
-                        </p>
-                      )}
-                    </div>
-                    <Input
-                      placeholder='Patient Name'
-                      className='my-2 border-2 border-orange-300'
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-              {/* DOB */}
-              <FormField
-                control={form.control}
-                name='DOB'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>DOB</FormLabel>
-                    <Input
-                      type='date'
-                      className='my-2 border-2 border-orange-300'
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-              {/* age */}
-              <FormField
-                control={form.control}
-                name='age'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Age</FormLabel>
-                    <Input
-                      placeholder='Age'
-                      className='my-2 border-2 border-orange-300'
-                      disabled
-                      {...field} />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className='grid grid-cols-4 gap-10'>
-              <FormField
-                control={form.control}
-                name='sex'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Sex</FormLabel>
-                    <select
-                      className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
-                      {...field}>
-                      <option className='dark:text-white' value=''>Select Sex</option>
-                      <option className='dark:text-white' value='male'>Male</option>
-                      <option className='dark:text-white' value='female'>Female</option>
-                      <option className='dark:text-white' value='other'>Other</option>
-                    </select>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='ethnicity'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Ethnicity</FormLabel>
-                    <Input
-                      placeholder='Ethnicity'
-                      className='my-2 border-2 border-orange-300'
-                      {...field}
-                    />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='father_husband_name'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Father/Husband Name</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Father/Husband Name' />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='address'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Address</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Address'
-                    />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-
-            <div className='grid grid-cols-3 gap-10'>
-              <FormField
-                control={form.control}
-                name='city'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>City</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='City'
-                      onBlur={(e) => {
-                        get_state_and_country(e.target.value);
-                      }}
-                    />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='state'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>State</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='State'
-                    />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='country'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Country</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Country'
-                    />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-
-            <div className='grid grid-cols-4 gap-10'>
-              <FormField
-                control={form.control}
-                name='patient_mobile'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Patient's Mobile</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Mobile'
-                    />
-                  </FormItem>
-                )}
-              />
-
-
-              <FormField
-                control={form.control}
-                name='docter_name'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Doctor Name</FormLabel>
-                      {form.formState.errors.docter_name && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.docter_name.message}
-                        </p>
-                      )}
-                    </div>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Doctor Name'
-                    />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='docter_mobile'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Doctor's Mobile</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Mobile'
-                    />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name='email'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Doctor's Email</FormLabel>
-                      {form.formState.errors.email && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.email.message}
-                        </p>
-                      )}
-                    </div>
-                    <Input
-                      {...field}
-                      className='my-2 border-2 border-orange-300'
-                      placeholder='Email'
-                    />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-10 ">
-
-
-              <div className="flex gap-4 items-end my-2 w-[60%]">
-                <FormField
-                  control={form.control}
-                  name='test_name'
-                  render={({ field }) => (
-                    <FormItem className='flex-1'>
-                      <div className="flex justify-between items-center">
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            type="button"
-                            className="h-10 bg-orange-400 hover:bg-orange-500 cursor-pointer text-white"
-                          >
-                            Add Test
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="min-w-[250px]">
-                          {allTests
-                            .filter(test => !selectedTests.includes(test))
-                            .map(test => (
-                              <DropdownMenuItem
-                                key={test}
-                                onClick={() => {
-                                  if (selectedTests.includes(test)) {
-                                    toast.warning(`${test} is already added`);
-                                    return;
-                                  }
-                                  const updated = [...selectedTests, test];
-                                  setSelectedTests(updated);
-                                  form.setValue('selectedTestName', updated.join(', '));
-                                  toast.success(`${test} added`);
-                                  setHasSelectedFirstTest(true);
-                                  form.setValue('test_name', ''); // Reset if needed
-                                }}
-                              >
-                                <span className="text-sm">{test}</span>
-                              </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </FormItem>
-                  )}
-                />
-
-
-              </div>
-
-
-
-              {/* </div> */}
-
-              <div>
-                {/* Selected Test Name with Remove Button */}
-                <div className="flex gap-4 items-end my-2 w-[60%]">
-                  <FormField
-                    control={form.control}
-                    name='selectedTestName'
-                    render={({ field }) => (
-                      <FormItem className='flex-1'>
-                        <div className="flex justify-between items-center mb-1">
-                          <FormLabel>Test Added</FormLabel>
-                          {form.formState.errors.selectedTestName && (
-                            <p className='text-red-500 text-sm'>
-                              {form.formState.errors.selectedTestName.message}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-wrap gap-2 min-h-[42px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800">
-                          {selectedTests.length === 0 && (
-                            <span className="text-gray-400 dark:text-white">No test added</span>
-                          )}
-                          {selectedTests.map((test, idx) => (
-                            <span
-                              key={test}
-                              className="flex items-center bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-semibold"
-                            >
-                              {test}
-                              <button
-                                type="button"
-                                className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
-                                onClick={() => {
-                                  setTestToRemove(test); // <-- Set which test to remove
-                                  setShowRemoveModal(true); // <-- Open dialog
-                                }}
-                                aria-label={`Remove ${test}`}
-                              >
-                                ×
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-
-                {/* Remove Test Name Dialog */}
-                <Dialogbox
-                  open={showRemoveModal}
-                  setOpen={setShowRemoveModal}
-                  testName={testToRemove} // <-- Use testToRemove here
-                  type="remove"
-                  onRemove={handleRemoveTestName}
-                />
-              </div>
-
-
-            </div>
-
-            {/* Add Test Name Dialog */}
-
-            <Dialogbox
-              open={showTestModal}
-              setOpen={(open) => {
-                setShowTestModal(open);
-                if (!open) {
-                  form.setValue('test_name', ''); // Reset test_name when dialog closes
-                }
-              }}
-              type="add"
-              testName={form.watch('test_name')}
-              onAdd={() => { handleAddTestName() }}
-            />
-
-
-            {[
-              "Cardio Comprehensive (Screening Test)",
-              "Cardio Metabolic Syndrome (Screening Test)",
-              "Cardio Comprehensive Myopathy"
-            ].some(test => selectedTests.includes(test)) && (
-                <div className="my-8">
-                  {/* Cardio-specific fields */}
-                  <div className="grid grid-cols-3 gap-8">
-                    <FormField
-                      control={form.control}
-                      name="systolic_bp"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>Systolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input
-                            {...field}
-                            placeholder="90-200"
-                            type="number"
-                            className="my-2 border-2 border-orange-300"
-                            min={90}
-                            max={200} />
-                          <p className="text-xs text-gray-500">Value must be between 90-200</p>
-                          {form.formState.errors.systolic_bp && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.systolic_bp.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="diastolic_bp"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>Diastolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input
-                            {...field}
-                            className="my-2 border-2 border-orange-300"
-                            placeholder="60-130"
-                            type="number"
-                            min={60}
-                            max={130} />
-                          <p
-                            className="text-xs text-gray-500"
-                          >Value must be between 60-130</p>
-                          {form.formState.errors.diastolic_bp && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.diastolic_bp.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="total_cholesterol"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>Total Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input
-                            {...field}
-                            placeholder="130-320"
-                            className="my-2 border-2 border-orange-300"
-                            type="number"
-                            min={130}
-                            max={320} />
-                          <p className="text-xs text-gray-500">Value must be between 130 - 320</p>
-                          {form.formState.errors.total_cholesterol && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.total_cholesterol.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="hdl_cholesterol"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>HDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input
-                            {...field}
-                            className="my-2 border-2 border-orange-300"
-                            placeholder="20-100"
-                            type="number"
-                            min={20}
-                            max={100} />
-                          <p className="text-xs text-gray-500">Value must be between 20 - 100</p>
-                          {form.formState.errors.hdl_cholesterol && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.hdl_cholesterol.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="ldl_cholesterol"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>LDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input
-                            {...field}
-                            className="my-2 border-2 border-orange-300"
-                            placeholder="30-300"
-                            type="number"
-                            min={30}
-                            max={300} />
-                          <p className="text-xs text-gray-500">Value must be between 30 - 300</p>
-                          {form.formState.errors.ldl_cholesterol && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.ldl_cholesterol.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-
-                  {/* Yes/No and multi-choice buttons */}
-                  <div className="grid grid-cols-2 gap-8 mt-6">
-                    <FormField
-                      control={form.control}
-                      name="diabetes"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>History of Diabetes? <span className="text-orange-500">*</span></FormLabel>
-                          <div className="flex gap-2">
-                            <Button
-                              type="button"
-                              variant={field.value === "yes" ? "default" : "outline"}
-                              onClick={() => field.onChange("yes")}>Yes</Button>
-                            <Button
-                              type="button"
-                              variant={field.value === "no" ? "default" : "outline"}
-                              onClick={() => field.onChange("no")}>No</Button>
-                          </div>
-                          {form.formState.errors.diabetes && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.diabetes.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="smoker"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>Smoker? <span className="text-orange-500">*</span></FormLabel>
-                          <div className="flex gap-2">
-                            {["current", "former", "never"].map(opt => (
-                              <Button
-                                key={opt}
-                                type="button"
-                                variant={field.value === opt ? "default" : "outline"}
-                                onClick={() => field.onChange(opt)}
-                              >
-                                {opt.charAt(0).toUpperCase() + opt.slice(1)}
-                              </Button>
-                            ))}
-                          </div>
-                          {form.formState.errors.smoker && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.smoker.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="hypertension_treatment"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>On Hypertension Treatment? <span className="text-orange-500">*</span></FormLabel>
-                          <div className="flex gap-2">
-                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                          </div>
-                          {form.formState.errors.hypertension_treatment && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.hypertension_treatment.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="statin"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>On a Statin? <span className="text-orange-500">*</span></FormLabel>
-                          <div className="flex gap-2">
-                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                          </div>
-                          {form.formState.errors.statin && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.statin.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="aspirin_therapy"
-                      render={({ field }) => (
-                        <FormItem className="my-2">
-                          <FormLabel>On Aspirin Therapy? <span className="text-orange-500">*</span></FormLabel>
-                          <div className="flex gap-2">
-                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
-                          </div>
-                          {form.formState.errors.aspirin_therapy && (
-                            <p className="text-red-500 text-sm">{form.formState.errors.aspirin_therapy.message}</p>
-                          )}
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </div>
-              )}
-
-
-
-            <div className='grid grid-cols-2 gap-10'>
-
-              <FormField
-                control={form.control}
-                name='remarks'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Remarks</FormLabel>
-                    <textarea
-                      placeholder='Remarks'
-                      {...field}
-                      className='my-2 border-2 border-orange-300 rounded-md p-2'
-                    >
-
-                    </textarea>
-                  </FormItem>
-                )}
-              />
-
+              {/* clinical history */}
               <FormField
                 control={form.control}
                 name='clinical_history'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel>Clinical History</FormLabel>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Clinical History</FormLabel>
+                      {form.formState.errors.clinical_history && (
+                        <p className='text-red-500 text-sm'>
+                          {form.formState.errors.clinical_history.message}
+                        </p>
+                      )}
+                    </div>
                     <textarea
                       placeholder='Clinical History'
                       {...field}
@@ -1193,17 +577,16 @@ export const SampleRegistration = () => {
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className='grid grid-cols-4 gap-10'>
+              {/* repeat required? */}
               <FormField
                 control={form.control}
                 name='repeat_required'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel>Repeat Required</FormLabel>
+                    <FormLabel>Repeat Required ?</FormLabel>
                     <select
-                      className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
+                      className=' dark:bg-gray-800 my-2  rounded-md p-2 border-2 border-orange-300'
                       {...field}>
                       <option className='dark:text-white' value=''>Select Repeat Required</option>
                       <option className='dark:text-white' value='yes'>Yes</option>
@@ -1212,6 +595,8 @@ export const SampleRegistration = () => {
                   </FormItem>
                 )}
               />
+
+
               {repeatRequired === 'yes' && (
                 <>
                   <FormField
@@ -1242,6 +627,722 @@ export const SampleRegistration = () => {
                   />
                 </>
               )}
+
+            </div>
+
+            <div className='mt-4 grid grid-cols-5 gap-6'>
+              <div className='col-span-3 '>
+                <div className='grid grid-cols-3 gap-6'>
+
+                  {/* patient name */}
+                  <FormField
+                    control={form.control}
+                    name='patient_name'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Patient Name</FormLabel>
+                          {form.formState.errors.patient_name && (
+                            <p className='text-red-500 text-sm'>
+                              {form.formState.errors.patient_name.message}
+                            </p>
+                          )}
+                        </div>
+                        <Input
+                          placeholder='Patient Name'
+                          disabled
+                          className='my-2 border-2 border-orange-300'
+                          {...field} />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* patient mobile */}
+                  <FormField
+                    control={form.control}
+                    name='patient_mobile'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Patient's Mobile</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Mobile'
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* father husband name */}
+                  <FormField
+                    control={form.control}
+                    name='father_husband_name'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Father/Husband Name</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Father/Husband Name' />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* ethnicity */}
+                  <FormField
+                    control={form.control}
+                    name='ethnicity'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Ethnicity</FormLabel>
+                        <Input
+                          placeholder='Ethnicity'
+                          className='my-2 border-2 border-orange-300'
+                          {...field}
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* address */}
+                  <FormField
+                    control={form.control}
+                    name='address'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Address</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Address'
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* city */}
+                  <FormField
+                    control={form.control}
+                    name='city'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>City</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='City'
+                          onBlur={(e) => {
+                            get_state_and_country(e.target.value);
+                          }}
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* state */}
+                  <FormField
+                    control={form.control}
+                    name='state'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>State</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='State'
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* country */}
+                  <FormField
+                    control={form.control}
+                    name='country'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Country</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Country'
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* client id */}
+                  <FormField
+                    control={form.control}
+                    name='client_id'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Client ID</FormLabel>
+                        <Input
+                          placeholder='Client ID'
+                          className='my-2 border-2 border-orange-300'
+                          {...field} />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* client name */}
+                  <FormField
+                    control={form.control}
+                    name='client_name'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Client Name</FormLabel>
+                          {form.formState.errors.client_name && (
+                            <p className='text-red-500 text-sm'>
+                              {form.formState.errors.client_name.message}
+                            </p>
+                          )}
+                        </div>
+                        <Input
+                          placeholder='Client Name'
+                          className='my-2 border-2 border-orange-300'
+                          {...field}
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* upload trf */}
+                  <FormField
+                    control={form.control}
+                    name='trf'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Upload TRF</FormLabel>
+
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            className="bg-gray-700 hover:bg-gray-700 cursor-pointer text-white flex items-center gap-2"
+                            onClick={() => document.getElementById('trf-upload').click()}
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4v16m8-8H4"
+                              />
+                            </svg>
+                            Upload TRF
+                          </Button>
+                          <input
+                            id="trf-upload"
+                            type="file"
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={e => uploadTrf(e.target.files[0])}
+                          />
+                          {trfUrl && (
+                            <Button
+                              type="button"
+                              className="ml-2"
+                              onClick={() => window.open(trfUrl, '_blank')}
+                              variant="outline"
+                            >
+                              Preview TRF
+                            </Button>
+                          )}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* trf file name */}
+                  <FormField
+                    control={form.control}
+                    name='trf-file'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>TRF File Name</FormLabel>
+                          {form.formState.errors.trf && (
+                            <p className='text-red-500 text-sm'>
+                              {form.formState.errors.trf.message}
+                            </p>
+                          )}
+                        </div>
+                        <Input
+                          disabled
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          value={trfFile ? trfFile.name : ''}
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/*  Doctor name  */}
+                  <FormField
+                    control={form.control}
+                    name='docter_name'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Doctor Name</FormLabel>
+                          {form.formState.errors.docter_name && (
+                            <p className='text-red-500 text-sm'>
+                              {form.formState.errors.docter_name.message}
+                            </p>
+                          )}
+                        </div>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Doctor Name'
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* dept name */}
+                  <FormField
+                    control={form.control}
+                    name='dept_name'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel >Department Name</FormLabel>
+                        <Input
+                          placeholder='Department Name'
+                          className='border-2 border-orange-300 my-2'
+                          {...field} />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* doctor mobile */}
+                  <FormField
+                    control={form.control}
+                    name='docter_mobile'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Doctor's Mobile</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Mobile'
+                        />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* doctor email */}
+                  <FormField
+                    control={form.control}
+                    name='email'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <div className="flex justify-between items-center">
+                          <FormLabel>Doctor's Email</FormLabel>
+                          {form.formState.errors.email && (
+                            <p className='text-red-500 text-sm'>
+                              {form.formState.errors.email.message}
+                            </p>
+                          )}
+                        </div>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Email'
+                        />
+                      </FormItem>
+                    )}
+                  />
+                  <div></div>
+                  <div></div>
+
+                  <div className='w-1/2'>
+                    <FormField
+                      control={form.control}
+                      name='test_name'
+                      render={({ field }) => (
+                        <FormItem className='flex-1'>
+                          <FormLabel>Add Test Name</FormLabel>
+                          <div className="flex justify-between items-center">
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                type="button"
+                                className="h-10 bg-gray-700 hover:bg-gray-800 cursor-pointer text-white"
+                              >
+                                Add Test
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="min-w-[250px] mx-10">
+                              {selectedTests.length === allTests.length ? (
+                                <DropdownMenuItem disabled>
+                                  <span className="text-sm text-gray-500">All tests added</span>
+                                </DropdownMenuItem>
+                              ) : (
+                                allTests
+                                  .filter(test => !selectedTests.includes(test))
+                                  .map(test => (
+                                    <DropdownMenuItem
+                                      key={test}
+                                      onClick={() => {
+                                        if (selectedTests.includes(test)) {
+                                          toast.warning(`${test} is already added`);
+                                          return;
+                                        }
+                                        const updated = [...selectedTests, test];
+                                        setSelectedTests(updated);
+                                        form.setValue('selectedTestName', updated.join(', '));
+                                        toast.success(`${test} added`);
+                                        setHasSelectedFirstTest(true);
+                                        form.setValue('test_name', ''); // Reset if needed
+                                      }}
+                                    >
+                                      <span className="text-sm">{test}</span>
+                                    </DropdownMenuItem>
+                                  ))
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* selected test name */}
+                  <div className=''>
+                    <FormField
+                      control={form.control}
+                      name='selectedTestName'
+                      render={({ field }) => (
+                        <FormItem className='flex-1'>
+                          <div className="flex justify-between items-center mb-1">
+                            <FormLabel>Test Added</FormLabel>
+                            {form.formState.errors.selectedTestName && (
+                              <p className='text-red-500 text-sm'>
+                                {form.formState.errors.selectedTestName.message}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap gap-2 min-h-[42px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800">
+                            {selectedTests.length === 0 && (
+                              <span className="text-gray-400 dark:text-white">No test added</span>
+                            )}
+                            {selectedTests.map((test, idx) => (
+                              <span
+                                key={test}
+                                className="flex items-center bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-semibold"
+                              >
+                                {test}
+                                <button
+                                  type="button"
+                                  className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
+                                  onClick={() => {
+                                    setTestToRemove(test); // <-- Set which test to remove
+                                    setShowRemoveModal(true); // <-- Open dialog
+                                  }}
+                                  aria-label={`Remove ${test}`}
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Remove Test Name Dialog */}
+                    <Dialogbox
+                      open={showRemoveModal}
+                      setOpen={setShowRemoveModal}
+                      testName={testToRemove} // <-- Use testToRemove here
+                      type="remove"
+                      onRemove={handleRemoveTestName}
+                    />
+                  </div>
+
+                  {/* remarks */}
+                  <FormField
+                    control={form.control}
+                    name='remarks'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Remarks</FormLabel>
+                        <textarea
+                          placeholder='Remarks'
+                          {...field}
+                          className='my-2 border-2 border-orange-300 rounded-md p-2'
+                        >
+
+                        </textarea>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className='col-span-2'>
+
+                {[
+                  "Cardio Comprehensive (Screening Test)",
+                  "Cardio Metabolic Syndrome (Screening Test)",
+                  "Cardio Comprehensive Myopathy"
+                ].some(test => selectedTests.includes(test)) && (
+                    <>
+                      {/* Cardio-specific fields */}
+                      <div className='grid grid-cols-2 gap-6'>
+
+                        <FormField
+                          control={form.control}
+                          name="systolic_bp"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>Systolic Blood Pressure
+                                <span className="text-xs font-normal">(mm Hg)</span>
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <Input
+                                {...field}
+                                placeholder="90-200"
+                                type="number"
+                                className="my-2 border-2 border-orange-300"
+                                min={90}
+                                max={200} />
+                              <p className="text-xs text-gray-500">Value must be between 90-200</p>
+                              {form.formState.errors.systolic_bp && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.systolic_bp.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="diastolic_bp"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>Diastolic Blood Pressure
+                                <span className="text-xs font-normal">(mm Hg)</span>
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <Input
+                                {...field}
+                                className="my-2 border-2 border-orange-300"
+                                placeholder="60-130"
+                                type="number"
+                                min={60}
+                                max={130} />
+                              <p
+                                className="text-xs text-gray-500"
+                              >Value must be between 60-130</p>
+                              {form.formState.errors.diastolic_bp && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.diastolic_bp.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="total_cholesterol"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>Total Cholesterol
+                                <span className="text-xs font-normal">(mg/dL)</span>
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <Input
+                                {...field}
+                                placeholder="130-320"
+                                className="my-2 border-2 border-orange-300"
+                                type="number"
+                                min={130}
+                                max={320} />
+                              <p className="text-xs text-gray-500">Value must be between 130 - 320</p>
+                              {form.formState.errors.total_cholesterol && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.total_cholesterol.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="hdl_cholesterol"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>HDL Cholesterol
+                                <span className="text-xs font-normal">(mg/dL)</span>
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <Input
+                                {...field}
+                                className="my-2 border-2 border-orange-300"
+                                placeholder="20-100"
+                                type="number"
+                                min={20}
+                                max={100} />
+                              <p className="text-xs text-gray-500">Value must be between 20 - 100</p>
+                              {form.formState.errors.hdl_cholesterol && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.hdl_cholesterol.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="ldl_cholesterol"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>LDL Cholesterol
+                                <span className="text-xs font-normal">(mg/dL)</span>
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <Input
+                                {...field}
+                                className="my-2 border-2 border-orange-300"
+                                placeholder="30-300"
+                                type="number"
+                                min={30}
+                                max={300} />
+                              <p className="text-xs text-gray-500">Value must be between 30 - 300</p>
+                              {form.formState.errors.ldl_cholesterol && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.ldl_cholesterol.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="diabetes"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>History of Diabetes?
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <div className="flex gap-2">
+                                <Button
+                                  type="button"
+                                  variant={field.value === "yes" ? "default" : "outline"}
+                                  onClick={() => field.onChange("yes")}>Yes</Button>
+                                <Button
+                                  type="button"
+                                  variant={field.value === "no" ? "default" : "outline"}
+                                  onClick={() => field.onChange("no")}>No</Button>
+                              </div>
+                              {form.formState.errors.diabetes && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.diabetes.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="smoker"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>Smoker?
+                                <span className="text-orange-500">*</span>
+                              </FormLabel>
+                              <div className="flex gap-2">
+                                {["current", "former", "never"].map(opt => (
+                                  <Button
+                                    key={opt}
+                                    type="button"
+                                    variant={field.value === opt ? "default" : "outline"}
+                                    onClick={() => field.onChange(opt)}
+                                  >
+                                    {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                                  </Button>
+                                ))}
+                              </div>
+                              {form.formState.errors.smoker && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.smoker.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="hypertension_treatment"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>On Hypertension Treatment? <span className="text-orange-500">*</span></FormLabel>
+                              <div className="flex gap-2">
+                                <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                                <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                              </div>
+                              {form.formState.errors.hypertension_treatment && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.hypertension_treatment.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="statin"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>On a Statin? <span className="text-orange-500">*</span></FormLabel>
+                              <div className="flex gap-2">
+                                <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                                <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                              </div>
+                              {form.formState.errors.statin && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.statin.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="aspirin_therapy"
+                          render={({ field }) => (
+                            <FormItem className="my-2">
+                              <FormLabel>On Aspirin Therapy? <span className="text-orange-500">*</span></FormLabel>
+                              <div className="flex gap-2">
+                                <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
+                                <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                              </div>
+                              {form.formState.errors.aspirin_therapy && (
+                                <p className="text-red-500 text-sm">{form.formState.errors.aspirin_therapy.message}</p>
+                              )}
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                    </>
+                  )}
+              </div>
+
+            </div>
+
+            <div className='grid grid-cols-4 gap-6 mt-4'>
+
+
+            </div>
+
+            <div className='grid grid-cols-4 gap-6 mt-4'>
+              {/* test name button */}
+
             </div>
 
 

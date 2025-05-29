@@ -405,7 +405,8 @@ const Processing = () => {
     }
     
     if (localStorage.getItem("libraryPreparationData")) {
-      toast.warning("Some rows are already selected for Library Preparation.");
+      toast.warning("Some rows are already present in the Library Preparation.");
+      // dispatch(setActiveTab("library-prepration"));
       return;
     }
 
@@ -413,7 +414,7 @@ const Processing = () => {
     localStorage.setItem("libraryPreparationData", JSON.stringify(checkedRows));
 
     // Navigate to the LibraryPreparation tab
-    dispatch(setActiveTab("library-preparation"));
+    dispatch(setActiveTab("library-prepration"));
   };
 
   return (

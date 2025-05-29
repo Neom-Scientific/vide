@@ -1,169 +1,149 @@
 import { Button } from '@/components/ui/button';
-import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { generateUsernamePassword } from '@/lib/generate_username_password';
-import { zodResolver } from '@hookform/resolvers/zod';
-import axios from 'axios'
-import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
-
-const formSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  hospital_name: z.string().min(1, "Hospital name is required"),
-  email: z.string().email("Invalid email address"),
-  phone_no: z.string().min(10, "Phone number must be at least 10 digits"),
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import axios from 'axios';
+import React, { useEffect } from 'react';
+import { toast, ToastContainer } from 'react-toastify';
 
 const AssignUser = () => {
-  const [userData, setUserData] = useState(null);
+  const [users, setUsers] = React.useState([]);
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      hospital_name: '',
-      email: '',
-      phone_no: '',
-      username: '',
-      password: ''
-    }
-  });
-
-  // Populate form when userData changes
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get('/api/request-insert');
-        if (res.status === 200 && res.data.data.length > 0) {
-          setUserData(res.data.data[0]);
+        const data = await axios.get('/api/request-insert');
+        if (data.status === 200) {
+          setUsers(data.data[0].data);
+        } else {
+          console.error('Failed to fetch data:', data.statusText);
         }
-      } catch (err) {
-        console.log(err);
+      } catch (e) {
+        console.error('Error in AssignUser component:', e);
       }
     };
     fetchData();
   }, []);
 
-  useEffect(() => {
-    if (userData) {
-      form.reset({
-        name: userData.name || '',
-        hospital_name: userData.hospital_name || '',
-        email: userData.email || '',
-        phone_no: userData.phone_no || '',
-        username: userData.username || '',
-        password: userData.password || ''
-      });
+  const handleStatus = async (id,status) => {
+    try{
+      const response = await axios.put('/api/request-insert',{id,status});
+      if(response.data[0].status === 200){
+        console.log('data', response.data[0]);
+        toast.success('User status changed successfully');
+        setUsers((prevUsers) => 
+          prevUsers.map((user) => 
+            user.id === id ? { ...user, status: status === 'disable' ? 'enable' : 'disable' } : user
+          )
+        );
+      }
+      if (response.data[0].status === 400) {
+        toast.error(response.data[0].message);
+      }
     }
-  }, [userData, form]);
-
-  const handleGenerateUsernamePassword = async () => {
-    const { name, hospital_name, email, phone_no } = form.getValues();
-    const data = await generateUsernamePassword(email, name, hospital_name, phone_no);
-    form.setValue('username', data.username);
-    form.setValue('password', data.password);
-  }
-
-  const handleSubmit = async (data) => {
-    console.log(data);
+    catch (error) {
+      toast.error('Error changing user status');
+      console.error('Error updating user status:', error);
+    }
   }
 
   return (
-    <div className="max-w-md mt-10">
-      <h1 className="text-2xl font-bold mb-6"> Assign Username and Password</h1>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name='name'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Name</FormLabel>
-                <FormControl>
-                  <Input className="focus-within:ring-orange-500" placeholder="Name" {...field} />
-                </FormControl>
-              </FormItem>
+    <div>
+      <h1>Assign User</h1>
+      <div className="overflow-x-auto">
+        <Table className="min-w-full divide-y divide-gray-200">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone No</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hospital Name</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            { users ? (users.map((user) => (
+              <TableRow key={user.id} className="hover:bg-gray-100">
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.id}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.name}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.username}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.email}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.phone_no}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.hospital_name}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {user.status}
+                </TableCell>
+                <TableCell
+                  className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <Button
+                    className={`text-white ${user.status === 'disable' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
+                    onClick={()=>handleStatus(user.id, user.status)}
+                    >
+                    {user.status === 'disable' ? 'Enable' : 'Disable'}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )
+            )):
+            (
+              <TableRow>
+                <TableCell colSpan="8" className=" py-4 text-gray-500">
+                  No users found
+                </TableCell>
+              </TableRow>
             )}
-          />
-          <FormField
-            control={form.control}
-            name='hospital_name'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Hospital Name</FormLabel>
-                <FormControl>
-                  <Input className="focus-within:ring-orange-500" placeholder="Hospital Name" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='email'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input className="focus-within:ring-orange-500" placeholder="Email" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='phone_no'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone</FormLabel>
-                <FormControl>
-                  <Input className="focus-within:ring-orange-500" placeholder="Phone" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='username'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <Input className="focus-within:ring-orange-500" placeholder="Username" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name='password'
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Password</FormLabel>
-                <FormControl>
-                  <Input className="focus-within:ring-orange-500" placeholder="Password" {...field} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-
-          <Button
-            type='button'
-            onClick={handleGenerateUsernamePassword}
-            className="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600 transition duration-200">
-            Generate Username and Password
-          </Button>
-          <Button
-            type='submit'
-            className="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600 transition duration-200">
-            Submit
-          </Button>
-        </form>
-      </Form>
+          </TableBody>
+        </Table>
+        <ToastContainer/>
+      </div>
+      {/* <table className="table-auto border-collapse border border-gray-400 w-full mt-4">
+        <thead>
+          <tr>
+            <th className="border border-gray-400 px-4 py-2">ID</th>
+            <th className="border border-gray-400 px-4 py-2">Name</th>
+            <th className="border border-gray-400 px-4 py-2">Username</th>
+            <th className="border border-gray-400 px-4 py-2">Email</th>
+            <th className="border border-gray-400 px-4 py-2">Phone No</th>
+            <th className="border border-gray-400 px-4 py-2">Hospital Name</th>
+            <th className="border border-gray-400 px-4 py-2">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((user) => (
+            <tr key={user.id}>
+              <td className="border border-gray-400 px-4 py-2">{user.id}</td>
+              <td className="border border-gray-400 px-4 py-2">{user.name}</td>
+              <td className="border border-gray-400 px-4 py-2">{user.username}</td>
+              <td className="border border-gray-400 px-4 py-2">{user.email}</td>
+              <td className="border border-gray-400 px-4 py-2">{user.phone_no}</td>
+              <td className="border border-gray-400 px-4 py-2">{user.hospital_name}</td>
+              <td className="border border-gray-400 px-4 py-2">{user.status}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table> */}
     </div>
-  )
-}
+  );
+};
 
-export default AssignUser
+export default AssignUser;

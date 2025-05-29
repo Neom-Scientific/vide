@@ -85,7 +85,7 @@ const Header = ({ activeTab, setActiveTab }) => {
                 <li className="p-0 m-0">
                   <TabsTrigger
                     className="cursor-pointer"
-                    value="library-preparation"
+                    value="library-prepration"
                   >
                     Library Preparation
                   </TabsTrigger>
