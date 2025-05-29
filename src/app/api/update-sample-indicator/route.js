@@ -3,118 +3,101 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
     const body = await request.json();
-    const { sample_id, sample_indicator, test_name } = body;
-    let response = [];
+    const { rows, testName } = body;
     try {
-        if (!sample_id || !sample_indicator || sample_indicator.length === 0 || !test_name) {
-            response.push({
-                status: 400,
-                message: "sample_id, sample_indicator, and test_name are required"
-            });
-        }
-        console.log('sample_id:', sample_id);
-        console.log('sample_indicator:', sample_indicator);
-        console.log('test_name:', test_name);
+        const response = []
 
-        const data = await pool.query(`SELECT sample_id FROM master_sheet`);
-        const sampleExists = data.rows.some(row => row.sample_id === sample_id);
-        if (!sampleExists) {
-            response.push({
-                status: 404,
-                message: "Sample ID not found"
-            });
-        }
-
-        if (sample_indicator === 'lib_prep' && test_name.includes('Myeloid')) {
-            const {
-                qubit_hs,
-                conc_rxn,
-                i5_index_reverse,
-                i7_index,
-                lib_qubit,
-                nm_conc,
-                nfw_volu_for_2nm,
-                total_vol_for_2nm
-            } = body;
-
-            // Validate that all required fields are present
-            if (
-                qubit_hs === undefined ||
-                conc_rxn === undefined ||
-                i5_index_reverse === undefined ||
-                i7_index === undefined ||
-                lib_qubit === undefined ||
-                nm_conc === undefined ||
-                nfw_volu_for_2nm === undefined ||
-                total_vol_for_2nm === undefined
-            ) {
-                response.push({
-                    status: 400,
-                    message: "All related fields are required to update lib_prep to 'yes'"
-                });
-                return NextResponse.json(response);
+        for (let i = 0; i < rows.length; i++) {
+            if (testName === "Myeloid") {
+                const sample_id = rows[i].sample_id;
+                const Qubit_hs = rows[i].Qubit_hs;
+                const conc_rxn = rows[i].conc_rxn;
+                const barcode = rows[i].barcode;
+                const i5_index_reverse = rows[i].i5_index_reverse;
+                const i7_index = rows[i].i7_index;
+                const lib_qubit = rows[i].lib_qubit;
+                const nM_conc = rows[i].nM_conc;
+                const volumefromStock_lib = rows[i].volumefromStock_lib;
+                const nfw_volu_for_2nM = rows[i].nfw_volu_for_2nM;
+                const total_vol_for_2nM = rows[i].total_vol_for_2nM;
+                if (!sample_id) {
+                    response.push({
+                        message: 'Sample Id is required',
+                        status: 400
+                    });
+                } else {
+                    const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
+                    const sampleExists = data.rows.length > 0;
+                    if (sampleExists) {
+                        response.push({
+                            message: 'Sample Id exists',
+                            status: 404
+                        });
+                    } else {
+                        await pool.query(
+                            `INSERT INTO pool_info (sample_id, Qubit_hs, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nM_conc, volumefromStock_lib, nfw_volu_for_2nM, total_vol_for_2nM)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11)`,
+                            [sample_id, Qubit_hs, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nM_conc, volumefromStock_lib, nfw_volu_for_2nM, total_vol_for_2nM]
+                        );
+                        response.push({
+                            message: 'Sample indicator updated successfully',
+                            status: 200
+                        });
+                    }
+                }
             }
+            else if (testName === "WES" ||
+                testName === "CS" ||
+                testName === "Clinical Exome" ||
+                testName === "Cardio Comprehensive (Screening Test)" ||
+                testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+                testName === "Cardio Comprehensive Myopathy") {
+                const sample_id = rows[i].sample_id;
+                const Qubit_dna_hs = rows[i].Qubit_dna_hs;
+                const per_rxn_gdna = rows[i].per_rxn_gdna;
+                const volume = rows[i].volume;
+                const gdna_volume_3x = rows[i].gdna_volume_3x;
+                const nfw = rows[i].nfw;
+                const plate_designation = rows[i].plate_designation;
+                const well = rows[i].well;
+                const i5_index_reverse = rows[i].i5_index_reverse;
+                const i7_index = rows[i].i7_index;
+                const qubit_lib_qc_ng_ul = rows[i].qubit_lib_qc_ng_ul;
+                const stock_ng_ul = rows[i].stock_ng_ul;
+                const lib_vol_for_hyb = rows[i].lib_vol_for_hyb;
+                const gb_per_sample = rows[i].gb_per_sample;
 
-            // Build dynamic query for partial updates
-            const fields = [];
-            const values = [];
-            let index = 1;
-
-            fields.push(`qubit_hs = $${index++}`);
-            values.push(qubit_hs);
-
-            fields.push(`conc_rxn = $${index++}`);
-            values.push(conc_rxn);
-
-            fields.push(`i5_index_reverse = $${index++}`);
-            values.push(i5_index_reverse);
-
-            fields.push(`i7_index = $${index++}`);
-            values.push(i7_index);
-
-            fields.push(`lib_qubit = $${index++}`);
-            values.push(lib_qubit);
-
-            fields.push(`nm_conc = $${index++}`);
-            values.push(nm_conc);
-
-            fields.push(`nfw_volu_for_2nm = $${index++}`);
-            values.push(nfw_volu_for_2nm);
-
-            fields.push(`total_vol_for_2nm = $${index++}`);
-            values.push(total_vol_for_2nm);
-
-            // Add lib_prep and sample_id to the query
-            fields.push(`lib_prep = $${index++}`);
-            values.push("yes");
-            values.push(sample_id);
-
-            const query = `
-                UPDATE master_sheet
-                SET ${fields.join(", ")}
-                WHERE sample_id = $${index}
-            `;
-
-            const result = await pool.query(query, values);
-            response.push({
-                status: 200,
-                message: "Sample indicator updated successfully",
-                rowsAffected: result.rowCount
-            });
-        } else {
-            response.push({
-                status: 400,
-                message: "Invalid sample_indicator or test_name"
-            });
+                if (!sample_id) {
+                    response.push({
+                        message: 'Sample Id is required',
+                        status: 400
+                    });
+                }
+                const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
+                const sampleExists = data.rows.length > 0;
+                if (sampleExists) {
+                    response.push({
+                        message: 'Sample Id exists',
+                        status: 404
+                    });
+                }
+                else {
+                    await pool.query(
+                        `INSERT INTO pool_info (sample_id, Qubit_dna_hs, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, test_name)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                        [sample_id, Qubit_dna_hs, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, testName]
+                    );
+                    response.push({
+                        message: 'Sample indicator updated successfully',
+                        status: 200
+                    });
+                }
+            }
         }
-
-        return NextResponse.json(response);
-    } catch (error) {
-        console.error("Error in update-sample-indicator API", error);
-        response = {
-            status: 500,
-            message: "Internal server error"
-        };
-        return NextResponse.json(response);
+        return NextResponse.json(response)
+    }
+    catch (e) {
+        console.error("Error updating sample indicator:", e);
+        return NextResponse.json({ error: "Failed to update sample indicator" }, { status: 500 });
     }
 }

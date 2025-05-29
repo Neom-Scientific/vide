@@ -5,8 +5,8 @@ import { Input } from '@/components/ui/input';
 import { zodResolver } from '@hookform/resolvers/zod';
 import axios from 'axios';
 import React, { useState } from 'react'
-import { useForm } from 'react-hook-form';
-import { toast } from 'react-toastify';
+import { set, useForm } from 'react-hook-form';
+import { toast, ToastContainer } from 'react-toastify';
 import { z } from 'zod';
 
 const formSchema = z.object({
@@ -22,6 +22,8 @@ const formSchema = z.object({
 const Request = () => {
     const [step, setStep] = useState(1);
     const [otpError, setOtpError] = useState('');
+    const [isOtpDisabled, setIsOtpDisabled] = useState(false); // State to track button disable status
+
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -37,29 +39,26 @@ const Request = () => {
 
     const handleOTP = async () => {
         const data = form.getValues();
+        setTimeout(() => {
+            setIsOtpDisabled(false); // Re-enable the button after 10 minutes
+        }, 600000); // 10 minutes in milliseconds
         setOtpError('');
         try {
             const response = await axios.post('/api/send-otp', { email: data.email });
-            if (response.data.status === 200) {
+            console.log('response', response.data);
+            if (response.data[0].status === 200) {
                 toast.success("OTP sent successfully. Please check your email.");
-            } else if (response.data.status === 400 && response.data.message === "Invalid email") {
-                setOtpError("Invalid email. Please enter a valid email address.");
-                toast.error("Invalid email. Please enter a valid email address.");
-            } else if (response.data.status === 400 && response.data.message === "OTP expired") {
-                setOtpError("OTP expired. Please request a new OTP.");
-                toast.error("OTP expired. Please request a new OTP.");
-            } else if (response.data.status === 400 && response.data.message === "Invalid OTP") {
-                setOtpError("Invalid OTP. Please try again.");
-                toast.error("Invalid OTP. Please try again.");
-            } else if (response.data.status === 400 && response.data.message === "Email already exists") {
-                setOtpError("Email already exists. Please use a different email.");
-                toast.error("Email already exists. Please use a different email.");
-            } else {
-                setOtpError("Failed to send OTP. Please try again.");
-                toast.error("Failed to send OTP. Please try again.");
+                setIsOtpDisabled(true); // Disable the button
+               
+            } 
+            else if (response.data[0].status === 400 && response.data[0].message === "Email already exists") {
+                console.log('response', response.data[0].message);
+                setIsOtpDisabled(false)
+                toast.error("You have already requested one Time");
             }
         } catch (error) {
             setOtpError("Failed to send OTP. Please try again.");
+            setIsOtpDisabled(false); // Re-enable the button on error
             toast.error("Failed to send OTP. Please try again.");
         }
     };
@@ -68,7 +67,8 @@ const Request = () => {
         setOtpError('');
         try {
             const response = await axios.post('/api/validate-otp', data);
-            if (response.data.status === 200) {
+            console.log(response.data);
+            if (response.data[0].status === 200) {
                 toast.success("OTP validated successfully! Please set your username and password.");
                 const email = form.getValues('email'); // Get the email value from the form
                 if (email) {
@@ -77,18 +77,14 @@ const Request = () => {
                     form.setValue('username', username); // Set the username field
                 }
                 setStep(2);
-            } else if (response.data.status === 400 && response.data.message === "Invalid OTP") {
-                setOtpError("Invalid OTP. Please try again.");
+            } else if (response.data[0].status === 400 && response.data[0].message === "Invalid OTP") {
                 toast.error("Invalid OTP. Please try again.");
-            } else if (response.data.status === 400 && response.data.message === "OTP expired") {
-                setOtpError("OTP expired. Please request a new OTP.");
+            } else if (response.data[0].status === 400 && response.data[0].message === "OTP expired") {
                 toast.error("OTP expired. Please request a new OTP.");
             } else {
-                setOtpError("Registration failed. Please try again.");
                 toast.error("Registration failed. Please try again.");
             }
         } catch (error) {
-            setOtpError("Registration failed. Please try again.");
             toast.error("Registration failed. Please try again.");
         }
     };
@@ -104,7 +100,7 @@ const Request = () => {
                 name: data.name,
                 password: data.password
             });
-            if (response.data.status === 200) {
+            if (response.data[0].status === 200) {
                 toast.success("Username and password set successfully!");
                 // Optionally reset form or redirect
             } else {
@@ -199,12 +195,19 @@ const Request = () => {
                                 <Button
                                     type="button"
                                     onClick={handleOTP}
-                                    className="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 cursor-pointer transition duration-200"
-                                >Send OTP</Button>
+                                    disabled={isOtpDisabled} // Disable the button if isOtpDisabled is true
+                                    className={`bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 cursor-pointer transition duration-200 ${
+                                        isOtpDisabled ? "opacity-50 cursor-not-allowed" : ""
+                                    }`}
+                                >
+                                    {isOtpDisabled ? "Wait 10 minutes" : "Send OTP"}
+                                </Button>
                                 <Button
                                     type="submit"
                                     className="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 transition duration-200"
-                                >Register</Button>
+                                >
+                                    Register
+                                </Button>
                             </div>
                         </>
                     )}
@@ -237,13 +240,16 @@ const Request = () => {
                             <Button
                                 type="submit"
                                 className="bg-orange-500 text-white py-2 px-4 rounded hover:bg-orange-600 transition duration-200"
-                            >Submit</Button>
+                            >
+                                Submit
+                            </Button>
                         </>
                     )}
                 </form>
             </Form>
+            <ToastContainer />
         </div>
-    )
-}
+    );
+};
 
-export default Request
+export default Request;

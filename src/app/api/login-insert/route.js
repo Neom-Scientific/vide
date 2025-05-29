@@ -4,48 +4,41 @@ import { NextResponse } from "next/server";
 export async function POST(request) {
     const body= await request.json();
     const { username, password } = body;
-    let response = {}
     try{
+        let response = [];
         const userData = await pool.query('SELECT password FROM request_form WHERE username = $1', [username]);
         if (userData.rowCount === 0) {
-            response = {
+            response.push({
                 status: 401,
                 message: 'Username does not exist',
-            };
-            return new NextResponse(response, { status: response.status });
+            });
         }
         const isPasswordValid = userData.rows[0].password === password;
         if (!isPasswordValid) {
-            response = {
+            response.push({
                 status: 401,
                 message: 'Invalid password',
-            };
-            return new NextResponse(response, { status: response.status });
+            });
         }
         const result = await pool.query(
             'INSERT INTO login (username, password) VALUES ($1, $2)',
             [username, password]
         );
         if (result.rowCount > 0) {
-            response = {
+            response.push({
                 status: 200,
                 message: 'Login successful',
-            };
-            return new NextResponse(response, { status: response.status });
+            });
         } else {
-            response = {
+            response.push({
                 status: 500,
                 message: 'Failed to login',
-            };
-            return new NextResponse(response, { status: response.status });
+            });
         }
+        return NextResponse(response);
     }
     catch (error) {
         console.error('Error executing query', error);
-        response = {
-            status: 500,
-            message: 'Internal Server Error',
-        };
-        return new NextResponse(response, { status: response.status });
+        return new NextResponse({error: 'Internal Server Error'}, { status: 500 });
     }
 }

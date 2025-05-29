@@ -5,8 +5,8 @@ import { NextResponse } from "next/server";
 export async function POST(request) {
     const body = await request.json();
     const { email } = body;
-    let response = []
     try {
+        let response = []
         const data = await pool.query('SELECT email FROM request_form')
         const emailExists = data.rows.some(row => row.email === email);
         if (emailExists) {
@@ -51,10 +51,6 @@ export async function POST(request) {
     }
     catch (error) {
         console.error('Error executing query', error);
-        response.push({
-            status: 500,
-            message: 'Internal Server Error',
-        });
-        return NextResponse.json(response);
+        return NextResponse.json({error: 'Internal Server Error'}, { status: 500 });
     }
 }

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(request) {
   try {
+    const response = [];
     const { searchParams } = new URL(request.url);
     const parseList = (param) => {
       const val = searchParams.get(param);
@@ -25,7 +26,10 @@ export async function GET(request) {
       !sample_statuses.length && !sample_indicators.length &&
       !doctor_names.length && !dept_names.length && !from_dates.length && !to_dates.length
     ) {
-      return NextResponse.json({ message: "Please provide at least one search parameter" }, { status: 400 });
+      response.push({
+        status: 400,
+        message: "Please provide at least one search parameter"
+      });
     }
 
     // Validate date range
@@ -34,10 +38,16 @@ export async function GET(request) {
       const toDate = new Date(to_dates[0]);
 
       if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
-        return NextResponse.json({ message: "Invalid date format" }, { status: 400 });
+        response.push({
+          status: 400,
+          message: "Invalid date format"
+        });
       }
       if (fromDate > toDate) {
-        return NextResponse.json({ message: "From date cannot be greater than To date" }, { status: 400 });
+        response.push({
+          status: 400,
+          message: "From date cannot be greater than To date"
+        })
       }
     }
 
@@ -71,10 +81,19 @@ export async function GET(request) {
     const data = await pool.query(query, values);
 
     if (data.rows.length === 0) {
-      return NextResponse.json({ message: "No data found" }, { status: 404 });
+      response.push({
+        status: 404,
+        message: "No data found"
+      });
+    }
+    else {
+      response.push({
+        status: 200,
+        data: data.rows
+      });
     }
 
-    return NextResponse.json({ status: 200, data: data.rows });
+    return NextResponse.json(response);
 
   } catch (error) {
     console.error("Search API Error:", error);

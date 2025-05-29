@@ -60,6 +60,7 @@ export const SampleRegistration = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       hospital_name: '',
+      dept_name: '',
       vial_received: '',
       specimen_quality: '',
       registration_date: currentDate,
@@ -110,6 +111,7 @@ export const SampleRegistration = () => {
   const allTests = [
     'WES',
     'CS',
+    'Clinical Exome',
     'Myeloid',
     'SGS',
     'SolidTumor Panel',
@@ -207,13 +209,13 @@ export const SampleRegistration = () => {
     const allData = form.getValues();
     console.log(allData);
 
-    // const res = await axios.post('/api/store', allData);
-    // if (res.status === 200) {
-    //   toast.success('Sample registered successfully');
-    //   // form.reset();
-    // } else {
-    //   toast.error('Sample registration failed');
-    // }
+    const res = await axios.post('/api/store', allData);
+    if (res.status === 200) {
+      toast.success('Sample registered successfully');
+      form.reset();
+    } else {
+      toast.error('Sample registration failed');
+    }
   }
 
 
@@ -276,20 +278,44 @@ export const SampleRegistration = () => {
       <div className='p-4'>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onFormSubmit)}>
-            <FormField
-              control={form.control}
-              name='hospital_name'
-              render={({ field }) => (
-                <FormItem className='my-2'>
-                  <FormLabel >Hospital Name</FormLabel>
-                  <Input
-                    placeholder='Hospital Name'
-                    className='w-[50%] my-2'
-                    disabled
-                    {...field} />
-                </FormItem>
-              )}
-            />
+            <div className='grid grid-cols-2 gap-10'>
+              <FormField
+                control={form.control}
+                name='hospital_name'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel >Hospital Name</FormLabel>
+                    <Input
+                      placeholder='Hospital Name'
+                      className='border-2 border-orange-300 my-2'
+                      disabled
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+
+              {/* hospital id */}
+              <FormField
+                control={form.control}
+                name='hospital_id'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <div className="flex justify-between items-center">
+                      <FormLabel>Hospital ID</FormLabel>
+                      {form.formState.errors.hospital_id && (
+                        <p className='text-red-500 text-sm'>
+                          {form.formState.errors.hospital_id.message}
+                        </p>
+                      )}
+                    </div>
+                    <Input
+                      placeholder='Hospital ID'
+                      className='my-2 border-2 border-orange-300'
+                      {...field} />
+                  </FormItem>
+                )}
+              />
+            </div>
             <div className='grid grid-cols-3 gap-10'>
               <FormField
                 control={form.control}
@@ -299,7 +325,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Vial Received</FormLabel>
                     <Input
                       placeholder='Vial Received'
-                      className='my-2'
+                      className='border-2 border-orange-300 my-2'
                       {...field} />
                   </FormItem>
                 )}
@@ -320,7 +346,7 @@ export const SampleRegistration = () => {
                     <div className="relative">
                       <Input
                         placeholder='Specimen Quality'
-                        className='my-2'
+                        className='my-2 border-2 border-orange-300'
                         {...field}
                       />
 
@@ -336,7 +362,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Registration Date</FormLabel>
                     <Input
                       type='datetime-local'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       disabled
                       {...field} />
                   </FormItem>
@@ -351,10 +377,10 @@ export const SampleRegistration = () => {
                 name='sample_date'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel>Sample Date</FormLabel>
+                    <FormLabel>Sample Receiving Date and Time</FormLabel>
                     <Input
                       type='datetime-local'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
@@ -375,7 +401,7 @@ export const SampleRegistration = () => {
                     </div>
                     <Input
                       placeholder='Sample Type'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field}
                     />
                   </FormItem>
@@ -399,7 +425,7 @@ export const SampleRegistration = () => {
                       <Input
                         type='file'
                         accept='.pdf'
-                        className='my-2'
+                        className='my-2 border-2 border-orange-300'
                         onChange={e => uploadTrf(e.target.files[0])}
                       />
                       {trfUrl && (
@@ -428,7 +454,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Collection Date Time</FormLabel>
                     <Input
                       type='datetime-local'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
@@ -441,7 +467,7 @@ export const SampleRegistration = () => {
                   <FormItem className='my-2'>
                     <FormLabel>Storage Condition</FormLabel>
                     <select
-                      className=' dark:bg-gray-800 my-2 border rounded-md p-2'
+                      className=' dark:bg-gray-800 my-2  rounded-md p-2 border-2 border-orange-300'
                       {...field}>
                       <option className='dark:text-white' value=''>Select Storage Condition</option>
                       <option className='dark:text-white' value='refrigerated'>Refrigerated</option>
@@ -458,7 +484,7 @@ export const SampleRegistration = () => {
                   <FormItem className='my-2'>
                     <FormLabel>Prority</FormLabel>
                     <select
-                      className=' dark:bg-gray-800 my-2 border rounded-md p-2'
+                      className=' dark:bg-gray-800 my-2  rounded-md p-2 border-2 border-orange-300'
                       {...field}>
                       <option className='dark:text-white' value=''>Select Prority</option>
                       <option className='dark:text-white' value='routine'>Routine</option>
@@ -471,27 +497,21 @@ export const SampleRegistration = () => {
             </div>
 
             <div className='grid grid-cols-3 gap-10'>
-              {/* hospital id */}
+
               <FormField
                 control={form.control}
-                name='hospital_id'
+                name='dept_name'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <div className="flex justify-between items-center">
-                      <FormLabel>Hospital ID</FormLabel>
-                      {form.formState.errors.hospital_id && (
-                        <p className='text-red-500 text-sm'>
-                          {form.formState.errors.hospital_id.message}
-                        </p>
-                      )}
-                    </div>
+                    <FormLabel >Department Name</FormLabel>
                     <Input
-                      placeholder='Hospital ID'
-                      className='my-2'
+                      placeholder='Department Name'
+                      className='border-2 border-orange-300 my-2'
                       {...field} />
                   </FormItem>
                 )}
               />
+
               {/* client id */}
               <FormField
                 control={form.control}
@@ -501,7 +521,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Client ID</FormLabel>
                     <Input
                       placeholder='Client ID'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
@@ -522,7 +542,7 @@ export const SampleRegistration = () => {
                     </div>
                     <Input
                       placeholder='Client Name'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field}
                     />
                   </FormItem>
@@ -547,7 +567,7 @@ export const SampleRegistration = () => {
                     </div>
                     <Input
                       placeholder='Sample ID'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
@@ -571,7 +591,7 @@ export const SampleRegistration = () => {
                     </div>
                     <Input
                       placeholder='Patient Name'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
@@ -585,7 +605,7 @@ export const SampleRegistration = () => {
                     <FormLabel>DOB</FormLabel>
                     <Input
                       type='date'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field} />
                   </FormItem>
                 )}
@@ -599,7 +619,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Age</FormLabel>
                     <Input
                       placeholder='Age'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       disabled
                       {...field} />
                   </FormItem>
@@ -615,7 +635,7 @@ export const SampleRegistration = () => {
                   <FormItem className='my-2'>
                     <FormLabel>Sex</FormLabel>
                     <select
-                      className=' dark:bg-gray-800 my-2 border rounded-md p-2'
+                      className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
                       {...field}>
                       <option className='dark:text-white' value=''>Select Sex</option>
                       <option className='dark:text-white' value='male'>Male</option>
@@ -633,15 +653,13 @@ export const SampleRegistration = () => {
                     <FormLabel>Ethnicity</FormLabel>
                     <Input
                       placeholder='Ethnicity'
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       {...field}
                     />
                   </FormItem>
                 )}
               />
-            </div>
 
-            <div className="grid grid-cols-4 gap-10">
               <FormField
                 control={form.control}
                 name='father_husband_name'
@@ -650,7 +668,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Father/Husband Name</FormLabel>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='Father/Husband Name' />
                   </FormItem>
                 )}
@@ -663,13 +681,14 @@ export const SampleRegistration = () => {
                     <FormLabel>Address</FormLabel>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='Address'
                     />
                   </FormItem>
                 )}
               />
             </div>
+
 
             <div className='grid grid-cols-3 gap-10'>
               <FormField
@@ -680,7 +699,7 @@ export const SampleRegistration = () => {
                     <FormLabel>City</FormLabel>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='City'
                       onBlur={(e) => {
                         get_state_and_country(e.target.value);
@@ -697,7 +716,7 @@ export const SampleRegistration = () => {
                     <FormLabel>State</FormLabel>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='State'
                     />
                   </FormItem>
@@ -711,7 +730,7 @@ export const SampleRegistration = () => {
                     <FormLabel>Country</FormLabel>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='Country'
                     />
                   </FormItem>
@@ -729,27 +748,13 @@ export const SampleRegistration = () => {
                     <FormLabel>Patient's Mobile</FormLabel>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='Mobile'
                     />
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name='docter_mobile'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Doctor's Mobile</FormLabel>
-                    <Input
-                      {...field}
-                      className='my-2'
-                      placeholder='Mobile'
-                    />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}
@@ -766,8 +771,23 @@ export const SampleRegistration = () => {
                     </div>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='Doctor Name'
+                    />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='docter_mobile'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Doctor's Mobile</FormLabel>
+                    <Input
+                      {...field}
+                      className='my-2 border-2 border-orange-300'
+                      placeholder='Mobile'
                     />
                   </FormItem>
                 )}
@@ -778,7 +798,7 @@ export const SampleRegistration = () => {
                 render={({ field }) => (
                   <FormItem className='my-2'>
                     <div className="flex justify-between items-center">
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>Doctor's Email</FormLabel>
                       {form.formState.errors.email && (
                         <p className='text-red-500 text-sm'>
                           {form.formState.errors.email.message}
@@ -787,7 +807,7 @@ export const SampleRegistration = () => {
                     </div>
                     <Input
                       {...field}
-                      className='my-2'
+                      className='my-2 border-2 border-orange-300'
                       placeholder='Email'
                     />
                   </FormItem>
@@ -810,7 +830,7 @@ export const SampleRegistration = () => {
                         <DropdownMenuTrigger asChild>
                           <Button
                             type="button"
-                            className="h-10 bg-gray-800 text-white"
+                            className="h-10 bg-orange-400 hover:bg-orange-500 cursor-pointer text-white"
                           >
                             Add Test
                           </Button>
@@ -846,6 +866,8 @@ export const SampleRegistration = () => {
 
               </div>
 
+
+
               {/* </div> */}
 
               <div>
@@ -864,7 +886,7 @@ export const SampleRegistration = () => {
                             </p>
                           )}
                         </div>
-                        <div className="flex flex-wrap gap-2 min-h-[42px] border rounded-md p-2 dark:bg-gray-800">
+                        <div className="flex flex-wrap gap-2 min-h-[42px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800">
                           {selectedTests.length === 0 && (
                             <span className="text-gray-400 dark:text-white">No test added</span>
                           )}
@@ -892,6 +914,7 @@ export const SampleRegistration = () => {
                     )}
                   />
                 </div>
+
 
                 {/* Remove Test Name Dialog */}
                 <Dialogbox
@@ -922,97 +945,6 @@ export const SampleRegistration = () => {
             />
 
 
-
-
-
-
-            <div className='grid grid-cols-2 gap-10'>
-
-              <FormField
-                control={form.control}
-                name='remarks'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Remarks</FormLabel>
-                    <textarea
-                      placeholder='Remarks'
-                      {...field}
-                      className='my-2 border rounded-md p-2'
-                    >
-
-                    </textarea>
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name='clinical_history'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Clinical History</FormLabel>
-                    <textarea
-                      placeholder='Clinical History'
-                      {...field}
-                      className='my-2 border rounded-md p-2'
-                    >
-                    </textarea>
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className='grid grid-cols-4 gap-10'>
-              <FormField
-                control={form.control}
-                name='repeat_required'
-                render={({ field }) => (
-                  <FormItem className='my-2'>
-                    <FormLabel>Repeat Required</FormLabel>
-                    <select
-                      className=' dark:bg-gray-800 my-2 border rounded-md p-2'
-                      {...field}>
-                      <option className='dark:text-white' value=''>Select Repeat Required</option>
-                      <option className='dark:text-white' value='yes'>Yes</option>
-                      <option className='dark:text-white' value='no'>No</option>
-                    </select>
-                  </FormItem>
-                )}
-              />
-              {repeatRequired === 'yes' && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name='repeat_reason'
-                    render={({ field }) => (
-                      <FormItem className='my-2'>
-                        <FormLabel>Repeat Reason</FormLabel>
-                        <Input
-                          placeholder='Repeat Reason'
-                          className='my-2'
-                          {...field} />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='repeat_date'
-                    render={({ field }) => (
-                      <FormItem className='my-2'>
-                        <FormLabel>Repeat Date</FormLabel>
-                        <Input
-                          type='date'
-                          className='my-2'
-                          {...field} />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-            </div>
-
-
-
             {[
               "Cardio Comprehensive (Screening Test)",
               "Cardio Metabolic Syndrome (Screening Test)",
@@ -1027,7 +959,13 @@ export const SampleRegistration = () => {
                       render={({ field }) => (
                         <FormItem className="my-2">
                           <FormLabel>Systolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input {...field} placeholder="90-200" type="number" min={90} max={200} />
+                          <Input
+                            {...field}
+                            placeholder="90-200"
+                            type="number"
+                            className="my-2 border-2 border-orange-300"
+                            min={90}
+                            max={200} />
                           <p className="text-xs text-gray-500">Value must be between 90-200</p>
                           {form.formState.errors.systolic_bp && (
                             <p className="text-red-500 text-sm">{form.formState.errors.systolic_bp.message}</p>
@@ -1041,8 +979,16 @@ export const SampleRegistration = () => {
                       render={({ field }) => (
                         <FormItem className="my-2">
                           <FormLabel>Diastolic Blood Pressure <span className="text-xs font-normal">(mm Hg)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input {...field} placeholder="60-130" type="number" min={60} max={130} />
-                          <p className="text-xs text-gray-500">Value must be between 60-130</p>
+                          <Input
+                            {...field}
+                            className="my-2 border-2 border-orange-300"
+                            placeholder="60-130"
+                            type="number"
+                            min={60}
+                            max={130} />
+                          <p
+                            className="text-xs text-gray-500"
+                          >Value must be between 60-130</p>
                           {form.formState.errors.diastolic_bp && (
                             <p className="text-red-500 text-sm">{form.formState.errors.diastolic_bp.message}</p>
                           )}
@@ -1055,7 +1001,13 @@ export const SampleRegistration = () => {
                       render={({ field }) => (
                         <FormItem className="my-2">
                           <FormLabel>Total Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input {...field} placeholder="130-320" type="number" min={130} max={320} />
+                          <Input
+                            {...field}
+                            placeholder="130-320"
+                            className="my-2 border-2 border-orange-300"
+                            type="number"
+                            min={130}
+                            max={320} />
                           <p className="text-xs text-gray-500">Value must be between 130 - 320</p>
                           {form.formState.errors.total_cholesterol && (
                             <p className="text-red-500 text-sm">{form.formState.errors.total_cholesterol.message}</p>
@@ -1069,7 +1021,13 @@ export const SampleRegistration = () => {
                       render={({ field }) => (
                         <FormItem className="my-2">
                           <FormLabel>HDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input {...field} placeholder="20-100" type="number" min={20} max={100} />
+                          <Input
+                            {...field}
+                            className="my-2 border-2 border-orange-300"
+                            placeholder="20-100"
+                            type="number"
+                            min={20}
+                            max={100} />
                           <p className="text-xs text-gray-500">Value must be between 20 - 100</p>
                           {form.formState.errors.hdl_cholesterol && (
                             <p className="text-red-500 text-sm">{form.formState.errors.hdl_cholesterol.message}</p>
@@ -1083,7 +1041,13 @@ export const SampleRegistration = () => {
                       render={({ field }) => (
                         <FormItem className="my-2">
                           <FormLabel>LDL Cholesterol <span className="text-xs font-normal">(mg/dL)</span> <span className="text-orange-500">*</span></FormLabel>
-                          <Input {...field} placeholder="30-300" type="number" min={30} max={300} />
+                          <Input
+                            {...field}
+                            className="my-2 border-2 border-orange-300"
+                            placeholder="30-300"
+                            type="number"
+                            min={30}
+                            max={300} />
                           <p className="text-xs text-gray-500">Value must be between 30 - 300</p>
                           {form.formState.errors.ldl_cholesterol && (
                             <p className="text-red-500 text-sm">{form.formState.errors.ldl_cholesterol.message}</p>
@@ -1102,8 +1066,14 @@ export const SampleRegistration = () => {
                         <FormItem className="my-2">
                           <FormLabel>History of Diabetes? <span className="text-orange-500">*</span></FormLabel>
                           <div className="flex gap-2">
-                            <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
-                            <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
+                            <Button
+                              type="button"
+                              variant={field.value === "yes" ? "default" : "outline"}
+                              onClick={() => field.onChange("yes")}>Yes</Button>
+                            <Button
+                              type="button"
+                              variant={field.value === "no" ? "default" : "outline"}
+                              onClick={() => field.onChange("no")}>No</Button>
                           </div>
                           {form.formState.errors.diabetes && (
                             <p className="text-red-500 text-sm">{form.formState.errors.diabetes.message}</p>
@@ -1187,24 +1157,103 @@ export const SampleRegistration = () => {
                 </div>
               )}
 
-            <div className="my-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
-              <div className="font-semibold mb-1">Note</div>
-              <ul className="list-disc pl-5 text-sm">
-                <li>Checks for missing/invalid inputs before submission</li>
-                <li>Warns about duplicate sample entries or patient records</li>
-                <li>Who accessed, processed, or modified the sample data</li>
-              </ul>
+
+
+            <div className='grid grid-cols-2 gap-10'>
+
+              <FormField
+                control={form.control}
+                name='remarks'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Remarks</FormLabel>
+                    <textarea
+                      placeholder='Remarks'
+                      {...field}
+                      className='my-2 border-2 border-orange-300 rounded-md p-2'
+                    >
+
+                    </textarea>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name='clinical_history'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Clinical History</FormLabel>
+                    <textarea
+                      placeholder='Clinical History'
+                      {...field}
+                      className='my-2 border-2 border-orange-300 rounded-md p-2'
+                    >
+                    </textarea>
+                  </FormItem>
+                )}
+              />
             </div>
+
+            <div className='grid grid-cols-4 gap-10'>
+              <FormField
+                control={form.control}
+                name='repeat_required'
+                render={({ field }) => (
+                  <FormItem className='my-2'>
+                    <FormLabel>Repeat Required</FormLabel>
+                    <select
+                      className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
+                      {...field}>
+                      <option className='dark:text-white' value=''>Select Repeat Required</option>
+                      <option className='dark:text-white' value='yes'>Yes</option>
+                      <option className='dark:text-white' value='no'>No</option>
+                    </select>
+                  </FormItem>
+                )}
+              />
+              {repeatRequired === 'yes' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name='repeat_reason'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Repeat Reason</FormLabel>
+                        <Input
+                          placeholder='Repeat Reason'
+                          className='my-2 border-2 border-orange-300'
+                          {...field} />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name='repeat_date'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Repeat Date</FormLabel>
+                        <Input
+                          type='date'
+                          className='my-2 border-2 border-orange-300'
+                          {...field} />
+                      </FormItem>
+                    )}
+                  />
+                </>
+              )}
+            </div>
+
 
             <Button
               type='submit'
-              className='bg-orange-500 text-white hover:bg-orange-600 my-4'
+              className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4'
             >
               Submit
             </Button>
             <Button
               type='reset'
-              className='bg-gray-500 text-white hover:bg-gray-600 my-4 ml-2'
+              className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'
               onClick={() => {
                 form.reset();
               }}

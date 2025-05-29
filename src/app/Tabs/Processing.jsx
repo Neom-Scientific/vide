@@ -31,6 +31,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+import { useDispatch } from "react-redux";
+import { setActiveTab } from "@/lib/redux/slices/tabslice";
 
 
 const Processing = () => {
@@ -101,9 +103,10 @@ const Processing = () => {
   const allTests = [
     'WES',
     'CS',
+    'Clinical Exome',
     'Myeloid',
     'Cardio',
-    'SHS',
+    'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -140,7 +143,7 @@ const Processing = () => {
       docter_mobile: '8888888888',
       docter_name: 'Dr. Smith',
       email: 'john@example.com',
-      test_name: 'WES,Myeloid',
+      test_name: 'Myeloid',
       remarks: 'N/A',
       clinical_history: 'None',
       repeat_required: 'No',
@@ -170,6 +173,8 @@ const Processing = () => {
   const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
   const [getTheTestNames, setGetTheTestNames] = useState([]);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
+  const [selectedLibPrepTestName, setSelectedLibPrepTestName] = useState(null);
+  const dispatch = useDispatch();
 
   // Build columns for tanstack table
   const columns = [
@@ -211,11 +216,36 @@ const Processing = () => {
             cell: info => {
               const isChecked = info.getValue() === "Yes";
               const rowIdx = info.row.index;
+              const currentTestName = info.row.original.test_name;
+
               return (
                 <Checkbox
                   checked={isChecked}
-                  disabled={isChecked}
                   onCheckedChange={checked => {
+                    // Validate test_name before allowing selection
+                    if (checked) {
+                      if (
+                        selectedLibPrepTestName &&
+                        selectedLibPrepTestName !== currentTestName
+                      ) {
+                        toast.warning(
+                          `You can only select Library Prep for rows with the same test name: ${selectedLibPrepTestName}`
+                        );
+                        return;
+                      }
+
+                      // Set the selected test_name if valid
+                      setSelectedLibPrepTestName(currentTestName);
+                    } else {
+                      // Clear the selected test_name if no rows are selected
+                      const remainingRows = tableRows.filter(
+                        row => row.lib_prep === "Yes" && row.test_name === currentTestName
+                      );
+                      if (remainingRows.length === 1) {
+                        setSelectedLibPrepTestName(null);
+                      }
+                    }
+
                     // Update the state to show/hide the columns
                     setShowLibPrepColumns(checked);
 
@@ -227,16 +257,10 @@ const Processing = () => {
                           : row
                       )
                     );
-                    if(checked){
-                      setSelectedSampleIndicator(col.key);
-                    }
-                    else{
-                      setSelectedSampleIndicator('');
-                    }
                   }}
                 />
               );
-            }
+            },
           };
         }
         return {
@@ -247,7 +271,7 @@ const Processing = () => {
             return (
               <Checkbox
                 checked={isChecked}
-                disabled={isChecked}
+                // disabled={isChecked}
                 onCheckedChange={checked => {
                   const testNames = info.row.original.test_name;
                   setGetTheTestNames(testNames.split(',').map(name => name.trim()));
@@ -265,70 +289,7 @@ const Processing = () => {
           },
         };
       }
-      // Default: render as text
-      if ([
-        "Qubit_hs",
-        "conc/rxn",
-        "barcode",
-        "i5_index_reverse",
-        "i7_index",
-        "lib_qubit",
-        "nM_conc",
-        "volumefromStock_lib",
-        "nfw_volu_for_2nM",
-        "total_vol_for_2nM",
-      ].includes(col.key)) {
-        return {
-          accessorKey: col.key,
-          header: col.label,
-          cell: info => {
-            const value = info.getValue() ?? ""; // Current value from the state
-            const rowIndex = info.row.index;
-            const columnId = info.column.id;
-        
-            // Check if the row is eligible for editing
-            const testNames = info.row.original.test_name?.split(',').map(t => t.trim());
-            const isLibPrepMyeloid =
-              info.row.original.lib_prep === "Yes" && testNames.includes("Myeloid");
-        
-            if (!isLibPrepMyeloid) return value;
-        
-            return (
-              <Input
-                className="border rounded p-1 text-xs w-full"
-                value={value}
-                type="text"
-                placeholder={`Enter ${info.column.columnDef.header}`}
-                name={columnId}
-                onChange={async (e) => {
-                  const newValue = e.target.value;
-        
-                  // Update the local state
-                  info.table.options.meta?.updateData(rowIndex, columnId, newValue);
-        
-                  // Prepare the payload for the API
-                  const payload = {
-                    sample_id: info.row.original.sample_id,
-                    sample_indicator: selectedSampleIndicator,
-                    test_name: getTheTestNames.length > 0 ? getTheTestNames.join(',') : info.row.original.test_name,
-                    [columnId]: newValue, // Update only the changed column
-                  };
-        
-                  try {
-                    // Make the API call
-                    const response = await axios.post('/api/update-sample-indicator', payload);
-                    toast.success("Value updated successfully!");
-                    console.log("API Response:", response.data);
-                  } catch (error) {
-                    console.error("Error updating value:", error);
-                    toast.error("An error occurred while updating the value.");
-                  }
-                }}
-              />
-            );
-          }
-        }
-      }
+
       return {
         accessorKey: col.key,
         header: col.label,
@@ -359,23 +320,6 @@ const Processing = () => {
   );
 
   // Dynamically update column visibility when `showLibPrepColumns` changes
-  useEffect(() => {
-    setColumnVisibility(prev => ({
-      ...prev,
-      Qubit_hs: showLibPrepColumns,
-      'conc/rxn': showLibPrepColumns,
-      barcode: showLibPrepColumns,
-      i5_index_reverse: showLibPrepColumns,
-      i7_index: showLibPrepColumns,
-      lib_qubit: showLibPrepColumns,
-      nM_conc: showLibPrepColumns,
-      volumefromStock_lib: showLibPrepColumns,
-      nfw_volu_for_2nM: showLibPrepColumns,
-      total_vol_for_2nM: showLibPrepColumns,
-      under_seq: !showLibPrepColumns,
-      seq_completed: !showLibPrepColumns,
-    }));
-  }, [showLibPrepColumns]);
 
   const [sorting, setSorting] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -396,15 +340,15 @@ const Processing = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
-  updateData: (rowIndex, columnId, value) => {
-    setTableRows(prev =>
-      prev.map((row, idx) => {
-        if (idx !== rowIndex) return row;
-        return { ...row, [columnId]: value };
-      })
-    );
-  },
-},
+      updateData: (rowIndex, columnId, value) => {
+        setTableRows(prev =>
+          prev.map((row, idx) => {
+            if (idx !== rowIndex) return row;
+            return { ...row, [columnId]: value };
+          })
+        );
+      },
+    },
   });
 
   const handlesubmit = async () => {
@@ -424,24 +368,52 @@ const Processing = () => {
 
     try {
       const response = await axios.get(`/api/search`, { params: data });
-      // Axios automatically parses JSON, so use response.data
-      setTableRows(response.data.data);
-      // toast.success("Data fetched successfully!");
+      console.log(response.data);
+      if (response.data[0].status === 200) {
+        setTableRows(response.data[0].data);
+      }
+      if (response.data[0].status === 400) {
+        toast.error(response.data[0].message || "No data found for the given filters.");
+        setTableRows([]);
+        return;
+      }
+      if (response.data[0].status === 404) {
+        toast.error(response.data[0].message || "No data found for the given filters.");
+        setTableRows([]);
+        return;
+      }
+      // setTableRows(response.data.data);
     } catch (error) {
-      // Axios error handling
       if (error.response) {
-        // Server responded with a status other than 2xx
         setTableRows([]);
         toast.error(error.response.data.message || "An error occurred while fetching the data.");
-      } else {
-        // Network error or other
-        setTableRows([]);
-        toast.error(error.message || "An unknown error occurred.");
       }
       console.error("Error fetching data:", error);
     }
 
     console.log("Form submitted with filters:", data);
+  };
+
+  // Check if any row has lib_prep set to "Yes"
+  const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
+
+  const handleSendForLibraryPreparation = () => {
+    const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
+    if (checkedRows.length === 0) {
+      toast.warning("No rows selected for Library Preparation.");
+      return;
+    }
+    
+    if (localStorage.getItem("libraryPreparationData")) {
+      toast.warning("Some rows are already selected for Library Preparation.");
+      return;
+    }
+
+    // Save the checked rows to localStorage or a shared state
+    localStorage.setItem("libraryPreparationData", JSON.stringify(checkedRows));
+
+    // Navigate to the LibraryPreparation tab
+    dispatch(setActiveTab("library-preparation"));
   };
 
   return (
@@ -450,22 +422,22 @@ const Processing = () => {
 
       {/* Top Filters */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-5 gap-4 mb-2">
-          <div>
+        <div className="flex gap-4 mb-2">
+          <div className="me-5">
             <label className="block font-semibold mb-1">Sample id</label>
             <Input
               name='sample_id'
               placeholder="Sample id"
-              className="my-1"
+              className="my-1 w-[150px] border-2 border-orange-300"
             />
           </div>
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1 whitespace-nowrap">Test name</label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
-                  className="h-10 bg-gray-800 text-white"
+                  className="h-10 bg-gray-700 hover:bg-gray-800 cursor-pointer text-white"
                 >
                   Add Test
                 </Button>
@@ -478,12 +450,12 @@ const Processing = () => {
                       key={test}
                       onClick={() => {
                         if (selectedTestNames.includes(test)) {
-                          toast.warning(`${test} is already added`);
+                          // toast.warning(`${test} is already added`);
                           return;
                         }
                         const updated = [...selectedTestNames, test];
                         setSelectedTestNames(updated);
-                        toast.success(`${test} added`);
+                        // toast.success(`${test} added`);
                       }}
                     >
                       <span className="text-sm">{test}</span>
@@ -494,7 +466,7 @@ const Processing = () => {
           </div>
           <div>
             <label className="block font-semibold mb-1">Selected Test Name</label>
-            <div className="flex flex-wrap gap-2 min-h-[42px] border rounded-md p-2 dark:bg-gray-800 ml-2" style={{ flex: 1 }}>
+            <div className="flex w-[400px] border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 ml-2" style={{ flex: 1 }}>
               {selectedTestNames.length === 0 && (
                 <span className="text-gray-400 dark:text-white">No test added</span>
               )}
@@ -519,22 +491,22 @@ const Processing = () => {
               ))}
             </div>
           </div>
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1">Sample Status</label>
             <select
               name='sample_status'
-              className="w-full border rounded-md p-2 dark:bg-gray-800"
+              className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
               <option value="processing">Under Processing</option>
               <option value="reporting">Ready for Reporting</option>
             </select>
           </div>
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1">Sample Indicator</label>
             <select
               name='sample_indicator'
-              className="w-full border rounded-md p-2 dark:bg-gray-800"
+              className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
               onChange={e => {
                 const options = Array.from(e.target.selectedOptions, option => option.value);
                 setSelectedSampleIndicator(options);
@@ -548,57 +520,59 @@ const Processing = () => {
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-4 mb-2">
-          <div>
-            <label className="block font-semibold mb-1 mt-2">From Date</label>
-            <Input
-              name='from_date'
-              type="date"
-              className="my-1"
-            />
-          </div>
-          <div>
-            <label className="block font-semibold mb-1 mt-2">To Date</label>
-            <Input
-              name='to_date'
-              type="date"
-              className="my-1"
-            />
+        <div className="flex gap-4 mb-2">
+          <div className="flex gap-4 me-5">
+            <div className="me-5">
+              <label className="block font-semibold mb-1 mt-2">From Date</label>
+              <Input
+                name='from_date'
+                type="date"
+                className="my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1 mt-2">To Date</label>
+              <Input
+                name='to_date'
+                type="date"
+                className="my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              />
+            </div>
           </div>
 
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Doctor's Name</label>
             <Input
               name='doctor_name'
               placeholder="Doctor's Name"
-              className="my-1"
+              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
 
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Dept. Name</label>
             <Input
               name='dept_name'
               placeholder="Dept. Name"
-              className="my-1"
+              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+            />
+          </div>
+          <div className="me-5">
+            <label className="block font-semibold mb-1 mt-2">Run id</label>
+            <Input
+              name='run_id'
+              placeholder="Run id"
+              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
         </div>
         <div className='grid grid-cols-4 gap-4 mb-2 '>
-          <div>
-            <label className="block font-semibold mb-1">Run id</label>
-            <Input
-              name='run_id'
-              placeholder="Run id"
-              className="my-1"
-            />
-          </div>
 
           <div>
             <Button
               type='submit'
               onClick={() => { handlesubmit() }}
-              className="mt-6 bg-gray-700 text-white hover:bg-gray-800 w-full">
+              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-full">
               Retrieve
             </Button>
           </div>
@@ -662,18 +636,6 @@ const Processing = () => {
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
-                    {/* Submit Button for rows where lib_prep columns are visible
-                    {showLibPrepColumns && (
-                      <TableCell colSpan={1}>
-                        <Button
-                          type="button"
-                          onClick={handleLibPrepMyeloidSubmit}
-                          className="bg-orange-500 text-white hover:bg-orange-600 w-full"
-                        >
-                          Submit
-                        </Button>
-                      </TableCell>
-                    )} */}
                   </TableRow>
                 ))
               ) : (
@@ -687,7 +649,27 @@ const Processing = () => {
           </Table>
         </div>
       </div>
-      <Button className="bg-gray-700 mt-5 text-white hover:bg-gray-800 min-w-[120px] h-12">Save</Button>
+      <div className="flex justify-between items-center mb-4">
+        <Button
+          className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12"
+          onClick={() => {
+            // Save logic here
+            console.log("Save clicked");
+          }}
+        >
+          Save
+        </Button>
+
+        {isAnyLibPrepChecked && (
+          <Button
+            className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (isAnyLibPrepChecked ? "" : "opacity-50")}
+            onClick={handleSendForLibraryPreparation}
+          >
+            Send for Library Preparation
+          </Button>
+        )}
+
+      </div>
       <ToastContainer />
 
     </div>

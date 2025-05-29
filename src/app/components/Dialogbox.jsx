@@ -27,8 +27,6 @@ const Dialogbox = ({
   onRemove,
   sampleIndicator
 }) => {
-  console.log('sampleIndicator:', sampleIndicator);
-  console.log('testName:', testName);
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
