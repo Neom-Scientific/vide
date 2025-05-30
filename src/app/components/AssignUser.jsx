@@ -116,32 +116,6 @@ const AssignUser = () => {
         </Table>
         <ToastContainer/>
       </div>
-      {/* <table className="table-auto border-collapse border border-gray-400 w-full mt-4">
-        <thead>
-          <tr>
-            <th className="border border-gray-400 px-4 py-2">ID</th>
-            <th className="border border-gray-400 px-4 py-2">Name</th>
-            <th className="border border-gray-400 px-4 py-2">Username</th>
-            <th className="border border-gray-400 px-4 py-2">Email</th>
-            <th className="border border-gray-400 px-4 py-2">Phone No</th>
-            <th className="border border-gray-400 px-4 py-2">Hospital Name</th>
-            <th className="border border-gray-400 px-4 py-2">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {users.map((user) => (
-            <tr key={user.id}>
-              <td className="border border-gray-400 px-4 py-2">{user.id}</td>
-              <td className="border border-gray-400 px-4 py-2">{user.name}</td>
-              <td className="border border-gray-400 px-4 py-2">{user.username}</td>
-              <td className="border border-gray-400 px-4 py-2">{user.email}</td>
-              <td className="border border-gray-400 px-4 py-2">{user.phone_no}</td>
-              <td className="border border-gray-400 px-4 py-2">{user.hospital_name}</td>
-              <td className="border border-gray-400 px-4 py-2">{user.status}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table> */}
     </div>
   );
 };

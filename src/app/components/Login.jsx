@@ -4,16 +4,20 @@ import { Input } from '@/components/ui/input'
 import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { ToastContainer } from 'react-toastify'
+import { toast, ToastContainer } from 'react-toastify'
 import { z } from "zod"
 import { FaEye, FaEyeSlash } from "react-icons/fa"
+import axios from 'axios'
+import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
 
 const formSchema = z.object({
-   username: z.string().min(1, "Username is required"),
+    username: z.string().min(1, "Username is required"),
     password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
 const Login = () => {
+    const router = useRouter();
     const [passwordVisible, setPasswordVisible] = useState(false);
 
     const form = useForm({
@@ -25,8 +29,25 @@ const Login = () => {
     });
 
     const onSubmit = async (data) => {
-        // Handle login logic here
         console.log(data)
+        try {
+            const response = await axios.post('/api/login-insert', data);
+            if (response.data[0].status === 200) {
+                toast.success(response.data[0].message);
+                console.log(response.data[0].data);
+                Cookies.set('user', JSON.stringify(response.data[0].data), { expires: 7 }); 
+                router.push('/');
+            }
+            else if (response.data[0].status === 401) {
+                toast.error(response.data[0].message);
+            }
+            else {
+                toast.error('Login failed, please try again');
+            }
+        }
+        catch (error) {
+            console.error('Error during login:', error);
+        }
     }
 
     return (

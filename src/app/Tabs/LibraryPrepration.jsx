@@ -35,36 +35,9 @@ import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 
 const LibraryPrepration = () => {
-  const [message, setMessage] = useState(0); // State for displaying a message
-  const [tableRows, setTableRows] = useState([]); // Initialize with an empty array
-  const [testName, setTestName] = useState(""); // State for test name
-  const dispatch = useDispatch();
-
-  useEffect(() => {
-    // Access localStorage only on the client side
-    const rows = localStorage.getItem('libraryPreparationData')
-      ? JSON.parse(localStorage.getItem('libraryPreparationData'))
-      : []; // If there is no data in localStorage, initialize with an empty array
-
-    if (!rows || rows.length === 0) {
-      setMessage(1);
-      return;
-    } else {
-      setMessage(""); // Clear the message if data is available
-    }
-
-    // console.log('rows', rows[0].test_name);
-    setTestName(rows[0].test_name); // Get the test name from the first row if available
-
-
-    const updateRows = rows.map(row => ({
-      ...row,
-      total_vol_for_2nM: 10 // Ensure total_vol_for_2nM is set to 10 for all rows
-    }));
-    // If no data in localStorage, initialize with an empty array
-    setTableRows(updateRows); // Set the rows state
-  }, []); // Run only once on component mount
-
+  const [message, setMessage] = useState(0);
+  const [tableRows, setTableRows] = useState([]);
+  const [testName, setTestName] = useState("");
   const [sorting, setSorting] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
   const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
@@ -122,50 +95,53 @@ const LibraryPrepration = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
-    { key: 'Qubit_hs', label: 'Qubit HS' },
     { key: 'conc_rxn', label: 'conc/rxn' },
     { key: 'barcode', label: 'Barcode' },
     { key: 'i5_index_reverse', label: 'i5 (reverse)' },
+    { key: 'i5_index_forward', label: 'i5 (forward)' },
     { key: 'i7_index', label: 'i7 index' },
-    { key: 'size', label: 'Size' },
+    { key: 'size', label: 'Size (bp)' },
     { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'nM_conc', label: 'nM conc' },
-    { key: 'volumefromStock_lib', label: 'Volume from stock library for 2nM' },
+    { key: 'lib_vol_for_2nM', label: 'Library Volume for 2nM' },
     { key: 'nfw_volu_for_2nM', label: 'NFW Volume For 2nM' },
     { key: 'total_vol_for_2nM', label: 'Total Volume For 2nM' },
-    { key: 'Qubit_dna_hs', label: 'Qubit DNA HS' },
+    { key: 'Qubit_dna', label: 'Qubit DNA' },
     { key: 'per_rxn_gdna', label: 'Per Rxn gDNA' },
     { key: 'volume', label: 'Volume' },
     { key: 'gdna_volume_3x', label: 'gDNA Volume (3X)' },
     { key: 'nfw', label: 'NFW (3x)' },
     { key: 'plate_designation', label: 'Plate Designation' },
-    { key: 'well', label: 'Well' },
+    { key: 'well', label: 'Well No.' },
     { key: 'qubit_lib_qc_ng_ul', label: 'Qubit Library QC (ng/ul)' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb' },
     { key: 'gb_per_sample', label: 'GB per Sample' },
+    { key: 'sample_volume', label: 'Sample Volume' },
+    { key: 'pooling_volume', label: 'Pooling Volume' },
+    { key: 'pool_conc', label: 'Pooling Conc (ng/ul)' },
+    { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
   ];
 
-  const columns = useMemo(() => {
-    // Define the defaultVisible array based on testName
-    let defaultVisible = [];
+  const getDefaultVisible = (testName) => {
     if (testName === "Myeloid") {
-      defaultVisible = [
+      return [
         "sno",
         "sample_id",
         "registration_date",
         "test_name",
         "client_name",
         "sample_type",
-        "Qubit_hs",
+        "Qubit_dna",
         "conc_rxn",
         "barcode",
+        "i5_index_forward",
         "i5_index_reverse",
         "i7_index",
         "size",
         "lib_qubit",
         "nM_conc",
-        "volumefromStock_lib",
+        "lib_vol_for_2nM",
         "nfw_volu_for_2nM",
         "total_vol_for_2nM",
       ];
@@ -177,13 +153,13 @@ const LibraryPrepration = () => {
       testName === "Cardio Metabolic Syndrome (Screening Test)" ||
       testName === "Cardio Comprehensive Myopathy"
     ) {
-      defaultVisible = [
+      return [
         "sno",
         "sample_id",
         "registration_date",
         "test_name",
         "client_name",
-        "Qubit_dna_hs",
+        "Qubit_dna",
         "per_rxn_gdna",
         "volume",
         "gdna_volume_3x",
@@ -195,11 +171,91 @@ const LibraryPrepration = () => {
         "qubit_lib_qc_ng_ul",
         "stock_ng_ul",
         "lib_vol_for_hyb",
-        "gb_per_sample"
+        "gb_per_sample",
+      ];
+    } else if (testName === "SGS" || testName === "HLA") {
+      return [
+        "sno",
+        "sample_id",
+        "registration_date",
+        "test_name",
+        "client_name",
+        "Qubit_dna",
+        "sample_volume",
+        "well",
+        "i7_index",
+        "qubit_lib_qc_ng_ul",
+        "pooling_volume",
+        "pool_conc",
+        "size",
+        "nM_conc",
+        "one_tenth_of_nm_conc",
+        "total_vol_for_2nM",
+        "lib_vol_for_2nM",
+        "nfw_volu_for_2nM",
       ];
     }
+    return [];
+  };
+  const [columnVisibility, setColumnVisibility] = useState(() => {
+    const defaultVisible = getDefaultVisible(testName);
+    return allColumns.reduce((acc, col) => {
+      acc[col.key] = defaultVisible.includes(col.key); // Default visibility for columns in defaultVisible
+      return acc;
+    }, {});
+  });
 
-    // Reorder columns based on defaultVisible
+  // Define defaultVisible based on testName
+
+
+  // Initialize columnVisibility state
+
+
+  useEffect(() => {
+    const rows = localStorage.getItem('libraryPreparationData')
+      ? JSON.parse(localStorage.getItem('libraryPreparationData'))
+      : [];
+
+    if (!rows || rows.length === 0) {
+      setMessage(1);
+      return;
+    } else {
+      setMessage("");
+    }
+
+    setTestName(rows[0].test_name);
+
+    const updateRows = rows.map(row => ({
+      ...row
+    }));
+    setTableRows(updateRows);
+
+    const defaultVisible = getDefaultVisible(rows[0].test_name);
+    const visibleColumns = defaultVisible.reduce((acc, key) => {
+      acc[key] = true;
+      return acc;
+    }, {});
+
+    allColumns.forEach((col) => {
+      if (!visibleColumns.hasOwnProperty(col.key)) {
+        visibleColumns[col.key] = columnVisibility[col.key] || false; // Preserve user selection
+      }
+    });
+
+    setColumnVisibility(prev => {
+      const isEqual = Object.keys(visibleColumns).every(
+        key => prev[key] === visibleColumns[key]
+      );
+      return isEqual ? prev : visibleColumns;
+    });
+  }, [testName]);
+
+
+
+  const columns = useMemo(() => {
+    // Dynamically derive defaultVisible based on testName
+    const defaultVisible = getDefaultVisible(testName);
+
     const reorderedColumns = defaultVisible.map((key) => {
       const column = allColumns.find((col) => col.key === key);
       if (column) {
@@ -207,7 +263,30 @@ const LibraryPrepration = () => {
           accessorKey: column.key,
           header: column.label,
           cell: (info) => {
-            // Use InputCell for specific columns
+            if (column.key === "registration_date") {
+              // Format the registration_date
+              const value = info.getValue();
+              if (!value) return ""; // Handle empty value
+              const date = new Date(value);
+              if (isNaN(date)) return value;
+              // Format: YYYY-MM-DD HH:mm
+              const yyyy = date.getFullYear();
+              const mm = String(date.getMonth() + 1).padStart(2, '0');
+              const dd = String(date.getDate()).padStart(2, '0');
+              const hh = String(date.getHours()).padStart(2, '0');
+              const min = String(date.getMinutes()).padStart(2, '0');
+              return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            }
+
+            if (
+              column.key === "sno" ||
+              column.key === "sample_id" ||
+              column.key === "test_name" ||
+              column.key === "client_name" ||
+              column.key === "sample_type"
+            ) {
+              return <span>{info.getValue()}</span> || "";
+            }
 
             return (
               <InputCell
@@ -217,9 +296,7 @@ const LibraryPrepration = () => {
                 updateData={table.options.meta.updateData}
               />
             );
-          }
-          // return info.getValue() || "";
-          // },
+          },
         };
       }
       return null;
@@ -247,8 +324,6 @@ const LibraryPrepration = () => {
     ];
   }, [testName, allColumns]);
 
-  const [columnVisibility, setColumnVisibility] = useState({});
-
   useEffect(() => {
     let defaultVisible = [];
     if (testName === "Myeloid") {
@@ -259,15 +334,16 @@ const LibraryPrepration = () => {
         "test_name",
         "client_name",
         "sample_type",
-        "Qubit_hs",
+        "Qubit_dna",
         "conc_rxn",
         "barcode",
+        "i5_index_forward",
         "i5_index_reverse",
         "i7_index",
         "size",
         "lib_qubit",
         "nM_conc",
-        "volumefromStock_lib",
+        "lib_vol_for_2nM",
         "nfw_volu_for_2nM",
         "total_vol_for_2nM",
       ];
@@ -285,7 +361,7 @@ const LibraryPrepration = () => {
         "registration_date",
         "test_name",
         "client_name",
-        "Qubit_dna_hs",
+        "Qubit_dna",
         "per_rxn_gdna",
         "volume",
         "gdna_volume_3x",
@@ -298,6 +374,28 @@ const LibraryPrepration = () => {
         "stock_ng_ul",
         "lib_vol_for_hyb",
         "gb_per_sample"
+      ];
+    }
+    else if (testName === "SGS" || testName === 'HLA') {
+      defaultVisible = [
+        "sno",
+        "sample_id",
+        "registration_date",
+        "test_name",
+        "client_name",
+        "Qubit_dna",
+        "well",
+        "i7_index",
+        "sample_volume",
+        "qubit_lib_qc_ng_ul",
+        "pooling_volume",
+        "pool_conc",
+        "size",
+        "nM_conc",
+        "one_tenth_of_nm_conc",
+        "total_vol_for_2nM",
+        "lib_vol_for_2nM",
+        "nfw_volu_for_2nM",
       ];
     }
 
@@ -331,7 +429,7 @@ const LibraryPrepration = () => {
       rowSelection,
     },
     onSortingChange: setSorting,
-    onColumnVisibilityChange: setColumnVisibility, // Keep this handler to sync visibility changes
+    onColumnVisibilityChange: setColumnVisibility, // Sync visibility changes
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -348,36 +446,47 @@ const LibraryPrepration = () => {
 
             // Apply formulas dynamically
             const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
-            const total_vol_for_2nM = (parseFloat(updatedRow.total_vol_for_2nM)) || 10;
+            const total_vol_for_2nM = parseFloat(updatedRow.total_vol_for_2nM) || 0;
+            const lib_vol_for_2nM = parseFloat(updatedRow.lib_vol_for_2nM) || 0;
+            const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
+            const Qubit_dna_hs = parseFloat(updatedRow.Qubit_dna_hs) || 0;
+            const volume = parseFloat(updatedRow.volume) || 0;
+            const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
+            const one_tenth_of_nm_conc = parseFloat(updatedRow.one_tenth_of_nm_conc) || 0;
             const size = parseFloat(updatedRow.size) || 0;
+            const nM_conc = parseFloat(updatedRow.nM_conc) || 0;
 
             if (columnId === "lib_qubit" || columnId === "total_vol_for_2nM") {
               // Calculate nM_conc
               // get the value of nM-conc till 8 decimal places
               updatedRow.nM_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : "";
 
-              // Calculate volumefromStock_lib
+              // Calculate lib_vol_for_2nM
               // round to 2 decimal places
               updatedRow.nM_conc = parseFloat(updatedRow.nM_conc).toFixed(2);
               const nM_conc = parseFloat(updatedRow.nM_conc) || 0;
-              updatedRow.volumefromStock_lib =
+              updatedRow.lib_vol_for_2nM =
                 nM_conc > 0 ? (Math.round(((2.5 * total_vol_for_2nM) / nM_conc) * 100) / 100) : "";
 
               // Calculate nfw_volu_for_2nM
-              const volumefromStock_lib = parseFloat(updatedRow.volumefromStock_lib) || 0;
+              const lib_vol_for_2nM = parseFloat(updatedRow.lib_vol_for_2nM) || 0;
               updatedRow.nfw_volu_for_2nM =
-                total_vol_for_2nM > 0 ? total_vol_for_2nM - volumefromStock_lib : "";
-
-
+                total_vol_for_2nM > 0 ? total_vol_for_2nM - lib_vol_for_2nM : "";
             }
 
-            const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
-            const Qubit_dna_hs = parseFloat(updatedRow.Qubit_dna_hs) || 0;
-            const volume = parseFloat(updatedRow.volume) || 0;
-            const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
-            // const stock_ng_ul = parseFloat(
-            //   columnId === "stock_ng_ul" ? value : updatedRow.stock_ng_ul
-            // ) || 0;
+
+
+
+            if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
+              // calculate 2nM
+              updatedRow.nM_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+            }
+
+            if (columnId === "size") {
+              console.log('nM_conc:', updatedRow.nM_conc);
+              updatedRow.one_tenth_of_nm_conc = nM_conc > 0 ? (parseFloat((nM_conc / 10).toFixed(2))) : "";
+              console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
+            }
 
             // Apply formulas dynamically
             if (columnId === "per_rxn_gdna" || columnId === "Qubit_dna_hs") {
@@ -405,6 +514,34 @@ const LibraryPrepration = () => {
               console.log('lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
             }
 
+            if (columnId === "qubit_lib_qc_ng_ul") {
+              // calculate pooling_volume
+              updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
+            }
+
+            if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
+              updatedRow.nM_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+            }
+
+            // Ensure one_tenth_of_nm_conc is calculated whenever nM_conc is updated
+            if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
+              updatedRow.one_tenth_of_nm_conc = updatedRow.nM_conc > 0 ? (parseFloat((updatedRow.nM_conc / 10).toFixed(2))) : "";
+              console.log('nM_conc:', updatedRow.nM_conc);
+              console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
+            }
+
+            if (columnId === "one_tenth_of_nm_conc" || columnId === "lib_vol_for_2nM") {
+              // calculate total_vol_for_2nM
+              updatedRow.total_vol_for_2nM = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nM/2).toFixed(2) : "";
+              updatedRow.nfw_volu_for_2nM = total_vol_for_2nM > 0 ? (updatedRow.total_vol_for_2nM - updatedRow.lib_vol_for_2nM).toFixed(2) : "";
+
+            }
+            
+            if (columnId === "total_vol_for_2nM") {
+            // calculate nfw_volu_for_2nM
+            updatedRow.nfw_volu_for_2nM = total_vol_for_2nM > 0 ? (total_vol_for_2nM - lib_vol_for_2nM).toFixed(2) : "";
+            }
+            
             return updatedRow;
           })
         );
@@ -432,6 +569,9 @@ const LibraryPrepration = () => {
         localStorage.removeItem('libraryPreparationData');
         window.location.reload(); // Reload the page to reflect changes
       }
+      if(response.data[0].status === 400) {
+        toast.error(response.data[0].message);
+      }
     } catch (error) {
       console.error("Error updating values:", error);
       toast.error("An error occurred while updating the values.");
@@ -453,7 +593,7 @@ const LibraryPrepration = () => {
 
     return (
       <Input
-        className="border rounded p-1 text-xs w-full"
+        className="border rounded p-1 text-xs w-[100px`]"
         value={value} // Ensure value is always defined
         type="text"
         placeholder={`Enter ${columnId}`}
@@ -484,7 +624,12 @@ const LibraryPrepration = () => {
                       onCheckedChange={(value) => {
                         setColumnVisibility((prev) => ({
                           ...prev,
-                          [column.id]: value, // Update the visibility state for the selected column
+                          [column.id]: value, // Toggle visibility for the selected column
+                        }));
+
+                        table.setColumnVisibility((prev) => ({
+                          ...prev,
+                          [column.id]: value, // Sync with the table's internal state
                         }));
                       }}
                     >
@@ -494,7 +639,7 @@ const LibraryPrepration = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             <span className="text-sm text-gray-500">
-              Showing {Object.values(table.getState().columnVisibility).filter(Boolean).length || columns.length} of {columns.length} columns
+              Showing {Object.values(columnVisibility).filter(Boolean).length} of {columns.length} columns
             </span>
           </div>
 

@@ -15,6 +15,7 @@ const formSchema = z.object({
     email: z.string().min(1, "Email is required").email("Invalid email address"),
     phone_no: z.string().min(1, "Phone number is required").regex(/^\d+$/, "Phone number must contain only digits").min(10, "Phone number must be at least 10 digits"),
     otp: z.string().min(1, "OTP is required"),
+    hospital_id: z.string().min(1, "Hospital ID is required"),
     username: z.string().optional(),
     password: z.string().optional(),
 });
@@ -32,6 +33,7 @@ const Request = () => {
             email: '',
             phone_no: '',
             otp: '',
+            hospital_id: '',
             username: '',
             password: ''
         }
@@ -96,6 +98,7 @@ const Request = () => {
                 email: data.email,
                 username: data.username,
                 hospital_name: data.hospital_name,
+                hospital_id: data.hospital_id,
                 phone_no: data.phone_no,
                 name: data.name,
                 password: data.password
@@ -130,7 +133,10 @@ const Request = () => {
                                     <FormItem>
                                         <FormLabel>Name</FormLabel>
                                         <FormControl>
-                                            <Input className="focus-within:ring-orange-500" placeholder="Name" {...field} />
+                                            <Input 
+                                            className="focus-within:ring-orange-500" 
+                                            placeholder="Name" 
+                                            {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -142,7 +148,25 @@ const Request = () => {
                                     <FormItem>
                                         <FormLabel>Hospital Name</FormLabel>
                                         <FormControl>
-                                            <Input className="focus-within:ring-orange-500" placeholder="Hospital Name" {...field} />
+                                            <Input 
+                                            className="focus-within:ring-orange-500" 
+                                            placeholder="Hospital Name"
+                                             {...field} />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="hospital_id"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Hospital ID</FormLabel>
+                                        <FormControl>
+                                            <Input 
+                                            className="focus-within:ring-orange-500" 
+                                            placeholder="Hostpital ID"
+                                             {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -154,7 +178,10 @@ const Request = () => {
                                     <FormItem>
                                         <FormLabel>Email</FormLabel>
                                         <FormControl>
-                                            <Input className="focus-within:ring-orange-500" placeholder="Email" {...field} />
+                                            <Input 
+                                            className="focus-within:ring-orange-500" 
+                                            placeholder="Email" 
+                                            {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -185,7 +212,10 @@ const Request = () => {
                                     <FormItem>
                                         <FormLabel>OTP</FormLabel>
                                         <FormControl>
-                                            <Input className="focus-within:ring-orange-500" placeholder="OTP" {...field} />
+                                            <Input 
+                                            className="focus-within:ring-orange-500" 
+                                            placeholder="OTP" 
+                                            {...field} />
                                         </FormControl>
                                     </FormItem>
                                 )}

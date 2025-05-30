@@ -4,12 +4,12 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
     const body = await request.json();
-    const { name, hospital_name, email, phone_no ,username, password} = body;
+    const { name, hospital_name, email, phone_no ,username,hospital_id, password} = body;
     try {        
         let response = [];
         const result = await pool.query(
-            'INSERT INTO request_form (name, hospital_name, username, password, phone_no, email, status) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [name, hospital_name, username, password, phone_no, email , "disable"]
+            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [name, hospital_name, hospital_id, username, password, phone_no, email , "disable"]
         );
         if (result.rowCount > 0) {
             response.push({
@@ -51,7 +51,7 @@ export async function POST(request) {
 export async function GET(request) {
     try {
         let response = [];
-        const data = await pool.query('SELECT * FROM request_form where status = $1', ['disable']);
+        const data = await pool.query('SELECT * FROM request_form');
         if (data.rows.length === 0) {
             response.push({
                 status: 404,

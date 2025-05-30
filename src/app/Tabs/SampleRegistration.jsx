@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { toast, ToastContainer } from 'react-toastify'
 import Dialogbox from '@/app/components/Dialogbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import Cookies from 'js-cookie'
 
 const formSchema = z.object({
   sample_id: z.string().min(1, 'Sample ID is required'),
@@ -50,9 +51,9 @@ export const SampleRegistration = () => {
   const [trfUrl, setTrfUrl] = useState('');
   const [selectedTests, setSelectedTests] = useState([]);
   const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
-  const [pendingTestToAdd, setPendingTestToAdd] = useState('');
   const [testToRemove, setTestToRemove] = useState(null); // <-- Add this line
 
+  const user = JSON.parse(Cookies.get('user') || '{}');
 
 
   const now = new Date();
@@ -63,8 +64,8 @@ export const SampleRegistration = () => {
     resolver: zodResolver(formSchema),
     defaultValues: {
       // hosptial and doctor information
-      hospital_name: '',
-      hospital_id: '',
+      hospital_name: user.hospital_name || '',
+      hospital_id: user.hospital_id || '',
       docter_name: '',
       dept_name: '',
       docter_mobile: '',
@@ -291,6 +292,7 @@ export const SampleRegistration = () => {
                       )}
                     </div>
                     <Input
+                      disabled
                       placeholder='Hospital ID'
                       className='my-2 border-2 border-orange-300'
                       {...field} />

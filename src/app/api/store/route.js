@@ -85,7 +85,7 @@ export async function POST(request) {
         const query = `
             INSERT INTO master_sheet (
                 hospital_name,
-                dept_name
+                dept_name,
                 vial_received,
                 specimen_quality,
                 registration_date,

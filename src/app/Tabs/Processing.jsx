@@ -33,16 +33,21 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
+import { CldOgImage } from "next-cloudinary";
+import Cookies from "js-cookie";
 
 
 const Processing = () => {
 
+  const user = JSON.parse(Cookies.get('user') || '{}');
 
   const allColumns = [
     { key: 'hospital_name', label: 'Hospital Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
+    { key: 'dept_name', label: 'Department Name' },
+    { key: 'run_id', label: 'Run ID' },
     { key: 'sample_date', label: 'Sample Date' },
     { key: 'sample_type', label: 'Sample Type' },
     { key: 'trf', label: 'TRF' },
@@ -88,16 +93,6 @@ const Processing = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
-    { key: 'Qubit_hs', label: 'Qubit HS' },
-    { key: 'conc/rxn', label: 'conc/rxn' },
-    { key: 'barcode', label: 'Barcode' },
-    { key: 'i5_index_reverse', label: 'i5 (reverse)' },
-    { key: 'i7_index', label: 'i7 index' },
-    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
-    { key: 'nM_conc', label: 'nM conc' },
-    { key: 'volumefromStock_lib', label: 'Volume from stock library for 2nM' },
-    { key: 'nfw_volu_for_2nM', label: 'NFW Volume For 2nM' },
-    { key: 'total_vol_for_2nM', label: 'Total Volume For 2nM' },
   ];
 
   const allTests = [
@@ -113,60 +108,7 @@ const Processing = () => {
     'Cardio Comprehensive Myopathy'
   ];
 
-  const rows = [
-    {
-      hospital_name: 'Apollo',
-      vial_received: 'Yes',
-      specimen_quality: 'Good',
-      registration_date: '2024-05-21',
-      sample_date: '2024-05-21',
-      sample_type: 'Blood',
-      trf: 'trf1.pdf',
-      collection_date_time: '2024-05-21T10:00',
-      storage_condition: 'Refrigerated',
-      prority: 'Routine',
-      hospital_id: 'H001',
-      client_id: 'C001',
-      client_name: 'Client A',
-      sample_id: 'S001',
-      patient_name: 'John Doe',
-      DOB: '1990-01-01',
-      age: '34',
-      sex: 'Male',
-      ethnicity: 'Asian',
-      father_husband_name: 'Richard Doe',
-      address: '123 Main St',
-      city: 'Delhi',
-      state: 'Delhi',
-      country: 'India',
-      patient_mobile: '9999999999',
-      docter_mobile: '8888888888',
-      docter_name: 'Dr. Smith',
-      email: 'john@example.com',
-      test_name: 'Myeloid',
-      remarks: 'N/A',
-      clinical_history: 'None',
-      repeat_required: 'No',
-      repeat_reason: '',
-      repeat_date: '',
-      selectedTestName: 'WES',
-      systolic_bp: '120',
-      diastolic_bp: '80',
-      total_cholesterol: '180',
-      hdl_cholesterol: '50',
-      ldl_cholesterol: '100',
-      diabetes: 'No',
-      smoker: 'Never',
-      hypertension_treatment: 'No',
-      statin: 'No',
-      aspirin_therapy: 'No',
-      dna_isolation: 'Yes',
-      lib_prep: 'No',
-      under_seq: 'No',
-      seq_completed: 'No',
-    },
-    // Add more rows as needed
-  ];
+  let rows = [];
 
   const [tableRows, setTableRows] = useState(rows);
   const [selectedTestNames, setSelectedTestNames] = useState([]);
@@ -221,7 +163,7 @@ const Processing = () => {
               return (
                 <Checkbox
                   checked={isChecked}
-                  onCheckedChange={checked => {
+                  onCheckedChange={async checked => {
                     // Validate test_name before allowing selection
                     if (checked) {
                       if (
@@ -246,6 +188,30 @@ const Processing = () => {
                       }
                     }
 
+
+                    const payload = {
+                      sample_id: info.row.original.sample_id,
+                      sample_indicator: col.key,
+                      indicator_status: checked ? "Yes" : "No",
+                    };
+                    console.log("Payload for API call:", payload);
+
+                    try {
+                      // Make the API call
+                      const response = await axios.put("/api/update-sample-indicator", {
+                        data: payload,
+                      });
+
+                      console.log("API response:", response.data);
+                      if (response.data[0].status === 200) {
+                      } else {
+                        toast.error(response.data[0].message || "Failed to update sample indicator.");
+                      }
+                    } catch (error) {
+                      console.error("Error updating sample indicator:", error);
+                      toast.error("An error occurred while updating the sample indicator.");
+                    }
+
                     // Update the state to show/hide the columns
                     setShowLibPrepColumns(checked);
 
@@ -268,21 +234,48 @@ const Processing = () => {
           header: col.label,
           cell: info => {
             const isChecked = info.getValue() === "Yes";
+            const rowIdx = info.row.index;
+            const currentTestName = info.row.original.test_name;
+
             return (
               <Checkbox
                 checked={isChecked}
-                // disabled={isChecked}
-                onCheckedChange={checked => {
-                  const testNames = info.row.original.test_name;
-                  setGetTheTestNames(testNames.split(',').map(name => name.trim()));
-                  setSelectedSampleIndicator(col.key);
+                onCheckedChange={async checked => {
+                  // Update the row data locally
+                  const updatedRow = {
+                    ...info.row.original,
+                    [col.key]: checked ? "Yes" : "No",
+                  };
+
+                  // Update the state
                   setTableRows(prev =>
                     prev.map((row, idx) =>
-                      idx === info.row.index
-                        ? { ...row, [col.key]: checked ? "Yes" : "No" }
-                        : row
+                      idx === rowIdx ? updatedRow : row
                     )
                   );
+
+                  // Prepare the API payload
+                  const payload = {
+                    sample_id: updatedRow.sample_id,
+                    sample_indicator: col.key,
+                    indicator_status: checked ? "Yes" : "No",
+                  };
+
+                  try {
+                    // Make the API call
+                    const response = await axios.put("/api/update-sample-indicator", {
+                      data: payload,
+                    });
+
+                    console.log("API response:", response.data);
+                    if (response.data[0].status === 200) {
+                    } else {
+                      toast.error(response.data[0].message || "Failed to update sample indicator.");
+                    }
+                  } catch (error) {
+                    console.error("Error updating sample indicator:", error);
+                    toast.error("An error occurred while updating the sample indicator.");
+                  }
                 }}
               />
             );
@@ -355,34 +348,36 @@ const Processing = () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
-      sample_id: getValue('sample_id'),
-      test_name: selectedTestNames.join(','),
-      sample_status: getValue('sample_status'),
-      sample_indicator: getValue('sample_indicator'),
-      from_date: getValue('from_date'),
-      to_date: getValue('to_date'),
-      doctor_name: getValue('doctor_name'),
-      dept_name: getValue('dept_name'),
-      run_id: getValue('run_id'),
+      sample_id: getValue("sample_id"),
+      test_name: selectedTestNames.join(","),
+      sample_status: getValue("sample_status"),
+      sample_indicator: getValue("sample_indicator"),
+      from_date: getValue("from_date"),
+      to_date: getValue("to_date"),
+      doctor_name: getValue("doctor_name"),
+      dept_name: getValue("dept_name"),
+      run_id: getValue("run_id"),
+      hospital_name: user.hospital_name, // Use the hospital name from the user cookie
     };
 
     try {
       const response = await axios.get(`/api/search`, { params: data });
-      console.log(response.data);
+
       if (response.data[0].status === 200) {
-        setTableRows(response.data[0].data);
-      }
-      if (response.data[0].status === 400) {
+        // Map the data to ensure checkbox fields are "Yes"/"No"
+        const mappedData = response.data[0].data.map((row) => ({
+          ...row,
+          dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+          lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+          under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+          seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+        }));
+        setTableRows(mappedData); // Update the tableRows state with the mapped data
+        localStorage.setItem("searchData", JSON.stringify(mappedData)); // Store the data in localStorage
+      } else if (response.data[0].status === 400 || response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the given filters.");
         setTableRows([]);
-        return;
       }
-      if (response.data[0].status === 404) {
-        toast.error(response.data[0].message || "No data found for the given filters.");
-        setTableRows([]);
-        return;
-      }
-      // setTableRows(response.data.data);
     } catch (error) {
       if (error.response) {
         setTableRows([]);
@@ -391,22 +386,22 @@ const Processing = () => {
       console.error("Error fetching data:", error);
     }
 
-    console.log("Form submitted with filters:", data);
   };
 
   // Check if any row has lib_prep set to "Yes"
   const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
 
   const handleSendForLibraryPreparation = () => {
-    const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
+   
+
     if (checkedRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
-    
+
+    // Check if data already exists in localStorage
     if (localStorage.getItem("libraryPreparationData")) {
       toast.warning("Some rows are already present in the Library Preparation.");
-      // dispatch(setActiveTab("library-prepration"));
       return;
     }
 
@@ -416,6 +411,13 @@ const Processing = () => {
     // Navigate to the LibraryPreparation tab
     dispatch(setActiveTab("library-prepration"));
   };
+
+  useEffect(()=>{
+    if(localStorage.getItem("searchData")){
+      const storedData = JSON.parse(localStorage.getItem("searchData"));
+      setTableRows(storedData);
+    }
+  },[])
 
   return (
     <div className="p-4">
@@ -451,12 +453,10 @@ const Processing = () => {
                       key={test}
                       onClick={() => {
                         if (selectedTestNames.includes(test)) {
-                          // toast.warning(`${test} is already added`);
                           return;
                         }
                         const updated = [...selectedTestNames, test];
                         setSelectedTestNames(updated);
-                        // toast.success(`${test} added`);
                       }}
                     >
                       <span className="text-sm">{test}</span>
@@ -514,10 +514,10 @@ const Processing = () => {
               }}
             >
               <option value="">Select the Sample Indicator</option>
-              <option value="dna">DNA Isolation</option>
-              <option value="library">Library Prep</option>
-              <option value="sequencing">Under sequencing</option>
-              <option value="completed">Sequencing completed</option>
+              <option value="dna_isolation">DNA Isolation</option>
+              <option value="lib_prep">Library Prep</option>
+              <option value="under_seq">Under sequencing</option>
+              <option value="seq_completed">Sequencing completed</option>
             </select>
           </div>
         </div>
@@ -591,6 +591,8 @@ const Processing = () => {
           <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
             {table
               .getAllLeafColumns()
+              .slice() // Create a copy of the array
+              .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
               .filter((column) => column.getCanHide())
               .map((column) => (
                 <DropdownMenuCheckboxItem

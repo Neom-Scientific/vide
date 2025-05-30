@@ -1,7 +1,9 @@
 "use client"
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, use } from 'react'
 import { Sun, Moon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
 
 const defaultAvatars = [
   "https://randomuser.me/api/portraits/men/32.jpg",
@@ -13,6 +15,15 @@ const defaultAvatars = [
 ];
 
 const Header = ({ activeTab, setActiveTab }) => {
+  const router = useRouter();
+  useEffect(() => {
+    const user = JSON.parse(Cookies.get('user') || '{}');
+    console.log('user', user);
+    if(Object.keys(user).length === 0){ // Check if user object is empty
+      router.push('/login'); // Redirect to login if user is not logged in
+    }
+  },[]);
+  
   const [darkMode, setDarkMode] = useState(
     typeof window !== "undefined"
       ? document.documentElement.classList.contains("dark")
