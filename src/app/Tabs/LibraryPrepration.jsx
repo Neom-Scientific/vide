@@ -33,6 +33,8 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
+import Cookies from "js-cookie";
+
 
 const LibraryPrepration = () => {
   const [message, setMessage] = useState(0);
@@ -43,6 +45,7 @@ const LibraryPrepration = () => {
   const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
   const [getTheTestNames, setGetTheTestNames] = useState([]);
+  const user = JSON.parse(Cookies.get('user') || '{}');
 
 
   const allColumns = [
@@ -121,6 +124,7 @@ const LibraryPrepration = () => {
     { key: 'pooling_volume', label: 'Pooling Volume' },
     { key: 'pool_conc', label: 'Pooling Conc (ng/ul)' },
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
+    { key: 'data_required', label: 'Data Required' },
   ];
 
   const getDefaultVisible = (testName) => {
@@ -132,6 +136,7 @@ const LibraryPrepration = () => {
         "test_name",
         "client_name",
         "sample_type",
+        "data_required",
         "Qubit_dna",
         "conc_rxn",
         "barcode",
@@ -160,6 +165,7 @@ const LibraryPrepration = () => {
         "test_name",
         "client_name",
         "Qubit_dna",
+        "data_required",
         "per_rxn_gdna",
         "volume",
         "gdna_volume_3x",
@@ -181,6 +187,7 @@ const LibraryPrepration = () => {
         "test_name",
         "client_name",
         "Qubit_dna",
+        "data_required",
         "sample_volume",
         "well",
         "i7_index",
@@ -335,6 +342,7 @@ const LibraryPrepration = () => {
         "client_name",
         "sample_type",
         "Qubit_dna",
+        "data_required",
         "conc_rxn",
         "barcode",
         "i5_index_forward",
@@ -363,6 +371,7 @@ const LibraryPrepration = () => {
         "client_name",
         "Qubit_dna",
         "per_rxn_gdna",
+        "data_required",
         "volume",
         "gdna_volume_3x",
         "nfw",
@@ -385,6 +394,7 @@ const LibraryPrepration = () => {
         "client_name",
         "Qubit_dna",
         "well",
+        "data_required",
         "i7_index",
         "sample_volume",
         "qubit_lib_qc_ng_ul",
@@ -532,16 +542,16 @@ const LibraryPrepration = () => {
 
             if (columnId === "one_tenth_of_nm_conc" || columnId === "lib_vol_for_2nM") {
               // calculate total_vol_for_2nM
-              updatedRow.total_vol_for_2nM = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nM/2).toFixed(2) : "";
+              updatedRow.total_vol_for_2nM = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nM / 2).toFixed(2) : "";
               updatedRow.nfw_volu_for_2nM = total_vol_for_2nM > 0 ? (updatedRow.total_vol_for_2nM - updatedRow.lib_vol_for_2nM).toFixed(2) : "";
 
             }
-            
+
             if (columnId === "total_vol_for_2nM") {
-            // calculate nfw_volu_for_2nM
-            updatedRow.nfw_volu_for_2nM = total_vol_for_2nM > 0 ? (total_vol_for_2nM - lib_vol_for_2nM).toFixed(2) : "";
+              // calculate nfw_volu_for_2nM
+              updatedRow.nfw_volu_for_2nM = total_vol_for_2nM > 0 ? (total_vol_for_2nM - lib_vol_for_2nM).toFixed(2) : "";
             }
-            
+
             return updatedRow;
           })
         );
@@ -556,6 +566,7 @@ const LibraryPrepration = () => {
 
       // Prepare the payload for the API call
       const payload = {
+        hospital_name: user.hospital_name, // Include the hospital name from user data
         testName: testName, // Include the test name
         rows: tableRows, // Send all rows with updated values
       };
@@ -569,7 +580,7 @@ const LibraryPrepration = () => {
         localStorage.removeItem('libraryPreparationData');
         window.location.reload(); // Reload the page to reflect changes
       }
-      if(response.data[0].status === 400) {
+      if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
       }
     } catch (error) {

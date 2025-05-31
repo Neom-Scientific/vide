@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
     const body = await request.json();
-    const { rows, testName } = body;
+    const { rows, testName, hospital_name } = body;
     try {
         const response = []
         let pool_no = 'P_001';
@@ -18,11 +18,19 @@ export async function POST(request) {
             pool_no = `P_${newNumber.toString().padStart(3, '0')}`; // Increment and format the pool number
         }
 
+        if(!hospital_name) {
+            response.push({
+                message: 'Hospital name is required',
+                status: 400
+            });
+        }
+
         if (testName === "Myeloid") {
 
             for (let i = 0; i < rows.length; i++) {
                 const sample_id = rows[i].sample_id;
                 const Qubit_dna = rows[i].Qubit_dna;
+                const data_required = rows[i].data_required;
                 const conc_rxn = rows[i].conc_rxn;
                 const barcode = rows[i].barcode;
                 const i5_index_reverse = rows[i].i5_index_reverse;
@@ -47,10 +55,10 @@ export async function POST(request) {
                             status: 404
                         });
                     } else {
-                        await pool.query(
-                            `INSERT INTO pool_info (sample_id, Qubit_dna, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nM_conc, lib_vol_for_2nM, nfw_volu_for_2nM, total_vol_for_2nM, pool_no,size,test_name)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11, $12, $13, $14)`,
-                            [sample_id, Qubit_dna, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nM_conc, lib_vol_for_2nM, nfw_volu_for_2nM, total_vol_for_2nM, pool_no, size], testName
+                       await pool.query(
+                            `INSERT INTO pool_info (sample_id, Qubit_dna, data_required, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nM_conc, lib_vol_for_2nM, nfw_volu_for_2nM, total_vol_for_2nM, pool_no,size,test_name, hospital_name)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11, $12, $13, $14, $15, $16)`,
+                            [sample_id, Qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nM_conc, lib_vol_for_2nM, nfw_volu_for_2nM, total_vol_for_2nM, pool_no, size, testName, hospital_name]
                         );
                         response.push({
                             message: 'Sample indicator updated successfully',
@@ -70,6 +78,7 @@ export async function POST(request) {
             for (let i = 0; i < rows.length; i++) {
                 const sample_id = rows[i].sample_id;
                 const Qubit_dna = rows[i].Qubit_dna;
+                const data_required = rows[i].data_required;
                 const per_rxn_gdna = rows[i].per_rxn_gdna;
                 const volume = rows[i].volume;
                 const gdna_volume_3x = rows[i].gdna_volume_3x;
@@ -106,9 +115,9 @@ export async function POST(request) {
                 }
                 else {
                     await pool.query(
-                        `INSERT INTO pool_info (sample_id, Qubit_dna, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, test_name, pool_no)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-                        [sample_id, Qubit_dna, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, testName, pool_no]
+                        `INSERT INTO pool_info (sample_id, Qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, test_name, pool_no, hospital_name)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+                        [sample_id, Qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, testName, pool_no, hospital_name]
                     );
                     response.push({
                         message: 'Sample indicator updated successfully',
@@ -121,6 +130,7 @@ export async function POST(request) {
             for (let i = 0; i < rows.length; i++) {
                 const sample_id = rows[i].sample_id;
                 const Qubit_dna = rows[i].Qubit_dna;
+                const data_required = rows[i].data_required;
                 const well = rows[i].well;
                 const i7_index = rows[i].i7_index;
                 const sample_volume = rows[i].sample_volume;
@@ -156,9 +166,9 @@ export async function POST(request) {
                 }
                 else {
                     await pool.query(
-                        `INSERT INTO pool_info (sample_id, Qubit_dna, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nM_conc, one_tenth_of_nm_conc, total_vol_for_2nM, lib_vol_for_2nM, nfw_volu_for_2nM, test_name, pool_no)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
-                        [sample_id, Qubit_dna, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nM_conc, one_tenth_of_nm_conc, total_vol_for_2nM, lib_vol_for_2nM, nfw_volu_for_2nM,testName,pool_no]
+                        `INSERT INTO pool_info (sample_id, Qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nM_conc, one_tenth_of_nm_conc, total_vol_for_2nM, lib_vol_for_2nM, nfw_volu_for_2nM, test_name, pool_no, hospital_name)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+                        [sample_id, Qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nM_conc, one_tenth_of_nm_conc, total_vol_for_2nM, lib_vol_for_2nM, nfw_volu_for_2nM, testName, pool_no, hospital_name]
                     );
                     response.push({
                         message: 'Sample indicator updated successfully',
@@ -181,14 +191,14 @@ export async function POST(request) {
     }
 }
 
-export async function PUT (request){
+export async function PUT(request) {
     const body = await request.json();
-    const {sample_id , sample_indicator, indicator_status} = body.data;
+    const { sample_id, sample_indicator, indicator_status } = body.data;
     console.log('body', body);
-    try{
+    try {
         const response = [];
-    
-        if(sample_indicator === 'dna_isolation'){
+
+        if (sample_indicator === 'dna_isolation') {
             await pool.query(`UPDATE master_sheet SET dna_isolation = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
             response.push({
                 message: 'Sample indicator updated successfully',
@@ -196,7 +206,7 @@ export async function PUT (request){
                 status: 200
             });
         }
-        else if(sample_indicator === 'lib_prep'){
+        else if (sample_indicator === 'lib_prep') {
             await pool.query(`UPDATE master_sheet SET lib_prep = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
             response.push({
                 message: 'Sample indicator updated successfully',
@@ -204,14 +214,14 @@ export async function PUT (request){
                 status: 200
             });
         }
-        else if(sample_indicator === 'under_seq'){
+        else if (sample_indicator === 'under_seq') {
             await pool.query(`UPDATE master_sheet SET under_seq = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 status: 200
             });
         }
-        else if(sample_indicator === 'seq_completed'){
+        else if (sample_indicator === 'seq_completed') {
             await pool.query(`UPDATE master_sheet SET seq_completed = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
             response.push({
                 message: 'Sample indicator updated successfully',

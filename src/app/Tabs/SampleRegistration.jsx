@@ -267,7 +267,7 @@ export const SampleRegistration = () => {
                 name='hospital_name'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel >Hospital Name</FormLabel>
+                    <FormLabel >Hospital/Lab Name</FormLabel>
                     <Input
                       placeholder='Hospital Name'
                       className='border-2 border-orange-300 my-2'
@@ -284,7 +284,7 @@ export const SampleRegistration = () => {
                 render={({ field }) => (
                   <FormItem className='my-2'>
                     <div className="flex justify-between items-center">
-                      <FormLabel>Hospital ID</FormLabel>
+                      <FormLabel>Hospital/Lab ID</FormLabel>
                       {form.formState.errors.hospital_id && (
                         <p className='text-red-500 text-sm'>
                           {form.formState.errors.hospital_id.message}

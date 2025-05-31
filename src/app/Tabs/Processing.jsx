@@ -38,8 +38,7 @@ import Cookies from "js-cookie";
 
 
 const Processing = () => {
-
-  const user = JSON.parse(Cookies.get('user') || '{}');
+  const user = JSON.parse(Cookies.get("user") || "{}");
 
   const allColumns = [
     { key: 'hospital_name', label: 'Hospital Name' },
@@ -392,8 +391,8 @@ const Processing = () => {
   const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
 
   const handleSendForLibraryPreparation = () => {
-   
 
+    const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
     if (checkedRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
       return;
