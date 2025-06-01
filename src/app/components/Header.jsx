@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 
 const defaultAvatars = [
+  "https://media.licdn.com/dms/image/v2/D5603AQGxb0ot3mS5XA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1689817962657?e=2147483647&v=beta&t=GkAxlImaAVRUvt9oyqg5CRHlMvIXpEH1SdKB8Dpakeo",
   "https://randomuser.me/api/portraits/men/32.jpg",
   "https://randomuser.me/api/portraits/women/44.jpg",
   "https://randomuser.me/api/portraits/men/65.jpg",
@@ -18,7 +19,6 @@ const Header = ({ activeTab, setActiveTab }) => {
   const router = useRouter();
   useEffect(() => {
     const user = JSON.parse(Cookies.get('user') || '{}');
-    console.log('user', user);
     if(Object.keys(user).length === 0){ // Check if user object is empty
       router.push('/login'); // Redirect to login if user is not logged in
     }

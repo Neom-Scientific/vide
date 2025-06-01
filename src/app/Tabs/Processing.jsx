@@ -296,7 +296,7 @@ const Processing = () => {
     "sample_id",
     "registration_date",
     "test_name",
-    "client_name",
+    "patient_name",
     "dna_isolation",
     "lib_prep",
     "under_seq",

@@ -9,9 +9,11 @@ export async function GET(request) {
         return val ? val.split(',').map(v => v.trim()).filter(Boolean) : [];
     };
     const testNames = parseList('application'); // Parse test names from query parameters
+    const sample_ids = parseList('sample_id').map(id => parseInt(id, 10)).filter(Number.isInteger); // Ensure sample_ids are integers
 
     try {
         const response = [];
+        const poolData = [];
 
         // Validate hospital_name
         if (!hospital_name) {
@@ -29,42 +31,49 @@ export async function GET(request) {
             });
         }
 
-        // Remove commas from test names
-        testNames.forEach((test, index) => {
-            testNames[index] = test.replace(/,/g, '');
-        });
-
-        // Query for each test name
-        const poolData = [];
-        for (const testName of testNames) {
+        // Query by sample_ids if provided
+        if (sample_ids.length > 0) {
             const { rows } = await pool.query(
-                `SELECT * FROM pool_info WHERE hospital_name = $1 AND test_name = $2;`,
-                [hospital_name, testName]
+                `SELECT * FROM pool_info WHERE sample_id = ANY($1::integer[]);`,
+                [sample_ids]
             );
 
             if (rows.length === 0) {
                 response.push({
                     status: 404,
-                    message: `No pool data found for hospital name "${hospital_name}" and test name "${testName}"`
+                    message: `No pool data found for the provided sample IDs`
                 });
             } else {
                 poolData.push(...rows); // Add rows to the poolData array
             }
         }
 
-        // If no data found for any test name
-        if (poolData.length === 0) {
+        // If no sample_ids provided, query by hospital_name and testNames
+        if (sample_ids.length === 0 && hospital_name && testNames.length > 0) {
+            for (const testName of testNames) {
+                const { rows } = await pool.query(
+                    `SELECT * FROM pool_info WHERE hospital_name = $1 AND test_name = $2;`,
+                    [hospital_name, testName]
+                );
 
-            response.push({
-                status: 404,
-                message: `No pool data found for hospital name "${hospital_name}" and provided test names`
-            });
+                if (rows.length === 0) {
+                    response.push({
+                        status: 404,
+                        message: `No pool data found for hospital name "${hospital_name}" and test name "${testName}"`
+                    });
+                } else {
+                    poolData.push(...rows); // Add rows to the poolData array
+                }
+            }
         }
+
+        // Remove duplicate rows from poolData
+        const uniquePoolData = Array.from(new Map(poolData.map(item => [item.sample_id, item])).values());
 
         // Return successful response
         response.push({
             status: 200,
-            data: poolData
+            data: uniquePoolData
         });
         return NextResponse.json(response);
 
