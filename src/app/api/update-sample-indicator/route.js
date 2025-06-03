@@ -93,10 +93,17 @@ export async function POST(request) {
                 const stock_ng_ul = rows[i].stock_ng_ul;
                 const lib_vol_for_hyb = rows[i].lib_vol_for_hyb;
                 const gb_per_sample = rows[i].gb_per_sample;
+                const pool_conc = rows[i].pool_conc;
+                const size = rows[i].size;
+                const nm_conc = rows[i].nm_conc;
+                const one_tenth_of_nm_conc = rows[i].one_tenth_of_nm_conc;
+                const total_vol_for_2nm = rows[i].total_vol_for_2nm;
+                const lib_vol_for_2nm = rows[i].lib_vol_for_2nm;
+                const nfw_volu_for_2nm = rows[i].nfw_volu_for_2nm;
 
                 if (!sample_id) {
-                    await pool.query(`UPDATE pool_info SET qubit_dna = $2, data_required = $3, per_rxn_gdna = $4, volume = $5, gdna_volume_3x = $6, nfw = $7, plate_designation = $8, well = $9, i5_index_reverse = $10, i7_index = $11, qubit_lib_qc_ng_ul = $12, stock_ng_ul = $13, lib_vol_for_hyb = $14, gb_per_sample = $15, pool_no = $16, test_name = $17, hospital_name = $18 WHERE sample_id = $1`,
-                        [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name]);
+                    await pool.query(`UPDATE pool_info SET qubit_dna = $2, data_required = $3, per_rxn_gdna = $4, volume = $5, gdna_volume_3x = $6, nfw = $7, plate_designation = $8, well = $9, i5_index_reverse = $10, i7_index = $11, qubit_lib_qc_ng_ul = $12, stock_ng_ul = $13, lib_vol_for_hyb = $14, gb_per_sample = $15, pool_no = $16, test_name = $17, hospital_name = $18, pool_conc = $19, size = $20, nm_conc = $21, one_tenth_of_nm_conc = $22, total_vol_for_2nm = $23, lib_vol_for_2nm = $24, nfw_volu_for_2nm = $25 WHERE sample_id = $1`,
+                        [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm]);
                     response.push({
                         message: 'Data updated successfully',
                         status: 200
@@ -113,8 +120,8 @@ export async function POST(request) {
                 const sampleExists = data.rows.length > 0;
                 if (sampleExists) {
                    await pool.query(
-                        `UPDATE pool_info SET qubit_dna = $2, data_required = $3, per_rxn_gdna = $4, volume = $5, gdna_volume_3x = $6, nfw = $7, plate_designation = $8, well = $9, i5_index_reverse = $10, i7_index = $11, qubit_lib_qc_ng_ul = $12, stock_ng_ul = $13, lib_vol_for_hyb = $14, gb_per_sample = $15, pool_no = $16, test_name = $17, hospital_name = $18 WHERE sample_id = $1`,
-                        [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name]
+                        `UPDATE pool_info SET qubit_dna = $2, data_required = $3, per_rxn_gdna = $4, volume = $5, gdna_volume_3x = $6, nfw = $7, plate_designation = $8, well = $9, i5_index_reverse = $10, i7_index = $11, qubit_lib_qc_ng_ul = $12, stock_ng_ul = $13, lib_vol_for_hyb = $14, gb_per_sample = $15, pool_no = $16, test_name = $17, hospital_name = $18, pool_conc = $19, size = $20, nm_conc = $21, one_tenth_of_nm_conc = $22, total_vol_for_2nm = $23, lib_vol_for_2nm = $24, nfw_volu_for_2nm = $25  WHERE sample_id = $1`,
+                        [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name,pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm]
                     );
                     response.push({
                         message: 'data updated successfully',

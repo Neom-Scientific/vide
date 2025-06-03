@@ -9,8 +9,9 @@ import axios from 'axios'
 import Cookies from 'js-cookie'
 import React, { use, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
+import { FaQuora } from 'react-icons/fa'
 import { toast, ToastContainer } from 'react-toastify'
-import { z } from 'zod'
+import { set, z } from 'zod'
 
 const formSchema = z.object({
   // application: z.string().min(1, 'Application is required'),
@@ -20,7 +21,24 @@ const formSchema = z.object({
   instument_type: z.string().min(1, 'Instrument type is required'),
   pool_size: z.string().min(1, 'Pool size is required'),
   pool_conc: z.string().min(1, 'Pool concentration is required'),
-  nM_cal: z.number().min(1, 'nM calibration is required'),
+  nm_cal: z.number().min(1, 'nM calibration is required'),
+  total_required: z.number().min(1, 'Total required is required'),
+  dinatured_lib_next_seq_550: z.number().optional(1, 'Dinatured library is required'),
+  total_volume_next_seq_550: z.number().optional(1, 'Total volume is required'),
+  loading_conc_550: z.number().optional(1, 'Loading concentration (550) is required'),
+  lib_required_next_seq_550: z.number().optional(1, 'Library required is required'),
+  buffer_volume_next_seq_550: z.number().optional(1, 'Buffer volume is required'),
+  final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().optional(1, 'Final pool concentration volume (2nM) is required'),
+  rsbetween_vol_2nm_next_seq_1000_2000: z.number().optional(1, 'RS Between volume (2nM) is required'),
+  total_volume_2nm_next_seq_1000_2000: z.number().optional(1, 'Total volume (2nM) is required'),
+  vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().optional(1, 'Volume of 2nM for 600pM is required'),
+  vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().optional(1, 'Volume of RS Between for 600pM is required'),
+  total_volume_600pm_next_seq_1000_2000: z.number().optional(1, 'Total volume (600pM) is required'),
+  loading_conc_1000_2000: z.number().optional(1, 'Loading concentration (1000/2000) is required'),
+  select_application: z.array(z.string()).optional(),
+  total_volume_2nm_next_seq_550: z.number().optional(1, 'Total volume (2nM) is required'),
+  final_pool_conc_vol_2nm_next_seq_550: z.number().optional(1, 'Final pool concentration volume (2nM) is required'),
+  nfw_vol_2nm_next_seq_550: z.number().optional(1, 'NFW volume (2nM) is required'),
 })
 
 const RunSetup = () => {
@@ -28,6 +46,9 @@ const RunSetup = () => {
   const [poolData, setPoolData] = useState([]);
   const [selectedTestNames, setSelectedTestNames] = useState([]);
   const [selectedCheckboxes, setSelectedCheckboxes] = useState([]); // Track selected checkboxes
+  const [size, setSize] = useState([]);
+  const [avgSize, setAvgSize] = useState(0);
+  const [InstrumentType, setInstrumentType] = useState('');
   const user = JSON.parse(Cookies.get('user') || '{}');
 
   const form = useForm({
@@ -39,8 +60,24 @@ const RunSetup = () => {
       instument_type: '',
       pool_size: '',
       pool_conc: '',
-      nM_cal: 0,
+      nm_cal: 0,
       total_required: 0,
+      selected_application: '',
+      dinatured_lib_next_seq_550: 20,
+      total_volume_next_seq_550: 0,
+      loading_conc_550: 0,
+      lib_required_next_seq_550: 0,
+      buffer_volume_next_seq_550: 0,
+      final_pool_conc_vol_2nm_next_seq_1000_2000: 0,
+      rsbetween_vol_2nm_next_seq_1000_2000: 0,
+      total_volume_2nm_next_seq_1000_2000: 0,
+      vol_of_2nm_for_600pm_next_seq_1000_2000: 0,
+      vol_of_rs_between_for_600pm_next_seq_1000_2000: 0,
+      total_volume_600pm_next_seq_1000_2000: 0,
+      loading_conc_1000_2000: 600,
+      total_volume_2nm_next_seq_550: 0,
+      final_pool_conc_vol_2nm_next_seq_550: 0,
+      nfw_vol_2nm_next_seq_550: 0,
     },
   });
 
@@ -66,6 +103,7 @@ const RunSetup = () => {
 
     fetchTestNames();
   }, []);
+
 
   const handleTestNameChange = async (selectedTestName) => {
     try {
@@ -93,7 +131,10 @@ const RunSetup = () => {
       // Fetch pool data for the selected test name
       const response = await axios.get(`/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}`);
       if (response.data[0].status === 200) {
-        setPoolData((prev) => [...prev, ...response.data[0].data]);
+        const poolDataForTest = response.data[0].data;
+
+        // Update poolData state
+        setPoolData((prev) => [...prev, ...poolDataForTest]);
       } else if (response.data[0].status === 404) {
         console.log("No pool data found for the provided hospital name and test name");
       }
@@ -105,47 +146,103 @@ const RunSetup = () => {
     }
   };
 
-  const handleRemoveTestName = (testNameToRemove) => {
-    // Remove the test name from the selected list
-    const updatedSelectedTestNames = selectedTestNames.filter((test) => test !== testNameToRemove);
-    setSelectedTestNames(updatedSelectedTestNames);
-
-    // Update the selected_application field in the form state
-    form.setValue("selected_application", updatedSelectedTestNames.join(", "));
-
-    // Add the removed test name back to the dropdown
-    setTestNames((prev) => [...prev, { test_name: testNameToRemove }]);
-
-    // Remove associated pool data
-    setPoolData((prev) => prev.filter((pool) => pool.test_name !== testNameToRemove));
-  };
-
   const handleSubmit = async (data) => {
-    console.log('data', data);
+    try {
+      const filteredPoolData = poolData.filter((pool) =>
+        selectedTestNames.includes(pool.test_name)
+      );
+
+      // Extract sample_ids from the filtered data
+      const selectedSampleIds = filteredPoolData.map((pool) => pool.sample_id);
+
+      console.log("Selected Sample IDs:", selectedSampleIds);
+
+      // Submit the form data along with the selected sample_ids
+      const response = await axios.post('/api/run-setup', {
+        setup: {
+          ...data,
+          sample_ids: selectedSampleIds, // Include only the selected sample_ids
+          hospital_name: user.hospital_name, // Include hospital name in the request
+        },
+      });
+      if (response.data[0].status === 200) {
+        toast.success("Run setup submitted successfully!");
+        // Reset the form and state after successful submission
+        form.reset();
+        setSelectedTestNames([]);
+        setSelectedCheckboxes([]);
+        setPoolData([]);
+      } else if (response.data[0].status === 404) {
+        toast.error(response.data[0].message || "No data found for the provided hospital name and test name");
+      }
+    }
+    catch (error) {
+      console.error("Error submitting form:", error);
+      toast.error("An error occurred while submitting the form.");
+      return;
+    }
   }
 
 
   const handleGbAvailable = (value) => {
-   if(value < form.getValues('total_required')){
-    toast.error("Total GB available cannot be less than total required.");
-   }
+    if (value < form.getValues('total_required')) {
+      toast.error("Total GB available cannot be less than total required.");
+    }
   }
 
-  // useEffect(() => {
-  //   if(form.getValues('total_gb_available') <= totalDataRequired) {
-  //     toast.error("Total data required exceeds the total GB available.");
-  //     form.setValue("total_gb_available", ""); // Reset the total GB available field
-  //   } 
-  // },[form.getValues('total_gb_available')])
 
   const pool_size = form.watch("pool_size");
   const pool_conc = form.watch("pool_conc");
   useEffect(() => {
     if (pool_size && pool_conc) {
       const nM = parseFloat(((pool_conc / (pool_size * 660)) * 1000000).toFixed(9));
-      form.setValue("nM_cal", nM);
+      form.setValue("nm_cal", nM);
     }
   }, [pool_size, pool_conc])
+
+  const dinatured_lib_next_seq_550 = form.watch("dinatured_lib_next_seq_550");
+  const total_volume_next_seq_550 = form.watch("total_volume_next_seq_550");
+  const loading_conc_550 = form.watch("loading_conc_550");
+  useEffect(() => {
+    if (dinatured_lib_next_seq_550 && total_volume_next_seq_550 && loading_conc_550) {
+      const libReq = parseFloat((total_volume_next_seq_550 * loading_conc_550 / dinatured_lib_next_seq_550).toFixed(2));
+      form.setValue("lib_required_next_seq_550", libReq);
+      const bufferVolume = parseFloat((total_volume_next_seq_550 - libReq).toFixed(2));
+      form.setValue("buffer_volume_next_seq_550", bufferVolume);
+    }
+  }, [dinatured_lib_next_seq_550, total_volume_next_seq_550, loading_conc_550])
+
+  const nMCal = form.watch("nm_cal");
+  const totalVol2nM = form.watch("total_volume_2nm_next_seq_1000_2000");
+  useEffect(() => {
+    if (nMCal && totalVol2nM) {
+      const volumeForFinalPoolConc2nM = parseFloat((2 * totalVol2nM / nMCal).toFixed(2));
+      form.setValue("final_pool_conc_vol_2nm_next_seq_1000_2000", volumeForFinalPoolConc2nM);
+      const rsBetweenVol2nM = parseFloat((totalVol2nM - volumeForFinalPoolConc2nM).toFixed(2));
+      form.setValue("rsbetween_vol_2nm_next_seq_1000_2000", rsBetweenVol2nM);
+    }
+  }, [nMCal, totalVol2nM])
+
+  const totalVolumeLoadingConc = form.watch("total_volume_600pm_next_seq_1000_2000");
+  const loading_conc_1000_2000 = form.watch("loading_conc_1000_2000");
+  useEffect(() => {
+    if (totalVolumeLoadingConc && loading_conc_1000_2000) {
+      console.log('loading_conc', loading_conc_1000_2000);
+      const volOf2nmLoadingConc = parseFloat((loading_conc_1000_2000 * totalVolumeLoadingConc / 2000).toFixed(2));
+      form.setValue("vol_of_2nm_for_600pm_next_seq_1000_2000", volOf2nmLoadingConc);
+      const volOfRsBetweenLoadingConc = parseFloat((totalVolumeLoadingConc - volOf2nmLoadingConc).toFixed(2));
+      form.setValue("vol_of_rs_between_for_600pm_next_seq_1000_2000", volOfRsBetweenLoadingConc);
+    }
+  }, [totalVolumeLoadingConc, loading_conc_1000_2000]);
+
+
+  const totalVolume2nMNextSeq550 = form.watch("total_volume_2nm_next_seq_550");
+  useEffect(() => {
+    const volumeForFinalPoolConc2nM = parseFloat((2 * totalVolume2nMNextSeq550 / nMCal).toFixed(2));
+    form.setValue("final_pool_conc_vol_2nm_next_seq_550", volumeForFinalPoolConc2nM);
+    const rnfwVol2nM = parseFloat((totalVolume2nMNextSeq550 - volumeForFinalPoolConc2nM).toFixed(2));
+    form.setValue("nfw_vol_2nm_next_seq_550", rnfwVol2nM);
+  })
 
   const handleCheckboxChange = (testName, isChecked) => {
     let updatedCheckboxes;
@@ -153,9 +250,26 @@ const RunSetup = () => {
     if (isChecked) {
       // Add the test name to the selected checkboxes
       updatedCheckboxes = [...selectedCheckboxes, testName];
+
+      // Extract the size data for the selected test_name
+      const sizeData = poolData
+        .filter((pool) => pool.test_name === testName)
+        .map((pool) => Number(pool.size)); // Ensure size is a number
+
+      console.log("Size data:", sizeData);
+
+      // Update the size state
+      setSize((prev) => [...prev, ...sizeData]);
     } else {
       // Remove the test name from the selected checkboxes
       updatedCheckboxes = selectedCheckboxes.filter((name) => name !== testName);
+
+      // Remove the size data for the deselected test_name
+      const sizeDataToRemove = poolData
+        .filter((pool) => pool.test_name === testName)
+        .map((pool) => Number(pool.size)); // Ensure size is a number
+
+      setSize((prev) => prev.filter((size) => !sizeDataToRemove.includes(size)));
     }
 
     setSelectedCheckboxes(updatedCheckboxes);
@@ -165,9 +279,42 @@ const RunSetup = () => {
       .filter((pool) => updatedCheckboxes.includes(pool.test_name))
       .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
 
-    // Update the Total Required field in the form
-    form.setValue("total_required", totalDataRequired);};
+    console.log("Total Data Required:", totalDataRequired);
 
+    // Update the Total Required field in the form
+    form.setValue("total_required", totalDataRequired);
+
+    // Calculate the average size
+    const updatedSize = poolData
+      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
+      .map((pool) => Number(pool.size)); // Ensure size is a number
+
+    const avgSize = updatedSize.length > 0
+      ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
+      : 0;
+
+    console.log("Updated Size:", updatedSize);
+    console.log("Average Size:", avgSize);
+
+    // Update the average size state
+    setAvgSize(avgSize);
+
+    // Update the Average Final Pool Size field in the form
+    form.setValue("pool_size", avgSize);
+
+    // Calculate the percentage of Total Available GB for each test_name
+    const totalGbAvailable = Number(form.getValues("total_gb_available")); // Get total GB available from the form
+    const percentageData = poolData
+      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
+      .map((pool) => ({
+        test_name: pool.test_name,
+        percentage: totalGbAvailable > 0
+          ? parseFloat(((pool.data_required / totalGbAvailable) * 100).toFixed(2))
+          : 0,
+      }));
+
+    console.log("Percentage Data:", percentageData);
+  };
   return (
     <div>
       <Form {...form}>
@@ -232,7 +379,9 @@ const RunSetup = () => {
                             <TableRow>
                               <TableHead>Application</TableHead>
                               <TableHead>Data Required (GB)</TableHead>
-                              <TableHead>Delete</TableHead>
+                              <TableHead>%</TableHead>
+                              <TableHead>Final Pool Volume (ul)</TableHead>
+                              <TableHead>Add Data</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -248,6 +397,8 @@ const RunSetup = () => {
                                   <TableCell>
                                     {totalDataRequiredForTest > 0 ? totalDataRequiredForTest : 'N/A'}
                                   </TableCell>
+                                  <TableCell></TableCell>
+                                  <TableCell></TableCell>
                                   <TableCell>
                                     <Input
                                       type="checkbox"
@@ -311,23 +462,6 @@ const RunSetup = () => {
               )}
             />
 
-            {/* pool size */}
-            <FormField
-              control={form.control}
-              name="pool_size"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="mb-2">Final Pool Size (Tapestation)</FormLabel>
-                  <Input
-                    required
-                    {...field}
-                    placeholder="Enter pool size"
-                    className="mb-2"
-                  />
-                </FormItem>
-              )}
-            />
-
             {/* pool concentration */}
             <FormField
               control={form.control}
@@ -345,11 +479,30 @@ const RunSetup = () => {
               )}
             />
 
+            {/* pool size */}
+            <FormField
+              control={form.control}
+              name="pool_size"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="mb-2">Average Final Pool Size (Tapestation)</FormLabel>
+                  <Input
+                    required
+                    {...field}
+                    value={avgSize || field.value} // Use avgSize state or field value
+                    onChange={(e) => field.onChange(e.target.value)}
+                    placeholder="Enter pool size"
+                    className="mb-2"
+                  />
+                </FormItem>
+              )}
+            />
+
 
             {/* nM Calculation */}
             <FormField
               control={form.control}
-              name="nM_cal"
+              name="nm_cal"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="mb-2">Final Pool nM Calculation</FormLabel>
@@ -360,9 +513,9 @@ const RunSetup = () => {
                     placeholder="Enter nM calculation"
                     className="mb-2"
                   />
-                  {form.formState.errors.nM_cal && (
+                  {form.formState.errors.nm_cal && (
                     <p className="text-red-500 text-sm">
-                      {form.formState.errors.nM_cal.message}
+                      {form.formState.errors.nm_cal.message}
                     </p>
                   )}
                 </FormItem>
@@ -378,6 +531,10 @@ const RunSetup = () => {
                   <FormLabel className="mb-2">Instrument Type</FormLabel>
                   <select
                     {...field}
+                    onChange={(e) => {
+                      field.onChange(e); // Update form state
+                      setInstrumentType(e.target.value); // Update instrument type state
+                    }}
                     className="mb-2 w-full p-2 border rounded"
                     required>
                     <option value="">Select instrument type</option>
@@ -388,7 +545,314 @@ const RunSetup = () => {
               )}
             />
 
-            
+            {InstrumentType && InstrumentType === 'NextSeq_550' ? (
+              <>
+
+                {/* total volume for 2nM */}
+                <FormField
+                  control={form.control}
+                  name='total_volume_2nm_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Total Volume (2nM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        placeholder="Enter Total Volume (2nM)"
+                        className="mb-2"
+                      />
+                      {form.formState.errors.total_volume_2nm_next_seq_1000_2000 && (
+                        <p className="text-red-500 text-sm">
+                          {form.formState.errors.total_volume_2nm_next_seq_1000_2000.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                {/* final pool conc vol for 2nM */}
+                <FormField
+                  control={form.control}
+                  name='final_pool_conc_vol_2nm_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Volulme for Final Pool conc 2nM</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Volulme for Final Pool conc 2nM"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* NFW vol for 2nM */}
+                <FormField
+                  control={form.control}
+                  name='nfw_vol_2nm_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">NFW (2nM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter RS Between (2nM)"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+                {/* dinatured */}
+                <FormField
+                  control={form.control}
+                  name='dinatured_lib_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Denatured Library</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        placeholder="Enter Dinatured Library"
+                        className="mb-2"
+                      />
+                      {form.formState.errors.dinatured_lib_next_seq_550 && (
+                        <p className="text-red-500 text-sm">
+                          {form.formState.errors.dinatured_lib_next_seq_550.message}
+                        </p>
+                      )}
+                    </FormItem>
+
+                  )}
+                />
+
+                {/* total volume */}
+                <FormField
+                  control={form.control}
+                  name='total_volume_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Total Volume</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        placeholder="Enter Total Volume"
+                        className="mb-2"
+                      />
+                      {form.formState.errors.total_volume_next_seq_550 && (
+                        <p className="text-red-500 text-sm">
+                          {form.formState.errors.total_volume_next_seq_550.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                {/* Loading Conc */}
+                <FormField
+                  control={form.control}
+                  name='loading_conc_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Loading Concentration(pM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        placeholder="Enter Loading Conc"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* lib required */}
+                <FormField
+                  control={form.control}
+                  name='lib_required_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Library Required</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Library Required"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* buffer volume */}
+                <FormField
+                  control={form.control}
+                  name='buffer_volume_next_seq_550'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Buffer Volume</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Buffer Volume"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+              </>
+            ) : ""}
+
+            {InstrumentType && InstrumentType === 'NextSeq_1000_2000' ? (
+              <>
+
+                {/* total volume for 2nM */}
+                <FormField
+                  control={form.control}
+                  name='total_volume_2nm_next_seq_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Total Volume (2nM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        placeholder="Enter Total Volume (2nM)"
+                        className="mb-2"
+                      />
+                      {form.formState.errors.total_volume_2nm_next_seq_1000_2000 && (
+                        <p className="text-red-500 text-sm">
+                          {form.formState.errors.total_volume_2nm_next_seq_1000_2000.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                {/* final pool conc vol for 2nM */}
+                <FormField
+                  control={form.control}
+                  name='final_pool_conc_vol_2nm_next_seq_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Volulme for Final Pool conc 2nM</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Volulme for Final Pool conc 2nM"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* RSBetween vol for 2nM */}
+                <FormField
+                  control={form.control}
+                  name='rsbetween_vol_2nm_next_seq_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">RS Between (2nM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter RS Between (2nM)"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* loading concentration */}
+                <FormField
+                  control={form.control}
+                  name='loading_conc_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Loading Concentration(pM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Loading Concentration"
+                        value={600}
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* total volume of 600pM */}
+                <FormField
+                  control={form.control}
+                  name='total_volume_600pm_next_seq_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Total Volume(600pM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        value={field.value ?? ""}
+                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        placeholder="Enter Total Volume(600pM)"
+                        className="mb-2"
+                      />
+                      {form.formState.errors.total_volume_600pm_next_seq_1000_2000 && (
+                        <p className="text-red-500 text-sm">
+                          {form.formState.errors.total_volume_600pm_next_seq_1000_2000.message}
+                        </p>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
+                {/* vol for 2nM of the loading conc */}
+                <FormField
+                  control={form.control}
+                  name='vol_of_2nm_for_600pm_next_seq_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Volume of 2nM conc(600pM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Volume of 2nM conc(600pM)"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+                {/* vol of RSBetween of loading conc */}
+                <FormField
+                  control={form.control}
+                  name='vol_of_rs_between_for_600pm_next_seq_1000_2000'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="mb-2">Volume of RS Between(600pM)</FormLabel>
+                      <Input
+                        {...field}
+                        type="number"
+                        placeholder="Enter Volume of RS Between(600pM)"
+                        className="mb-2"
+                      />
+                    </FormItem>
+                  )}
+                />
+
+
+
+              </>
+            ) : ""}
+
+
 
             <Button
               type="submit"

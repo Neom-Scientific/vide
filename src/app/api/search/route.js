@@ -26,7 +26,7 @@ export async function GET(request) {
       !sample_ids.length && !test_names.length && !run_ids.length &&
       !sample_statuses.length && !sample_indicators.length &&
       !doctor_names.length && !dept_names.length && !from_dates.length && !to_dates.length &&
-      !hospital_names.length // Include hospital_name in validation
+      hospital_names.length // Include hospital_name in validation
     ) {
       response.push({
         status: 400,

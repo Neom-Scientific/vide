@@ -16,7 +16,7 @@ const formSchema = z.object({
   sample_id: z.string().min(1, 'Sample ID is required'),
   sample_type: z.string().min(1, 'Sample Type is required'),
   client_name: z.string().min(1, 'Client Name is required'),
-  docter_name: z.string().min(1, 'Doctor Name is required'),
+  doctor_name: z.string().min(1, 'Doctor Name is required'),
   email: z.string()
     .min(1, 'Email is required')
     .email('Invalid email address'),
@@ -66,9 +66,9 @@ export const SampleRegistration = () => {
       // hosptial and doctor information
       hospital_name: user.hospital_name || '',
       hospital_id: user.hospital_id || '',
-      docter_name: '',
+      doctor_name: '',
       dept_name: '',
-      docter_mobile: '',
+      doctor_mobile: '',
       email: '',
 
       // patient information
@@ -197,13 +197,28 @@ export const SampleRegistration = () => {
 
   const uploadTrf = async (file) => {
     setTrfFile(file);
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setTrfUrl(url);
-      form.setValue('trf', file.name); // Store file name if needed
-    } else {
-      setTrfUrl('');
-      form.setValue('trf', '');
+    try {
+      if (file) {
+        const url = URL.createObjectURL(file);
+        setTrfUrl(url);
+        form.setValue('trf', file.name); // Store file name if needed
+      } else {
+        setTrfUrl('');
+        form.setValue('trf', '');
+      }
+      // if(file){
+      //   const formData = new FormData();
+      //   formData.append('file', file);
+      //   const response = await axios.post('/api/upload', formData,{
+      //     headers:{
+      //      'Content-Type': 'multipart/form-data'
+      //     }
+      //   })
+      //   console.log('response', response);
+      // }
+    }
+    catch (error) {
+      console.error('Error uploading TRF:', error);
     }
   }
 
@@ -892,14 +907,14 @@ export const SampleRegistration = () => {
                   {/*  Doctor name  */}
                   <FormField
                     control={form.control}
-                    name='docter_name'
+                    name='doctor_name'
                     render={({ field }) => (
                       <FormItem className='my-2'>
                         <div className="flex justify-between items-center">
                           <FormLabel>Doctor Name</FormLabel>
-                          {form.formState.errors.docter_name && (
+                          {form.formState.errors.doctor_name && (
                             <p className='text-red-500 text-sm'>
-                              {form.formState.errors.docter_name.message}
+                              {form.formState.errors.doctor_name.message}
                             </p>
                           )}
                         </div>
@@ -930,7 +945,7 @@ export const SampleRegistration = () => {
                   {/* doctor mobile */}
                   <FormField
                     control={form.control}
-                    name='docter_mobile'
+                    name='doctor_mobile'
                     render={({ field }) => (
                       <FormItem className='my-2'>
                         <FormLabel>Doctor's Mobile</FormLabel>

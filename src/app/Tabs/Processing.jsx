@@ -203,6 +203,12 @@ const Processing = () => {
 
                       console.log("API response:", response.data);
                       if (response.data[0].status === 200) {
+                        // update the localstorage with the updated data
+                        const updatedRows = tableRows.map((row, idx) =>
+                          idx === rowIdx ? { ...row, lib_prep: checked ? "Yes" : "No" } : row
+                        );
+                        setTableRows(updatedRows);
+                        localStorage.setItem("searchData", JSON.stringify(updatedRows));
                       } else {
                         toast.error(response.data[0].message || "Failed to update sample indicator.");
                       }
@@ -268,6 +274,12 @@ const Processing = () => {
 
                     console.log("API response:", response.data);
                     if (response.data[0].status === 200) {
+                      // update the localstorage with the updated data
+                      const updatedRows = tableRows.map((row, idx) =>
+                        idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
+                      );
+                      setTableRows(updatedRows);
+                      localStorage.setItem("searchData", JSON.stringify(updatedRows));
                     } else {
                       toast.error(response.data[0].message || "Failed to update sample indicator.");
                     }

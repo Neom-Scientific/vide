@@ -34,6 +34,7 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 
 const LibraryPrepration = () => {
@@ -45,7 +46,9 @@ const LibraryPrepration = () => {
   const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
   const [getTheTestNames, setGetTheTestNames] = useState([]);
+  const [DialogOpen, setDialogOpen] = useState(false);
   const user = JSON.parse(Cookies.get('user') || '{}');
+  const dispatch = useDispatch();
 
 
   const allColumns = [
@@ -106,7 +109,7 @@ const LibraryPrepration = () => {
     { key: 'size', label: 'Size (bp)' },
     { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'nm_conc', label: 'nM conc' },
-    { key: 'lib_vol_for_2nm', label: 'Library Volume for 2nM' },
+    { key: 'lib_vol_for_2nm', label: 'Library Volume for 2nM from 1/10 of nM' },
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 2nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
     { key: 'qubit_dna', label: 'Qubit DNA' },
@@ -115,14 +118,13 @@ const LibraryPrepration = () => {
     { key: 'gdna_volume_3x', label: 'gDNA Volume (3X)' },
     { key: 'nfw', label: 'NFW (3x)' },
     { key: 'plate_designation', label: 'Plate Designation' },
-    { key: 'well', label: 'Well No.' },
+    { key: 'well', label: 'Well No./Barcode' },
     { key: 'qubit_lib_qc_ng_ul', label: 'Qubit Library QC (ng/ul)' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb' },
-    { key: 'gb_per_sample', label: 'GB per Sample' },
     { key: 'sample_volume', label: 'Sample Volume' },
     { key: 'pooling_volume', label: 'Pooling Volume' },
-    { key: 'pool_conc', label: 'Pooling Conc (ng/ul)' },
+    { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'data_required', label: 'Data Required(GB)' },
   ];
@@ -176,7 +178,13 @@ const LibraryPrepration = () => {
         "qubit_lib_qc_ng_ul",
         "stock_ng_ul",
         "lib_vol_for_hyb",
-        "gb_per_sample",
+        "pool_conc",
+        "size",
+        "nm_conc",
+        "one_tenth_of_nm_conc",
+        "total_vol_for_2nm",
+        "lib_vol_for_2nm",
+        "nfw_volu_for_2nm",
         "data_required",
       ];
     } else if (testName === "SGS" || testName === "HLA") {
@@ -419,7 +427,13 @@ const LibraryPrepration = () => {
         "qubit_lib_qc_ng_ul",
         "stock_ng_ul",
         "lib_vol_for_hyb",
-        "gb_per_sample",
+        "pool_conc",
+        "size",
+        "nm_conc",
+        "one_tenth_of_nm_conc",
+        "total_vol_for_2nm",
+        "lib_vol_for_2nm",
+        "nfw_volu_for_2nm",
         "data_required",
       ];
     }
@@ -522,9 +536,6 @@ const LibraryPrepration = () => {
                 total_vol_for_2nm > 0 ? total_vol_for_2nm - lib_vol_for_2nm : "";
             }
 
-
-
-
             if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
               // calculate 2nM
               updatedRow.nm_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
@@ -609,6 +620,7 @@ const LibraryPrepration = () => {
         rows: tableRows, // Send all rows with updated values
       };
 
+
       // Make the API call
       const response = await axios.post('/api/update-sample-indicator', payload);
       console.log("API Response:", response.data);
@@ -616,7 +628,9 @@ const LibraryPrepration = () => {
         toast.success("Sample indicator updated successfully!");
         // remove the localStorage item after successful update
         localStorage.removeItem('libraryPreparationData');
-        window.location.reload(); // Reload the page to reflect changes
+        dispatch(setActiveTab("processing"));
+        setTableRows([]); // Clear the table rows after successful update
+        setMessage(1); // Set message to indicate no data available
       }
       if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
@@ -743,6 +757,13 @@ const LibraryPrepration = () => {
             className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12">
             Save
           </Button>
+          <Button
+            type="button"
+            onClick={() => { setDialogOpen(true); }}
+            className="bg-red-500 hover:bg-red-600 mt-5 text-white cursor-pointer ml-2 min-w-[120px] h-12"
+          >
+            Remove
+          </Button>
         </>
         )
         :
@@ -758,9 +779,53 @@ const LibraryPrepration = () => {
 
 
       {/* Column Selector Dropdown */}
+      <DialogBox isOpen={DialogOpen} onClose={() => setDialogOpen(false)} />
       <ToastContainer />
     </div>
   )
 }
 
 export default LibraryPrepration
+
+const DialogBox = ({ isOpen, onClose }) => {
+  const dispatch = useDispatch();
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      style={{ backdropFilter: 'blur(5px)' }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold">Remove from Library Preparation?</DialogTitle>
+        </DialogHeader>
+        <DialogDescription>
+          <span className="text-normal text-black dark:text-white">
+            Do you want to remove the data from Library Preparation? This action cannot be undone.
+          </span>
+        </DialogDescription>
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700"
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              dispatch(setActiveTab("processing"));
+              localStorage.removeItem('libraryPreparationData');
+              onClose();
+            }}
+            className="ml-2 bg-red-600 hover:bg-red-700 text-white"
+          >
+            Remove
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

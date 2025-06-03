@@ -12,11 +12,18 @@ export async function GET(request) {
                 message: "Hospital name is required"
             });
         }
-        
         const {rows} = await pool.query(
-            `SELECT DISTINCT test_name FROM pool_info WHERE hospital_name = $1 ORDER BY test_name;`,
+            `SELECT test_name, array_agg(sample_id) AS sample_ids 
+             FROM pool_info 
+             WHERE hospital_name = $1 AND run_id IS NULL
+             GROUP BY test_name 
+             ORDER BY test_name;`,
             [hospital_name]
         );
+        // const {rows} = await pool.query(
+        //     `SELECT DISTINCT test_name FROM pool_info WHERE hospital_name = $1 ORDER BY test_name;`,
+        //     [hospital_name]
+        // );
         if (rows.length === 0) {
             response.push({
                 status: 404,
@@ -25,7 +32,8 @@ export async function GET(request) {
         }
         else{
             const data = rows.map(row => ({
-                test_name: row.test_name
+                test_name: row.test_name,
+                sample_ids: row.sample_ids || []
             }));
             response.push({
                 status: 200,
