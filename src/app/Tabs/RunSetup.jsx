@@ -25,6 +25,7 @@ const formSchema = z.object({
   total_required: z.number().min(1, 'Total required is required'),
   dinatured_lib_next_seq_550: z.number().optional(1, 'Dinatured library is required'),
   total_volume_next_seq_550: z.number().optional(1, 'Total volume is required'),
+  final_pool_vol_ul: z.number().min(1, 'Final pool volume (ul) is required'),
   loading_conc_550: z.number().optional(1, 'Loading concentration (550) is required'),
   lib_required_next_seq_550: z.number().optional(1, 'Library required is required'),
   buffer_volume_next_seq_550: z.number().optional(1, 'Buffer volume is required'),
@@ -47,6 +48,7 @@ const RunSetup = () => {
   const [selectedTestNames, setSelectedTestNames] = useState([]);
   const [selectedCheckboxes, setSelectedCheckboxes] = useState([]); // Track selected checkboxes
   const [size, setSize] = useState([]);
+  const [percentage, setPercentage] = useState([]);
   const [avgSize, setAvgSize] = useState(0);
   const [InstrumentType, setInstrumentType] = useState('');
   const user = JSON.parse(Cookies.get('user') || '{}');
@@ -62,6 +64,7 @@ const RunSetup = () => {
       pool_conc: '',
       nm_cal: 0,
       total_required: 0,
+      final_pool_vol_ul: 0,
       selected_application: '',
       dinatured_lib_next_seq_550: 20,
       total_volume_next_seq_550: 0,
@@ -184,11 +187,16 @@ const RunSetup = () => {
   }
 
 
-  const handleGbAvailable = (value) => {
-    if (value < form.getValues('total_required')) {
-      toast.error("Total GB available cannot be less than total required.");
+  const validateTotalGbAvailable = () => {
+    const totalRequired = form.getValues("total_required"); // Get the current value of total_required
+    const totalGbAvailable = form.getValues("total_gb_available"); // Get the current value of total_gb_available
+
+    if (Number(totalGbAvailable) < Number(totalRequired)) {
+      // If total_gb_available is less than total_required, reset the field and show an error
+      form.setValue("total_gb_available", 0);
+      toast.error("Total GB available cannot be less than Total Required.");
     }
-  }
+  };
 
 
   const pool_size = form.watch("pool_size");
@@ -256,8 +264,6 @@ const RunSetup = () => {
         .filter((pool) => pool.test_name === testName)
         .map((pool) => Number(pool.size)); // Ensure size is a number
 
-      console.log("Size data:", sizeData);
-
       // Update the size state
       setSize((prev) => [...prev, ...sizeData]);
     } else {
@@ -279,28 +285,8 @@ const RunSetup = () => {
       .filter((pool) => updatedCheckboxes.includes(pool.test_name))
       .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
 
-    console.log("Total Data Required:", totalDataRequired);
-
     // Update the Total Required field in the form
     form.setValue("total_required", totalDataRequired);
-
-    // Calculate the average size
-    const updatedSize = poolData
-      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
-      .map((pool) => Number(pool.size)); // Ensure size is a number
-
-    const avgSize = updatedSize.length > 0
-      ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
-      : 0;
-
-    console.log("Updated Size:", updatedSize);
-    console.log("Average Size:", avgSize);
-
-    // Update the average size state
-    setAvgSize(avgSize);
-
-    // Update the Average Final Pool Size field in the form
-    form.setValue("pool_size", avgSize);
 
     // Calculate the percentage of Total Available GB for each test_name
     const totalGbAvailable = Number(form.getValues("total_gb_available")); // Get total GB available from the form
@@ -312,9 +298,31 @@ const RunSetup = () => {
           ? parseFloat(((pool.data_required / totalGbAvailable) * 100).toFixed(2))
           : 0,
       }));
+    setPercentage(percentageData);
 
     console.log("Percentage Data:", percentageData);
+
+    // Trigger validation for total_gb_available
+    validateTotalGbAvailable();
   };
+
+  useEffect(() => {
+    const totalGbAvailable = Number(form.watch("total_gb_available")); // Watch for changes in total_gb_available
+
+    if (totalGbAvailable > 0) {
+      const updatedPercentageData = poolData
+        .filter((pool) => selectedCheckboxes.includes(pool.test_name))
+        .map((pool) => ({
+          test_name: pool.test_name,
+          percentage: parseFloat(((pool.data_required / totalGbAvailable) * 100).toFixed(2)),
+        }));
+
+      setPercentage(updatedPercentageData);
+    } else {
+      setPercentage([]); // Reset percentages if total_gb_available is invalid
+    }
+  }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
+
   return (
     <div>
       <Form {...form}>
@@ -347,23 +355,30 @@ const RunSetup = () => {
               )}
             />
 
-            {/* sequnce run date*/}
+            {/* final pool vol (ul) */}
             <FormField
               control={form.control}
-              name="seq_run_date"
+              name="final_pool_vol_ul"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="mb-2">Sequence Run Date</FormLabel>
+                  <FormLabel className="mb-2">Final Pool Volume (ul)</FormLabel>
                   <Input
                     {...field}
-                    type="date"
+                    type="number"
+                    placeholder="Enter final pool volume (ul)"
+                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
                     className="mb-2"
                     required
                   />
-
+                  {form.formState.errors.final_pool_vol_ul && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.final_pool_vol_ul.message}
+                    </p>
+                  )}
                 </FormItem>
               )}
             />
+
 
             {/* Selected Applications */}
             <div className="col-span-2">
@@ -391,14 +406,29 @@ const RunSetup = () => {
                                 .filter((pool) => pool.test_name === test)
                                 .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
 
+                              // Get the percentage for the current test_name
+                              const percentageForTest = percentage
+                                .filter((item) => item.test_name === test)
+                                .reduce((sum, item) => sum + item.percentage, 0) || 0;
+
+                              // Get the final pool volume (ul) from the input field
+                              const finalPoolVolUl = form.getValues("final_pool_vol_ul");
+
+                              // Calculate the final pool volume (ul) for the current test_name
+                              const calculatedFinalPoolVolUl = parseFloat(((percentageForTest / 100) * finalPoolVolUl).toFixed(2));
+
                               return (
                                 <TableRow key={test}>
                                   <TableCell>{test}</TableCell>
                                   <TableCell>
                                     {totalDataRequiredForTest > 0 ? totalDataRequiredForTest : 'N/A'}
                                   </TableCell>
-                                  <TableCell></TableCell>
-                                  <TableCell></TableCell>
+                                  <TableCell>
+                                    {percentageForTest}%
+                                  </TableCell>
+                                  <TableCell>
+                                    {calculatedFinalPoolVolUl > 0 ? calculatedFinalPoolVolUl : 'N/A'}
+                                  </TableCell>
                                   <TableCell>
                                     <Input
                                       type="checkbox"
@@ -419,6 +449,8 @@ const RunSetup = () => {
               />
             </div>
 
+
+            {/* data required(GB) */}
             <FormField
               control={form.control}
               name="total_required"
@@ -427,7 +459,7 @@ const RunSetup = () => {
                   <FormLabel className="mb-2">Total Required (GB)</FormLabel>
                   <Input
                     {...field}
-                    // value={totalDataRequired || ''}
+                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
                     type="number"
                     disabled
                     placeholder="Enter total required"
@@ -437,7 +469,7 @@ const RunSetup = () => {
               )}
             />
 
-            {/* total gb Availabe */}
+            {/* total gb Available */}
             <FormField
               control={form.control}
               name="total_gb_available"
@@ -448,7 +480,8 @@ const RunSetup = () => {
                     {...field}
                     min="0"
                     required
-                    onBlur={(e) => handleGbAvailable(e.target.value)}
+                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    onBlur={() => validateTotalGbAvailable()} // Trigger validation on blur
                     type="number"
                     placeholder="Enter total GB available"
                     className="mb-2"
@@ -462,6 +495,25 @@ const RunSetup = () => {
               )}
             />
 
+            {/* sequnce run date*/}
+            <FormField
+              control={form.control}
+              name="seq_run_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="mb-2">Sequence Run Date</FormLabel>
+                  <Input
+                    {...field}
+                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    type="date"
+                    className="mb-2"
+                    required
+                  />
+
+                </FormItem>
+              )}
+            />
+
             {/* pool concentration */}
             <FormField
               control={form.control}
@@ -471,6 +523,9 @@ const RunSetup = () => {
                   <FormLabel className="mb-2">Final Pool Concentration (Qubit)</FormLabel>
                   <Input
                     {...field}
+                    type="number"
+                    min="0"
+                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
                     placeholder="Enter pool concentration"
                     className="mb-2"
                   />
@@ -489,6 +544,8 @@ const RunSetup = () => {
                   <Input
                     required
                     {...field}
+                    type="number"
+                    min="0"
                     value={avgSize || field.value} // Use avgSize state or field value
                     onChange={(e) => field.onChange(e.target.value)}
                     placeholder="Enter pool size"
@@ -509,6 +566,7 @@ const RunSetup = () => {
                   <Input
                     required
                     {...field}
+                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
                     type="number"
                     placeholder="Enter nM calculation"
                     className="mb-2"
@@ -531,6 +589,7 @@ const RunSetup = () => {
                   <FormLabel className="mb-2">Instrument Type</FormLabel>
                   <select
                     {...field}
+                    value={field.value || ""}
                     onChange={(e) => {
                       field.onChange(e); // Update form state
                       setInstrumentType(e.target.value); // Update instrument type state

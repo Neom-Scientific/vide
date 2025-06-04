@@ -3,10 +3,6 @@
 // import { NextResponse } from 'next/server';
 // import { Readable } from 'stream';
 
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
-import { NextResponse } from "next/server";
-import { storage } from "../../../../firebaseConfig";
-
 // const CLIENT_ID = process.env.CLIENT_ID_GOOGLE_DRIVE;
 // const CLIENT_SECRET = process.env.CLIENT_SECRET_GOOGLE_DRIVE;
 // // const REDIRECT_URI = process.env.REDIRECT_URI_GOOGLE_DRIVE;
@@ -51,27 +47,73 @@ import { storage } from "../../../../firebaseConfig";
 //   }
 // }
 
-export async function POST(req) {
-  try {
-    const formData = await req.formData();
-    const file = formData.get('file');
+// import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+// import { NextResponse } from "next/server";
+// import { storage } from "../../../../firebaseConfig";
+
+// export async function POST(req) {
+//   try {
+//     const formData = await req.formData();
+//     const file = formData.get('file');
+//     console.log('file', file);
+
+//     // Convert the file into a Buffer
+//     const buffer = Buffer.from(await file.arrayBuffer());
+
+//     // Create a reference to the file in Firebase Storage
+//     const storageRef = ref(storage, `uploads/${file.name}`);
+
+//     // Upload the file to Firebase Storage
+//     const snapshot = await uploadBytes(storageRef, buffer, { contentType: file.type });
+
+//     // Get the download URL
+//     const url = await getDownloadURL(snapshot.ref);
+
+//     return NextResponse.json({ success: true, fileUrl: url });
+//   } catch (error) {
+//     console.error('Error uploading file:', error);
+//     return NextResponse.json({ success: false, error: error.message });
+//   }
+// }
+
+import { NextResponse } from 'next/server';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import  s3  from '../../../../S3clientConfig';
+
+export async function POST(request){
+    const body = await request.formData();
+    const file = body.get('file');
     console.log('file', file);
+    try{
+      const response = [];
+       if(!file){
+        response.push({
+          message: 'No file provided',
+          status:404
+        })
+       }
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const params = {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: `uploads/${file.name}`,
+            Body: buffer,
+            ContentType: file.type
+        };
+        const command = new PutObjectCommand(params);
+        const data = await s3.send(command);
+        console.log('File uploaded successfully:', data);
+        const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/uploads/${file.name}`;
+        response.push({
+            message: 'File uploaded successfully',
+            status: 200,
+            fileUrl: fileUrl
+        });
 
-    // Convert the file into a Buffer
-    const buffer = Buffer.from(await file.arrayBuffer());
+        return NextResponse.json(response);
 
-    // Create a reference to the file in Firebase Storage
-    const storageRef = ref(storage, `uploads/${file.name}`);
-
-    // Upload the file to Firebase Storage
-    const snapshot = await uploadBytes(storageRef, buffer, { contentType: file.type });
-
-    // Get the download URL
-    const url = await getDownloadURL(snapshot.ref);
-
-    return NextResponse.json({ success: true, fileUrl: url });
-  } catch (error) {
-    console.error('Error uploading file:', error);
-    return NextResponse.json({ success: false, error: error.message });
-  }
+    }
+    catch(error){
+        console.error('Error uploading file:', error);
+        return NextResponse.json({ success: false, error: error.message });
+    }
 }

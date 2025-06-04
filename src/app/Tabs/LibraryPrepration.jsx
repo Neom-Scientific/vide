@@ -589,17 +589,16 @@ const LibraryPrepration = () => {
               console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
             }
 
-            if (columnId === "one_tenth_of_nm_conc" || columnId === "lib_vol_for_2nm") {
+            if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm" ) {
               // calculate total_vol_for_2nm
               updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
               updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
-
             }
 
-            if (columnId === "total_vol_for_2nm") {
-              // calculate nfw_volu_for_2nm
-              updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (total_vol_for_2nm - lib_vol_for_2nm).toFixed(2) : "";
-            }
+            // if (columnId === "lib_vol_for_2nm")  {
+            //   // calculate nfw_volu_for_2nm
+            //   updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (total_vol_for_2nm - lib_vol_for_2nm).toFixed(2) : "";
+            // }
 
             return updatedRow;
           })

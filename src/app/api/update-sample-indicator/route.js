@@ -52,12 +52,7 @@ export async function POST(request) {
                     const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
                     const sampleExists = data.rows.length > 0;
                     if (sampleExists) {
-                        response.push({
-                            message: 'Sample Id exists',
-                            status: 404
-                        });
-                    } else {
-                       await pool.query(
+                        await pool.query(
                             `INSERT INTO pool_info (sample_id, qubit_dna, data_required, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no,size,test_name, hospital_name)
                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11, $12, $13, $14, $15, $16)`,
                             [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
@@ -66,7 +61,7 @@ export async function POST(request) {
                             message: 'Sample indicator updated successfully',
                             status: 200
                         });
-                    }
+                    } 
                 }
             }
         }
