@@ -35,9 +35,6 @@ import AssignUser from '../components/AssignUser'
 
 const page = () => {
   const [SignIn, setSignIn] = useState(true)
-  const handleSignIn = () => {
-    setSignIn(!SignIn)
-  }
 
   return (
     <div className="grid h-screen grid-cols-1 md:grid-cols-12">
@@ -62,11 +59,6 @@ const page = () => {
             className="object-contain"
           />
         </div>
-
-        {/* Sign In / Sign Up Form */}
-        {/* <div className="w-full max-w-sm">
-          {SignIn ? <Login/> : <Request/>}
-        </div> */}
         <Tabs defaultValue='login' className="w-full max-w-sm">
           <TabsList className="flex justify-center mb-4 border-none rounded-lg ">
             <TabsTrigger value='login' className='p-2 bg-orange-500 cursor-pointer text-white font-bold border rounded-lg'> Login </TabsTrigger>
@@ -83,31 +75,6 @@ const page = () => {
             <AssignUser />
           </TabsContent>
         </Tabs>
-
-        {/* Toggle Between login and request
-        <div className="flex justify-center mt-5">
-          {SignIn ? (
-            <p className="text-sm text-center">
-              Don't have an Username and Password?{" "}
-              <span
-                className="text-blue-500 cursor-pointer"
-                onClick={handleSignIn}
-              >
-                Request
-              </span>
-            </p>
-          ) : (
-            <p className="text-sm text-center">
-              Already have Username and password?{" "}
-              <span
-                className="text-blue-500 cursor-pointer"
-                onClick={handleSignIn}
-              >
-                LogIn
-              </span>
-            </p>
-          )} 
-        </div>*/}
       </div>
     </div>
   )

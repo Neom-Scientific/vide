@@ -31,16 +31,22 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
+import { useDispatch } from "react-redux";
+import { setActiveTab } from "@/lib/redux/slices/tabslice";
+import { CldOgImage } from "next-cloudinary";
+import Cookies from "js-cookie";
 
 
 const Processing = () => {
-
+  const user = JSON.parse(Cookies.get("user") || "{}");
 
   const allColumns = [
     { key: 'hospital_name', label: 'Hospital Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
+    { key: 'dept_name', label: 'Department Name' },
+    { key: 'run_id', label: 'Run ID' },
     { key: 'sample_date', label: 'Sample Date' },
     { key: 'sample_type', label: 'Sample Type' },
     { key: 'trf', label: 'TRF' },
@@ -86,90 +92,30 @@ const Processing = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
-    { key: 'Qubit_hs', label: 'Qubit HS' },
-    { key: 'conc/rxn', label: 'conc/rxn' },
-    { key: 'barcode', label: 'Barcode' },
-    { key: 'i5_index_reverse', label: 'i5 (reverse)' },
-    { key: 'i7_index', label: 'i7 index' },
-    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
-    { key: 'nM_conc', label: 'nM conc' },
-    { key: 'volumefromStock_lib', label: 'Volume from stock library for 2nM' },
-    { key: 'nfw_volu_for_2nM', label: 'NFW Volume For 2nM' },
-    { key: 'total_vol_for_2nM', label: 'Total Volume For 2nM' },
   ];
 
   const allTests = [
     'WES',
     'CS',
+    'Clinical Exome',
     'Myeloid',
     'Cardio',
-    'SHS',
+    'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
     'Cardio Comprehensive Myopathy'
   ];
 
-  const rows = [
-    {
-      hospital_name: 'Apollo',
-      vial_received: 'Yes',
-      specimen_quality: 'Good',
-      registration_date: '2024-05-21',
-      sample_date: '2024-05-21',
-      sample_type: 'Blood',
-      trf: 'trf1.pdf',
-      collection_date_time: '2024-05-21T10:00',
-      storage_condition: 'Refrigerated',
-      prority: 'Routine',
-      hospital_id: 'H001',
-      client_id: 'C001',
-      client_name: 'Client A',
-      sample_id: 'S001',
-      patient_name: 'John Doe',
-      DOB: '1990-01-01',
-      age: '34',
-      sex: 'Male',
-      ethnicity: 'Asian',
-      father_husband_name: 'Richard Doe',
-      address: '123 Main St',
-      city: 'Delhi',
-      state: 'Delhi',
-      country: 'India',
-      patient_mobile: '9999999999',
-      docter_mobile: '8888888888',
-      docter_name: 'Dr. Smith',
-      email: 'john@example.com',
-      test_name: 'WES,Myeloid',
-      remarks: 'N/A',
-      clinical_history: 'None',
-      repeat_required: 'No',
-      repeat_reason: '',
-      repeat_date: '',
-      selectedTestName: 'WES',
-      systolic_bp: '120',
-      diastolic_bp: '80',
-      total_cholesterol: '180',
-      hdl_cholesterol: '50',
-      ldl_cholesterol: '100',
-      diabetes: 'No',
-      smoker: 'Never',
-      hypertension_treatment: 'No',
-      statin: 'No',
-      aspirin_therapy: 'No',
-      dna_isolation: 'Yes',
-      lib_prep: 'No',
-      under_seq: 'No',
-      seq_completed: 'No',
-    },
-    // Add more rows as needed
-  ];
+  let rows = [];
 
   const [tableRows, setTableRows] = useState(rows);
   const [selectedTestNames, setSelectedTestNames] = useState([]);
   const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
   const [getTheTestNames, setGetTheTestNames] = useState([]);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
+  const [selectedLibPrepTestName, setSelectedLibPrepTestName] = useState(null);
+  const dispatch = useDispatch();
 
   // Build columns for tanstack table
   const columns = [
@@ -211,11 +157,66 @@ const Processing = () => {
             cell: info => {
               const isChecked = info.getValue() === "Yes";
               const rowIdx = info.row.index;
+              const currentTestName = info.row.original.test_name;
+
               return (
                 <Checkbox
                   checked={isChecked}
-                  disabled={isChecked}
-                  onCheckedChange={checked => {
+                  onCheckedChange={async checked => {
+                    // Validate test_name before allowing selection
+                    if (checked) {
+                      if (
+                        selectedLibPrepTestName &&
+                        selectedLibPrepTestName !== currentTestName
+                      ) {
+                        toast.warning(
+                          `You can only select Library Prep for rows with the same test name: ${selectedLibPrepTestName}`
+                        );
+                        return;
+                      }
+
+                      // Set the selected test_name if valid
+                      setSelectedLibPrepTestName(currentTestName);
+                    } else {
+                      // Clear the selected test_name if no rows are selected
+                      const remainingRows = tableRows.filter(
+                        row => row.lib_prep === "Yes" && row.test_name === currentTestName
+                      );
+                      if (remainingRows.length === 1) {
+                        setSelectedLibPrepTestName(null);
+                      }
+                    }
+
+
+                    const payload = {
+                      sample_id: info.row.original.sample_id,
+                      sample_indicator: col.key,
+                      indicator_status: checked ? "Yes" : "No",
+                    };
+                    console.log("Payload for API call:", payload);
+
+                    try {
+                      // Make the API call
+                      const response = await axios.put("/api/update-sample-indicator", {
+                        data: payload,
+                      });
+
+                      console.log("API response:", response.data);
+                      if (response.data[0].status === 200) {
+                        // update the localstorage with the updated data
+                        const updatedRows = tableRows.map((row, idx) =>
+                          idx === rowIdx ? { ...row, lib_prep: checked ? "Yes" : "No" } : row
+                        );
+                        setTableRows(updatedRows);
+                        localStorage.setItem("searchData", JSON.stringify(updatedRows));
+                      } else {
+                        toast.error(response.data[0].message || "Failed to update sample indicator.");
+                      }
+                    } catch (error) {
+                      console.error("Error updating sample indicator:", error);
+                      toast.error("An error occurred while updating the sample indicator.");
+                    }
+
                     // Update the state to show/hide the columns
                     setShowLibPrepColumns(checked);
 
@@ -227,16 +228,10 @@ const Processing = () => {
                           : row
                       )
                     );
-                    if(checked){
-                      setSelectedSampleIndicator(col.key);
-                    }
-                    else{
-                      setSelectedSampleIndicator('');
-                    }
                   }}
                 />
               );
-            }
+            },
           };
         }
         return {
@@ -244,91 +239,61 @@ const Processing = () => {
           header: col.label,
           cell: info => {
             const isChecked = info.getValue() === "Yes";
+            const rowIdx = info.row.index;
+            const currentTestName = info.row.original.test_name;
+
             return (
               <Checkbox
                 checked={isChecked}
-                disabled={isChecked}
-                onCheckedChange={checked => {
-                  const testNames = info.row.original.test_name;
-                  setGetTheTestNames(testNames.split(',').map(name => name.trim()));
-                  setSelectedSampleIndicator(col.key);
+                onCheckedChange={async checked => {
+                  // Update the row data locally
+                  const updatedRow = {
+                    ...info.row.original,
+                    [col.key]: checked ? "Yes" : "No",
+                  };
+
+                  // Update the state
                   setTableRows(prev =>
                     prev.map((row, idx) =>
-                      idx === info.row.index
-                        ? { ...row, [col.key]: checked ? "Yes" : "No" }
-                        : row
+                      idx === rowIdx ? updatedRow : row
                     )
                   );
+
+                  // Prepare the API payload
+                  const payload = {
+                    sample_id: updatedRow.sample_id,
+                    sample_indicator: col.key,
+                    indicator_status: checked ? "Yes" : "No",
+                  };
+
+                  try {
+                    // Make the API call
+                    const response = await axios.put("/api/update-sample-indicator", {
+                      data: payload,
+                    });
+
+                    console.log("API response:", response.data);
+                    if (response.data[0].status === 200) {
+                      // update the localstorage with the updated data
+                      const updatedRows = tableRows.map((row, idx) =>
+                        idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
+                      );
+                      setTableRows(updatedRows);
+                      localStorage.setItem("searchData", JSON.stringify(updatedRows));
+                    } else {
+                      toast.error(response.data[0].message || "Failed to update sample indicator.");
+                    }
+                  } catch (error) {
+                    console.error("Error updating sample indicator:", error);
+                    toast.error("An error occurred while updating the sample indicator.");
+                  }
                 }}
               />
             );
           },
         };
       }
-      // Default: render as text
-      if ([
-        "Qubit_hs",
-        "conc/rxn",
-        "barcode",
-        "i5_index_reverse",
-        "i7_index",
-        "lib_qubit",
-        "nM_conc",
-        "volumefromStock_lib",
-        "nfw_volu_for_2nM",
-        "total_vol_for_2nM",
-      ].includes(col.key)) {
-        return {
-          accessorKey: col.key,
-          header: col.label,
-          cell: info => {
-            const value = info.getValue() ?? ""; // Current value from the state
-            const rowIndex = info.row.index;
-            const columnId = info.column.id;
-        
-            // Check if the row is eligible for editing
-            const testNames = info.row.original.test_name?.split(',').map(t => t.trim());
-            const isLibPrepMyeloid =
-              info.row.original.lib_prep === "Yes" && testNames.includes("Myeloid");
-        
-            if (!isLibPrepMyeloid) return value;
-        
-            return (
-              <Input
-                className="border rounded p-1 text-xs w-full"
-                value={value}
-                type="text"
-                placeholder={`Enter ${info.column.columnDef.header}`}
-                name={columnId}
-                onChange={async (e) => {
-                  const newValue = e.target.value;
-        
-                  // Update the local state
-                  info.table.options.meta?.updateData(rowIndex, columnId, newValue);
-        
-                  // Prepare the payload for the API
-                  const payload = {
-                    sample_id: info.row.original.sample_id,
-                    sample_indicator: selectedSampleIndicator,
-                    test_name: getTheTestNames.length > 0 ? getTheTestNames.join(',') : info.row.original.test_name,
-                    [columnId]: newValue, // Update only the changed column
-                  };
-        
-                  try {
-                    // Make the API call
-                    const response = await axios.post('/api/update-sample-indicator', payload);
-                    toast.success("Value updated successfully!");
-                    console.log("API Response:", response.data);
-                  } catch (error) {
-                    console.error("Error updating value:", error);
-                    toast.error("An error occurred while updating the value.");
-                  }
-                }}
-              />
-            );
-          }
-        }
-      }
+
       return {
         accessorKey: col.key,
         header: col.label,
@@ -343,7 +308,7 @@ const Processing = () => {
     "sample_id",
     "registration_date",
     "test_name",
-    "client_name",
+    "patient_name",
     "dna_isolation",
     "lib_prep",
     "under_seq",
@@ -359,23 +324,6 @@ const Processing = () => {
   );
 
   // Dynamically update column visibility when `showLibPrepColumns` changes
-  useEffect(() => {
-    setColumnVisibility(prev => ({
-      ...prev,
-      Qubit_hs: showLibPrepColumns,
-      'conc/rxn': showLibPrepColumns,
-      barcode: showLibPrepColumns,
-      i5_index_reverse: showLibPrepColumns,
-      i7_index: showLibPrepColumns,
-      lib_qubit: showLibPrepColumns,
-      nM_conc: showLibPrepColumns,
-      volumefromStock_lib: showLibPrepColumns,
-      nfw_volu_for_2nM: showLibPrepColumns,
-      total_vol_for_2nM: showLibPrepColumns,
-      under_seq: !showLibPrepColumns,
-      seq_completed: !showLibPrepColumns,
-    }));
-  }, [showLibPrepColumns]);
 
   const [sorting, setSorting] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
@@ -396,53 +344,91 @@ const Processing = () => {
     getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
-  updateData: (rowIndex, columnId, value) => {
-    setTableRows(prev =>
-      prev.map((row, idx) => {
-        if (idx !== rowIndex) return row;
-        return { ...row, [columnId]: value };
-      })
-    );
-  },
-},
+      updateData: (rowIndex, columnId, value) => {
+        setTableRows(prev =>
+          prev.map((row, idx) => {
+            if (idx !== rowIndex) return row;
+            return { ...row, [columnId]: value };
+          })
+        );
+      },
+    },
   });
 
   const handlesubmit = async () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
-      sample_id: getValue('sample_id'),
-      test_name: selectedTestNames.join(','),
-      sample_status: getValue('sample_status'),
-      sample_indicator: getValue('sample_indicator'),
-      from_date: getValue('from_date'),
-      to_date: getValue('to_date'),
-      doctor_name: getValue('doctor_name'),
-      dept_name: getValue('dept_name'),
-      run_id: getValue('run_id'),
+      sample_id: getValue("sample_id"),
+      test_name: selectedTestNames.join(","),
+      sample_status: getValue("sample_status"),
+      sample_indicator: getValue("sample_indicator"),
+      from_date: getValue("from_date"),
+      to_date: getValue("to_date"),
+      doctor_name: getValue("doctor_name"),
+      dept_name: getValue("dept_name"),
+      run_id: getValue("run_id"),
+      hospital_name: user.hospital_name, // Use the hospital name from the user cookie
     };
 
     try {
       const response = await axios.get(`/api/search`, { params: data });
-      // Axios automatically parses JSON, so use response.data
-      setTableRows(response.data.data);
-      // toast.success("Data fetched successfully!");
+
+      if (response.data[0].status === 200) {
+        // Map the data to ensure checkbox fields are "Yes"/"No"
+        const mappedData = response.data[0].data.map((row) => ({
+          ...row,
+          dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+          lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+          under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+          seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+        }));
+        setTableRows(mappedData); // Update the tableRows state with the mapped data
+        localStorage.setItem("searchData", JSON.stringify(mappedData)); // Store the data in localStorage
+      } else if (response.data[0].status === 400 || response.data[0].status === 404) {
+        toast.error(response.data[0].message || "No data found for the given filters.");
+        setTableRows([]);
+      }
     } catch (error) {
-      // Axios error handling
       if (error.response) {
-        // Server responded with a status other than 2xx
         setTableRows([]);
         toast.error(error.response.data.message || "An error occurred while fetching the data.");
-      } else {
-        // Network error or other
-        setTableRows([]);
-        toast.error(error.message || "An unknown error occurred.");
       }
       console.error("Error fetching data:", error);
     }
 
-    console.log("Form submitted with filters:", data);
   };
+
+  // Check if any row has lib_prep set to "Yes"
+  const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
+
+  const handleSendForLibraryPreparation = () => {
+
+    const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
+    if (checkedRows.length === 0) {
+      toast.warning("No rows selected for Library Preparation.");
+      return;
+    }
+
+    // Check if data already exists in localStorage
+    if (localStorage.getItem("libraryPreparationData")) {
+      toast.warning("Some rows are already present in the Library Preparation.");
+      return;
+    }
+
+    // Save the checked rows to localStorage or a shared state
+    localStorage.setItem("libraryPreparationData", JSON.stringify(checkedRows));
+
+    // Navigate to the LibraryPreparation tab
+    dispatch(setActiveTab("library-prepration"));
+  };
+
+  useEffect(()=>{
+    if(localStorage.getItem("searchData")){
+      const storedData = JSON.parse(localStorage.getItem("searchData"));
+      setTableRows(storedData);
+    }
+  },[])
 
   return (
     <div className="p-4">
@@ -450,22 +436,22 @@ const Processing = () => {
 
       {/* Top Filters */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-5 gap-4 mb-2">
-          <div>
+        <div className="flex gap-4 mb-2">
+          <div className="me-5">
             <label className="block font-semibold mb-1">Sample id</label>
             <Input
               name='sample_id'
               placeholder="Sample id"
-              className="my-1"
+              className="my-1 w-[150px] border-2 border-orange-300"
             />
           </div>
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1 whitespace-nowrap">Test name</label>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
-                  className="h-10 bg-gray-800 text-white"
+                  className="h-10 bg-gray-700 hover:bg-gray-800 cursor-pointer text-white"
                 >
                   Add Test
                 </Button>
@@ -478,12 +464,10 @@ const Processing = () => {
                       key={test}
                       onClick={() => {
                         if (selectedTestNames.includes(test)) {
-                          toast.warning(`${test} is already added`);
                           return;
                         }
                         const updated = [...selectedTestNames, test];
                         setSelectedTestNames(updated);
-                        toast.success(`${test} added`);
                       }}
                     >
                       <span className="text-sm">{test}</span>
@@ -494,7 +478,7 @@ const Processing = () => {
           </div>
           <div>
             <label className="block font-semibold mb-1">Selected Test Name</label>
-            <div className="flex flex-wrap gap-2 min-h-[42px] border rounded-md p-2 dark:bg-gray-800 ml-2" style={{ flex: 1 }}>
+            <div className="flex w-[400px] border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 ml-2" style={{ flex: 1 }}>
               {selectedTestNames.length === 0 && (
                 <span className="text-gray-400 dark:text-white">No test added</span>
               )}
@@ -519,86 +503,88 @@ const Processing = () => {
               ))}
             </div>
           </div>
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1">Sample Status</label>
             <select
               name='sample_status'
-              className="w-full border rounded-md p-2 dark:bg-gray-800"
+              className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
               <option value="processing">Under Processing</option>
               <option value="reporting">Ready for Reporting</option>
             </select>
           </div>
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1">Sample Indicator</label>
             <select
               name='sample_indicator'
-              className="w-full border rounded-md p-2 dark:bg-gray-800"
+              className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
               onChange={e => {
                 const options = Array.from(e.target.selectedOptions, option => option.value);
                 setSelectedSampleIndicator(options);
               }}
             >
               <option value="">Select the Sample Indicator</option>
-              <option value="dna">DNA Isolation</option>
-              <option value="library">Library Prep</option>
-              <option value="sequencing">Under sequencing</option>
-              <option value="completed">Sequencing completed</option>
+              <option value="dna_isolation">DNA Isolation</option>
+              <option value="lib_prep">Library Prep</option>
+              <option value="under_seq">Under sequencing</option>
+              <option value="seq_completed">Sequencing completed</option>
             </select>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-4 mb-2">
-          <div>
-            <label className="block font-semibold mb-1 mt-2">From Date</label>
-            <Input
-              name='from_date'
-              type="date"
-              className="my-1"
-            />
-          </div>
-          <div>
-            <label className="block font-semibold mb-1 mt-2">To Date</label>
-            <Input
-              name='to_date'
-              type="date"
-              className="my-1"
-            />
+        <div className="flex gap-4 mb-2">
+          <div className="flex gap-4 me-5">
+            <div className="me-5">
+              <label className="block font-semibold mb-1 mt-2">From Date</label>
+              <Input
+                name='from_date'
+                type="date"
+                className="my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              />
+            </div>
+            <div>
+              <label className="block font-semibold mb-1 mt-2">To Date</label>
+              <Input
+                name='to_date'
+                type="date"
+                className="my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              />
+            </div>
           </div>
 
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Doctor's Name</label>
             <Input
               name='doctor_name'
               placeholder="Doctor's Name"
-              className="my-1"
+              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
 
-          <div>
+          <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Dept. Name</label>
             <Input
               name='dept_name'
               placeholder="Dept. Name"
-              className="my-1"
+              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+            />
+          </div>
+          <div className="me-5">
+            <label className="block font-semibold mb-1 mt-2">Run id</label>
+            <Input
+              name='run_id'
+              placeholder="Run id"
+              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
         </div>
         <div className='grid grid-cols-4 gap-4 mb-2 '>
-          <div>
-            <label className="block font-semibold mb-1">Run id</label>
-            <Input
-              name='run_id'
-              placeholder="Run id"
-              className="my-1"
-            />
-          </div>
 
           <div>
             <Button
               type='submit'
               onClick={() => { handlesubmit() }}
-              className="mt-6 bg-gray-700 text-white hover:bg-gray-800 w-full">
+              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-full">
               Retrieve
             </Button>
           </div>
@@ -616,6 +602,8 @@ const Processing = () => {
           <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
             {table
               .getAllLeafColumns()
+              .slice() // Create a copy of the array
+              .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
               .filter((column) => column.getCanHide())
               .map((column) => (
                 <DropdownMenuCheckboxItem
@@ -662,18 +650,6 @@ const Processing = () => {
                         {flexRender(cell.column.columnDef.cell, cell.getContext())}
                       </TableCell>
                     ))}
-                    {/* Submit Button for rows where lib_prep columns are visible
-                    {showLibPrepColumns && (
-                      <TableCell colSpan={1}>
-                        <Button
-                          type="button"
-                          onClick={handleLibPrepMyeloidSubmit}
-                          className="bg-orange-500 text-white hover:bg-orange-600 w-full"
-                        >
-                          Submit
-                        </Button>
-                      </TableCell>
-                    )} */}
                   </TableRow>
                 ))
               ) : (
@@ -687,7 +663,27 @@ const Processing = () => {
           </Table>
         </div>
       </div>
-      <Button className="bg-gray-700 mt-5 text-white hover:bg-gray-800 min-w-[120px] h-12">Save</Button>
+      <div className="flex justify-between items-center mb-4">
+        <Button
+          className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12"
+          onClick={() => {
+            // Save logic here
+            console.log("Save clicked");
+          }}
+        >
+          Save
+        </Button>
+
+        {isAnyLibPrepChecked && (
+          <Button
+            className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (isAnyLibPrepChecked ? "" : "opacity-50")}
+            onClick={handleSendForLibraryPreparation}
+          >
+            Send for Library Preparation
+          </Button>
+        )}
+
+      </div>
       <ToastContainer />
 
     </div>

@@ -1,9 +1,12 @@
 "use client"
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, use } from 'react'
 import { Sun, Moon } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Cookies from 'js-cookie';
+import { useRouter } from 'next/navigation';
 
 const defaultAvatars = [
+  "https://media.licdn.com/dms/image/v2/D5603AQGxb0ot3mS5XA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1689817962657?e=2147483647&v=beta&t=GkAxlImaAVRUvt9oyqg5CRHlMvIXpEH1SdKB8Dpakeo",
   "https://randomuser.me/api/portraits/men/32.jpg",
   "https://randomuser.me/api/portraits/women/44.jpg",
   "https://randomuser.me/api/portraits/men/65.jpg",
@@ -13,90 +16,118 @@ const defaultAvatars = [
 ];
 
 const Header = ({ activeTab, setActiveTab }) => {
+  const router = useRouter();
+  useEffect(() => {
+    const user = JSON.parse(Cookies.get('user') || '{}');
+    if(Object.keys(user).length === 0){ // Check if user object is empty
+      router.push('/login'); // Redirect to login if user is not logged in
+    }
+  },[]);
+  
   const [darkMode, setDarkMode] = useState(
-    typeof window !== "undefined" ? document.documentElement.classList.contains('dark') : false
+    typeof window !== "undefined"
+      ? document.documentElement.classList.contains("dark")
+      : false
   );
-  const [profilePhoto, setProfilePhoto] = useState(defaultAvatars[0]);
-  const [showMenu, setShowMenu] = useState(false);
-  const fileInputRef = useRef(null);
+
+  const fileInputRef = useRef(null); // Define the file input reference
+  const [profilePhoto, setProfilePhoto] = useState(defaultAvatars[0]); // Default profile photo
+  const [showMenu, setShowMenu] = useState(false); // State for avatar menu
 
   const toggleDarkMode = () => {
-    document.documentElement.classList.toggle('dark')
-    setDarkMode(!darkMode)
-  }
+    document.documentElement.classList.toggle("dark");
+    setDarkMode(!darkMode);
+  };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
+  const handleAvatarClick = () => {
+    setShowMenu(!showMenu); // Toggle the avatar menu
+  };
+
+  const handlePhotoChange = (event) => {
+    const file = event.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfilePhoto(reader.result);
-        setShowMenu(false);
+      reader.onload = (e) => {
+        setProfilePhoto(e.target.result); // Update the profile photo
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleAvatarClick = () => {
-    setShowMenu(!showMenu);
-  };
-
   const handleChooseAvatar = (avatar) => {
-    setProfilePhoto(avatar);
-    setShowMenu(false);
+    setProfilePhoto(avatar); // Set the selected avatar
+    setShowMenu(false); // Close the menu
   };
 
   const handleUploadClick = () => {
-    fileInputRef.current.click();
+    if (fileInputRef.current) {
+      fileInputRef.current.click(); // Trigger the file input click
+    }
   };
 
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setDarkMode(document.documentElement.classList.contains('dark'));
-    });
-    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-    return () => observer.disconnect();
-  }, []);
-
   return (
-    <header className="w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md">
+    <header className="max-w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md">
       <div className="container mx-auto flex justify-between items-center">
         <a href="/" className="text-2xl font-bold text-orange-500">
-          Visulization Index and DashBoard Execution
+          Visualization Index and Dashboard Execution
         </a>
         <nav>
-          <ul className="flex space-x-4 items-center">
+          <ul className="flex space-x-4 items-center m-0 p-0">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="bg-white dark:bg-gray-900 ">
-                <li>
-                  <TabsTrigger className="cursor-pointer" value="dashboard">DashBoard</TabsTrigger>
+              <TabsList className="bg-white dark:bg-gray-900 flex items-center space-x-4 overflow-x-auto max-w-full">
+                <li className="p-0 m-0">
+                  <TabsTrigger className="cursor-pointer" value="dashboard">
+                    Dashboard
+                  </TabsTrigger>
                 </li>
-                <li>
-                  <TabsTrigger className="cursor-pointer" value="sample-register">Sample Registration</TabsTrigger>
+                <li className="p-0 m-0">
+                  <TabsTrigger
+                    className="cursor-pointer"
+                    value="sample-register"
+                  >
+                    Sample Registration
+                  </TabsTrigger>
                 </li>
-                <li>
-                  <TabsTrigger className="cursor-pointer" value="processing">Processing</TabsTrigger>
+                <li className="p-0 m-0">
+                  <TabsTrigger className="cursor-pointer" value="processing">
+                    Processing
+                  </TabsTrigger>
                 </li>
-                <li>
-                  <TabsTrigger className="cursor-pointer" value="run-setup">Run Setup</TabsTrigger>
+                <li className="p-0 m-0">
+                  <TabsTrigger
+                    className="cursor-pointer"
+                    value="library-prepration"
+                  >
+                    Library Preparation
+                  </TabsTrigger>
                 </li>
-                <li>
-                  <TabsTrigger className="cursor-pointer" value="reports">Reports</TabsTrigger>
+                <li className="p-0 m-0">
+                  <TabsTrigger className="cursor-pointer" value="run-setup">
+                    Run Setup
+                  </TabsTrigger>
+                </li>
+                <li className="p-0 m-0">
+                  <TabsTrigger className="cursor-pointer" value="reports">
+                    Reports
+                  </TabsTrigger>
                 </li>
               </TabsList>
             </Tabs>
             <li>
-              <button onClick={toggleDarkMode} className='p-2 border-2 border-black dark:border-2 dark:border-white rounded-lg cursor-pointer'>
+              <button
+                onClick={toggleDarkMode}
+                className="p-2 border-2 border-black dark:border-2 dark:border-white rounded-lg cursor-pointer"
+              >
                 {darkMode ? <Sun size={20} /> : <Moon size={20} />}
               </button>
             </li>
-            <li className="relative">
+            <li className="relative flex-shrink-0">
               <input
                 type="file"
                 accept="image/*"
-                ref={fileInputRef}
-                style={{ display: 'none' }}
-                onChange={handlePhotoChange}
+                ref={fileInputRef} // Attach the ref to the input
+                className="hidden"
+                onChange={handlePhotoChange} // Handle file selection
               />
               <img
                 src={profilePhoto}
@@ -132,7 +163,7 @@ const Header = ({ activeTab, setActiveTab }) => {
         </nav>
       </div>
     </header>
-  )
-}
+  );
+};
 
-export default Header
+export default Header;
