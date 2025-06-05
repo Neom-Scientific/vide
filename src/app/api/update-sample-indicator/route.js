@@ -25,6 +25,10 @@ export async function POST(request) {
             });
         }
 
+        console.log('rows', rows);
+        console.log('hospital_name', hospital_name);
+        console.log('testName', testName);
+
         if (testName === "Myeloid") {
 
             for (let i = 0; i < rows.length; i++) {
@@ -41,28 +45,66 @@ export async function POST(request) {
                 const nfw_volu_for_2nm = rows[i].nfw_volu_for_2nm;
                 const total_vol_for_2nm = rows[i].total_vol_for_2nm;
                 const size = rows[i].size;
+
                 if (!sample_id) {
-                    await pool.query(`UPDATE pool_info SET qubit_dna = $2, data_required = $3, "conc/rxn" = $4, barcode = $5, i5_index_reverse = $6, i7_index = $7, lib_qubit = $8, nm_conc = $9, lib_vol_for_2nm = $10, nfw_volu_for_2nm = $11, total_vol_for_2nm = $12, pool_no = $13, size = $14, test_name = $15, hospital_name = $16 WHERE sample_id = $1`,
-                        [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]);
                     response.push({
-                        message:'data updated successfully',
+                        message: 'Sample Id is required',
+                        status: 400
+                    });
+                }
+                else if (!qubit_dna || !data_required || !conc_rxn || !barcode || !i5_index_reverse || !i7_index || !lib_qubit || !nm_conc || !lib_vol_for_2nm || !nfw_volu_for_2nm || !total_vol_for_2nm) {
+                    response.push({
+                        message: 'All fields are required',
+                        status: 400
+                    });
+                }
+                const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
+                const sampleExists = data.rows.length > 0;
+                if (sampleExists) {
+                    await pool.query(
+                        `UPDATE pool_info SET qubit_dna = $2, data_required = $3, "conc/rxn" = $4, barcode = $5, i5_index_reverse = $6, i7_index = $7, lib_qubit = $8, nm_conc = $9, lib_vol_for_2nm = $10, nfw_volu_for_2nm = $11, total_vol_for_2nm = $12, pool_no = $13, size = $14, test_name = $15, hospital_name = $16 WHERE sample_id = $1`,
+                        [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
+                    );
+                    response.push({
+                        message: 'data updated successfully',
                         status: 200
                     });
-                } else {
-                    const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
-                    const sampleExists = data.rows.length > 0;
-                    if (sampleExists) {
-                        await pool.query(
-                            `INSERT INTO pool_info (sample_id, qubit_dna, data_required, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no,size,test_name, hospital_name)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11, $12, $13, $14, $15, $16)`,
-                            [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
-                        );
-                        response.push({
-                            message: 'Sample indicator updated successfully',
-                            status: 200
-                        });
-                    } 
                 }
+                else {
+                    await pool.query(
+                        `INSERT INTO pool_info (sample_id, qubit_dna, data_required, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, test_name, hospital_name)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11, $12, $13, $14, $15,$16)`,
+                        [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
+                    );
+                    response.push({
+                        message: 'Sample indicator updated successfully',
+                        status: 200
+                    });
+                }
+
+                // if (!sample_id) {
+                //     const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
+                //     const sampleExists = data.rows.length > 0;
+                //     if (!sampleExists) {
+                //         await pool.query(
+                //             `INSERT INTO pool_info (sample_id, qubit_dna, data_required, "conc/rxn", barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no,size,test_name, hospital_name)
+                //         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,$11, $12, $13, $14, $15, $16)`,
+                //             [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
+                //         );
+
+                //         response.push({
+                //             message: 'Sample indicator updated successfully',
+                //             status: 200
+                //         });
+                //     } 
+                // } else {
+                //     await pool.query(`UPDATE pool_info SET qubit_dna = $2, data_required = $3, "conc/rxn" = $4, barcode = $5, i5_index_reverse = $6, i7_index = $7, lib_qubit = $8, nm_conc = $9, lib_vol_for_2nm = $10, nfw_volu_for_2nm = $11, total_vol_for_2nm = $12, pool_no = $13, size = $14, test_name = $15, hospital_name = $16 WHERE sample_id = $1`,
+                //         [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]);
+                //     response.push({
+                //         message:'data updated successfully',
+                //         status: 200
+                //     });
+                // }
             }
         }
         else if (testName === "WES" ||
@@ -105,7 +147,7 @@ export async function POST(request) {
                     });
                 }
                 //  error de do agr user upr me se koi bhi field ko nhi dega to agr ek bhi field me value hai to error nhi aayega
-                else if (!qubit_dna || !per_rxn_gdna || !volume || !gdna_volume_3x || !nfw || !plate_designation || !well || !i5_index_reverse || !i7_index || !qubit_lib_qc_ng_ul || !stock_ng_ul || !lib_vol_for_hyb || !gb_per_sample) {
+                else if (!qubit_dna || !per_rxn_gdna || !volume || !gdna_volume_3x || !nfw || !plate_designation || !well || !i5_index_reverse || !i7_index || !qubit_lib_qc_ng_ul || !stock_ng_ul || !lib_vol_for_hyb ) {
                     response.push({
                         message: 'All fields are required',
                         status: 400

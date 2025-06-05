@@ -40,6 +40,7 @@ const formSchema = z.object({
   total_volume_2nm_next_seq_550: z.number().optional(1, 'Total volume (2nM) is required'),
   final_pool_conc_vol_2nm_next_seq_550: z.number().optional(1, 'Final pool concentration volume (2nM) is required'),
   nfw_vol_2nm_next_seq_550: z.number().optional(1, 'NFW volume (2nM) is required'),
+  table_data: z.string().optional(),
 })
 
 const RunSetup = () => {
@@ -81,6 +82,7 @@ const RunSetup = () => {
       total_volume_2nm_next_seq_550: 0,
       final_pool_conc_vol_2nm_next_seq_550: 0,
       nfw_vol_2nm_next_seq_550: 0,
+      table_data: []
     },
   });
 
@@ -154,16 +156,19 @@ const RunSetup = () => {
       const filteredPoolData = poolData.filter((pool) =>
         selectedTestNames.includes(pool.test_name)
       );
+      // console.log('data', data);
+      console.log('table_data',JSON.parse(data.table_data));
 
       // Extract sample_ids from the filtered data
       const selectedSampleIds = filteredPoolData.map((pool) => pool.sample_id);
 
-      console.log("Selected Sample IDs:", selectedSampleIds);
+      // console.log("Selected Sample IDs:", selectedSampleIds);
 
       // Submit the form data along with the selected sample_ids
       const response = await axios.post('/api/run-setup', {
         setup: {
           ...data,
+          table_data: data.table_data, // Parse the table_data from string to object
           sample_ids: selectedSampleIds, // Include only the selected sample_ids
           hospital_name: user.hospital_name, // Include hospital name in the request
         },
@@ -198,15 +203,6 @@ const RunSetup = () => {
     }
   };
 
-
-  const pool_size = form.watch("pool_size");
-  const pool_conc = form.watch("pool_conc");
-  useEffect(() => {
-    if (pool_size && pool_conc) {
-      const nM = parseFloat(((pool_conc / (pool_size * 660)) * 1000000).toFixed(9));
-      form.setValue("nm_cal", nM);
-    }
-  }, [pool_size, pool_conc])
 
   const dinatured_lib_next_seq_550 = form.watch("dinatured_lib_next_seq_550");
   const total_volume_next_seq_550 = form.watch("total_volume_next_seq_550");
@@ -280,6 +276,17 @@ const RunSetup = () => {
 
     setSelectedCheckboxes(updatedCheckboxes);
 
+    // Calculate the average size
+    const updatedSize = poolData
+      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
+      .map((pool) => Number(pool.size)); // Ensure size is a number
+
+    const avgSize = updatedSize.length > 0
+      ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
+      : 0;
+
+    setAvgSize(avgSize); // Update the avgSize state
+
     // Calculate the total data required for selected checkboxes
     const totalDataRequired = poolData
       .filter((pool) => updatedCheckboxes.includes(pool.test_name))
@@ -322,6 +329,54 @@ const RunSetup = () => {
       setPercentage([]); // Reset percentages if total_gb_available is invalid
     }
   }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
+
+  const pool_conc = form.watch("pool_conc");
+
+  useEffect(() => {
+    if (avgSize && pool_conc && !isNaN(avgSize) && !isNaN(pool_conc)) {
+      const nM = parseFloat(((pool_conc / (avgSize * 660)) * 1000000).toFixed(9)); // Perform calculation
+      form.setValue("nm_cal", nM); // Update nm_cal field
+    } else {
+      form.setValue("nm_cal", 0); // Set default value if inputs are invalid
+    }
+  }, [avgSize, pool_conc]); // Watch for changes in pool_size and pool_conc
+
+  useEffect(() => {
+    if (avgSize && !isNaN(avgSize)) {
+      form.setValue("pool_size", avgSize.toString()); // Set the value programmatically
+      form.trigger("pool_size"); // Trigger validation for the pool_size field
+    }
+  }, [avgSize]); // Watch for changes in avgSize
+
+  useEffect(() => {
+    const updatedTableData = selectedTestNames.map((test) => {
+
+      const filteredPoolData = poolData.filter((pool) => pool.test_name === test);
+
+      const sampleCount = filteredPoolData.length;
+
+      const totalDataRequiredForTest = poolData
+        .filter((pool) => pool.test_name === test)
+        .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
+
+      const percentageForTest = percentage
+        .filter((item) => item.test_name === test)
+        .reduce((sum, item) => sum + item.percentage, 0) || 0;
+
+      const finalPoolVolUl = form.getValues("final_pool_vol_ul");
+      const calculatedFinalPoolVolUl = parseFloat(((percentageForTest / 100) * finalPoolVolUl).toFixed(2));
+
+      return {
+        test_name: test,
+        total_data_required: totalDataRequiredForTest,
+        sample_count: sampleCount,
+        percentage: percentageForTest,
+        final_pool_volume_ul: calculatedFinalPoolVolUl,
+      };
+    });
+
+    form.setValue("table_data", JSON.stringify(updatedTableData)); // Update table_data in form state
+  }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]); // Watch for changes in dependencies
 
   return (
     <div>
@@ -366,7 +421,8 @@ const RunSetup = () => {
                     {...field}
                     type="number"
                     placeholder="Enter final pool volume (ul)"
-                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid numeric value
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} // Convert input to number
                     className="mb-2"
                     required
                   />
@@ -380,7 +436,7 @@ const RunSetup = () => {
             />
 
 
-            {/* Selected Applications */}
+            { /* Selected Applications */}
             <div className="col-span-2">
               <FormField
                 control={form.control}
@@ -450,7 +506,6 @@ const RunSetup = () => {
             </div>
 
 
-            {/* data required(GB) */}
             <FormField
               control={form.control}
               name="total_required"
@@ -504,7 +559,6 @@ const RunSetup = () => {
                   <FormLabel className="mb-2">Sequence Run Date</FormLabel>
                   <Input
                     {...field}
-                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
                     type="date"
                     className="mb-2"
                     required
@@ -525,7 +579,10 @@ const RunSetup = () => {
                     {...field}
                     type="number"
                     min="0"
-                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    step="0.01"
+                    value={field.value !== undefined && !isNaN(field.value) ? field.value.toString() : "0"} // Ensure valid value
+                    onChange={(e) => field.onChange(e.target.value === "" ? "0" : e.target.value)} // Handle empty input
+
                     placeholder="Enter pool concentration"
                     className="mb-2"
                   />
@@ -546,11 +603,15 @@ const RunSetup = () => {
                     {...field}
                     type="number"
                     min="0"
-                    value={avgSize || field.value} // Use avgSize state or field value
                     onChange={(e) => field.onChange(e.target.value)}
                     placeholder="Enter pool size"
                     className="mb-2"
                   />
+                  {form.formState.errors.pool_size && (
+                    <p className="text-red-500 text-sm">
+                      {form.formState.errors.pool_size.message}
+                    </p>
+                  )}
                 </FormItem>
               )}
             />
@@ -911,7 +972,19 @@ const RunSetup = () => {
               </>
             ) : ""}
 
-
+            {/* Retrieve table data on submit */}
+            <FormField
+              control={form.control}
+              name="table_data"
+              render={({ field }) => (
+                <FormItem>
+                  <Input
+                    type="hidden"
+                    {...field}
+                  />
+                </FormItem>
+              )}
+            />
 
             <Button
               type="submit"

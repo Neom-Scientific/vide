@@ -368,8 +368,10 @@ const Processing = () => {
       doctor_name: getValue("doctor_name"),
       dept_name: getValue("dept_name"),
       run_id: getValue("run_id"),
-      hospital_name: user.hospital_name, // Use the hospital name from the user cookie
     };
+    if(user && user.role !== "SuperAdmin"){
+      data.hospital_name = user.hospital_name; // Add hospital_name from user data
+    }
 
     try {
       const response = await axios.get(`/api/search`, { params: data });

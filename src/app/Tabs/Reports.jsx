@@ -16,10 +16,12 @@ import {
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ChevronDown } from "lucide-react";
+import Cookies from 'js-cookie';
+import axios from 'axios';
 
 
 const formSchema = z.object({
@@ -39,6 +41,13 @@ const Reports = () => {
   const [rowSelection, setRowSelection] = useState({});
   let rows = [];
   const [tableRows, setTableRows] = useState(rows);
+  const [user,setUser] = useState(null);
+  useEffect(()=>{
+    const CookieUser = Cookies.get('user');
+    if (CookieUser) {
+      setUser(JSON.parse(CookieUser));
+    }
+  },[]);
   const allTests = [
     'WES',
     'CS',
@@ -205,9 +214,39 @@ const Reports = () => {
     },
   });
 
-  const handleSubmit = (data) => {
-    console.log('Form submitted with data:', data);
-    // Here you can handle the form submission, e.g., send data to an API
+  const handleSubmit = async() => {
+    const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
+
+    const data = {
+      sample_id: getValue("sample_id"),
+      test_name: selectedTestNames.join(","),
+      sample_status: getValue("sample_status"),
+      from_date: getValue("from_date"),
+      to_date: getValue("to_date"),
+      doctor_name: getValue("doctor_name"),
+      dept_name: getValue("dept_name"),
+      run_id: getValue("run_id"),
+    };
+    if(user && user.role !== 'SuperAdmin'){
+      data.hospital_name = user.hospital_name;
+    }
+    try{
+      const response = await axios.get(`/api/search`,{params: data});
+      if (response.data[0].status === 200) {
+        const responseData = response.data[0].data;
+        if (Array.isArray(responseData) && responseData.length > 0) {
+          setTableRows(responseData);
+        } else {
+          setTableRows([]);
+          console.warn("No data found for the given filters.");
+        }
+      } else {
+        console.error("Failed to fetch data:", response.statusText);
+      }
+    }
+    catch(error) {
+      console.error("Error in handleSubmit:", error);
+    }
   }
   return (
     <div className="p-4">
@@ -347,7 +386,7 @@ const Reports = () => {
           <div>
             <Button
               type='submit'
-              onClick={() => { handlesubmit() }}
+              onClick={handleSubmit}
               className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-full">
               Retrieve
             </Button>

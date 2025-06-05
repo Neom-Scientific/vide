@@ -8,8 +8,8 @@ export async function POST(request) {
     try {        
         let response = [];
         const result = await pool.query(
-            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-            [name, hospital_name, hospital_id, username, password, phone_no, email , "disable"]
+            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status, role) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)',
+            [name, hospital_name, hospital_id, username, password, phone_no, email, "disable", "NormalUser"]
         );
         if (result.rowCount > 0) {
             response.push({
@@ -71,41 +71,56 @@ export async function GET(request) {
     }
 }
 
-export async function PUT(request){
+export async function PUT(request) {
     const body = await request.json();
-    const { id, status } = body;
-    try{
+    const { id, status, role } = body; // Accept both status and role
+    try {
         let response = [];
-        if (!id || !status){
+
+        // Validate the input
+        if (!id) {
             response.push({
                 status: 400,
-                message: 'ID and status are required',
+                message: 'ID is required',
             });
+            return NextResponse.json(response);
         }
-        if(status === 'disable'){
-            await pool.query('UPDATE request_form SET status = $1 WHERE id = $2',['enable', id]);
+
+        // Handle status update
+        if (status) {
+            if (status === 'disable') {
+                await pool.query('UPDATE request_form SET status = $1 WHERE id = $2', ['enable', id]);
+                response.push({
+                    status: 200,
+                    message: 'Status updated successfully',
+                });
+            } else if (status === 'enable') {
+                await pool.query('UPDATE request_form SET status = $1 WHERE id = $2', ['disable', id]);
+                response.push({
+                    status: 200,
+                    message: 'Status updated successfully',
+                });
+            } else {
+                response.push({
+                    status: 400,
+                    message: 'Invalid status value',
+                });
+            }
+        }
+
+        // Handle role update
+        if (role) {
+            await pool.query('UPDATE request_form SET role = $1 WHERE id = $2', [role, id]);
             response.push({
                 status: 200,
-                message: 'Status updated successfully',
+                message: 'Role updated successfully',
             });
         }
-        else if(status === 'enable'){
-            await pool.query('UPDATE request_form SET status = $1 WHERE id = $2',['disable', id]);
-            response.push({
-                status: 200,
-                message: 'Status updated successfully',
-            });
-        }
-        else{
-            response.push({
-                status: 400,
-                message: 'Invalid status value',
-            });
-        }
+
+        // Return response
         return NextResponse.json(response);
-    }
-    catch (error) {
-        console.error('Error updating status', error);
+    } catch (error) {
+        console.error('Error updating status or role', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

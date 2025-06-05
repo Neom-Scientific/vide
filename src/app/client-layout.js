@@ -16,8 +16,7 @@ export default function ClientLayout({ children }) {
   const showSidebar = pathname !== "/login";
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className="bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
+      <div className="bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
         <div className="flex min-h-screen">
           <main className={`flex-grow transition-all duration-300`}>
             <Provider store={store}>
@@ -27,8 +26,7 @@ export default function ClientLayout({ children }) {
             </Provider>
           </main>
         </div>
-      </body>
-    </html>
+      </div>
   );
 }
 

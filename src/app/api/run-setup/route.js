@@ -13,15 +13,7 @@ export async function POST(request) {
                 status: 404
             });
         }
-        // const { rows } = await pool.query('SELECT run_id FROM run_setup ORDER BY run_id DESC LIMIT 1');
-        // if (rows.length > 0) {
-        //     const { rows } = await pool.query('SELECT nextval(\'run_id_seq\') AS next_id');
-        //     const id = rows[0].next_id;
-        //     console.log('run_id', id);
-        //     run_id = `run_${id}`; // Generate the new run_id
-        // } else {
-        //     run_id = 'run_1'; // Start with run_1 if no entries exist
-        // }
+        console.log('table_data', setup.table_data);
         const { rows } = await pool.query('SELECT nextval(\'run_id_seq\') AS next_id');
         const id = rows[0].next_id;
         run_id = `run_${id}`; // Generate the new run_id
@@ -51,10 +43,12 @@ export async function POST(request) {
               hospital_name,
               total_volume_2nm_next_seq_550,
               final_pool_conc_vol_2nm_next_seq_550,
-              nfw_vol_2nm_next_seq_550
+              nfw_vol_2nm_next_seq_550,
+              count,
+              table_data
             ) VALUES (
               $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25
+              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27
             )`,
             [
                 run_id,
@@ -81,7 +75,9 @@ export async function POST(request) {
                 setup.hospital_name,
                 setup.total_volume_2nm_next_seq_550,
                 setup.final_pool_conc_vol_2nm_next_seq_550,
-                setup.nfw_vol_2nm_next_seq_550
+                setup.nfw_vol_2nm_next_seq_550,
+                setup.sample_ids.length,
+                setup.table_data
             ]
         );
 
@@ -109,5 +105,42 @@ export async function POST(request) {
             error: "An error occurred while processing your request.",
             details: error.message
         }, { status: 500 });
+    }
+}
+
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const hospital_name = searchParams.get('hospital_name');
+    try {
+        const response = [];
+        if (!hospital_name) {
+            response.push({
+                status: 400,
+                message: "Hospital name is required"
+            });
+        }
+        const { rows } = await pool.query(
+            `SELECT run_id, total_required, total_gb_available, selected_application, table_data, count FROM run_setup WHERE hospital_name = $1 ORDER BY seq_run_date DESC;`,
+            [hospital_name]
+        );
+        if (rows.length === 0) {
+            response.push({
+                status: 404,
+                message: "No run setups found for the provided hospital name"
+            });
+        } else {
+            response.push({
+                status: 200,
+                data: rows
+            });
+        }
+        return NextResponse.json(response);
+    } catch (error) {
+        console.log('error', error);
+        return NextResponse.json({
+            status: 500,
+            message: "Internal Server Error",
+            error: error.message
+        });
     }
 }

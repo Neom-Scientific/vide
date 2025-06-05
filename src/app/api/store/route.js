@@ -41,7 +41,17 @@ export async function POST(request) {
             repeat_required,
             repeat_reason,
             repeat_date,
-            selectedTestName
+            selectedTestName,
+            systolic_bp,
+            diastolic_bp,
+            total_cholesterol,
+            hdl_cholesterol,
+            ldl_cholesterol,
+            diabetes,
+            smoker,
+            hypertension_treatment,
+            statin,
+            aspirin_therapy,
         } = body;
 
         const data = await pool.query('select $1 from master_sheet',[sample_id]);
@@ -119,14 +129,24 @@ export async function POST(request) {
                 repeat_required,
                 repeat_reason,
                 repeat_date,
-                internal_id
+                internal_id,
+                systolic_bp,
+                diastolic_bp,
+                total_cholesterol,
+                hdl_cholesterol,
+                ldl_cholesterol,
+                diabetes,
+                smoker,
+                hypertension_treatment,
+                statin,
+                aspirin_therapy
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17, $18,
                 $19, $20, $21, $22, $23, $24, $25,
                 $26, $27, $28, $29, $30,
-                $31,$32,$33,$34,$35,$36
+                $31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41, $42, $43, $44, $45, $46
             )
             RETURNING *
         `;
@@ -166,7 +186,17 @@ export async function POST(request) {
             repeat_required,
             repeat_reason,
             repeat_date || null,
-            internal_id
+            internal_id,
+            systolic_bp || null,
+            diastolic_bp || null,
+            total_cholesterol || null,
+            hdl_cholesterol || null,
+            ldl_cholesterol || null,
+            diabetes || null,
+            smoker || null,
+            hypertension_treatment || null,
+            statin || null,
+            aspirin_therapy || null
         ];
         const result = await pool.query(query, values);
         const insertedData = result.rows[0];
@@ -185,4 +215,64 @@ export async function POST(request) {
         return NextResponse.json({error: "Failed to insert data"}, {status: 500});
     }
 
+}
+
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get('role');
+    const hospital_name = searchParams.get('hospital_name');
+    console.log('role', role);
+    console.log('hospital_name', hospital_name);
+
+    try {
+        let response = [];
+
+        if (!role) {
+            response.push({
+                status: 400,
+                message: 'Role is required',
+            });
+            return NextResponse.json(response);
+        }
+
+        if (!hospital_name && role === 'SuperAdmin') {
+            // Fetch all data for SuperAdmin
+            const { rows } = await pool.query('SELECT * FROM master_sheet');
+            if (rows.length === 0) {
+                response.push({
+                    status: 404,
+                    message: 'No data found',
+                });
+            } else {
+                response.push({
+                    status: 200,
+                    data: rows,
+                });
+            }
+        } else if (hospital_name) {
+            // Fetch data for a specific hospital
+            const { rows } = await pool.query('SELECT * FROM master_sheet WHERE hospital_name = $1', [hospital_name]);
+            if (rows.length === 0) {
+                response.push({
+                    status: 404,
+                    message: 'No data found for the specified hospital',
+                });
+            } else {
+                response.push({
+                    status: 200,
+                    data: rows,
+                });
+            }
+        } else {
+            response.push({
+                status: 400,
+                message: 'Hospital name is required for non-SuperAdmin roles',
+            });
+        }
+
+        return NextResponse.json(response);
+    } catch (error) {
+        console.error('Error executing query', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
 }
