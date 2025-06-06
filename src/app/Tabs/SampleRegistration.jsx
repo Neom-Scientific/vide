@@ -23,7 +23,6 @@ const formSchema = z.object({
     .email('Invalid email address'),
   // test_name: z.string().min(1, 'Test Name is required'),
   selectedTestName: z.string().min(1, 'Add the test name to confirm'),
-  registration_date: z.string().min(1, 'Registration Date is required'),
   hospital_id: z.string().min(1, 'Hospital ID is required'),
   patient_name: z.string().min(1, 'Patient Name is required'),
   trf: z.string().min(1, 'TRF is required'),
@@ -59,7 +58,7 @@ export const SampleRegistration = () => {
   const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
 
-  const  form = useForm({
+  const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       // hosptial and doctor information
@@ -114,7 +113,7 @@ export const SampleRegistration = () => {
       repeat_required: '',
       repeat_reason: '',
       repeat_date: '',
-      trf_file:'',
+      trf_file: '',
     }
   })
   useEffect(() => {
@@ -123,38 +122,37 @@ export const SampleRegistration = () => {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);
 
-     form.reset({
+      form.reset({
         hospital_name: parsedUser.hospital_name || '',
         hospital_id: parsedUser.hospital_id || '',
       })
-      
-        const handleSampleEdit = async () => {
-          try {
-            console.log('user', parsedUser);
-            const queryParams = new URLSearchParams();
-            queryParams.append('role', parsedUser.role);
-            if (parsedUser.hospital_name && parsedUser.role !== 'SuperAdmin') {
-              queryParams.append('hospital_name', parsedUser.hospital_name);
-            }
-        
-            const response = await axios.get(`/api/store?${queryParams.toString()}`);
-            if(response.data[0].status === 200) {
-              setEditData(response.data[0].data);
-              console.log('response', response.data[0].data);
-            }
-            if (response.data[0].status === 404) {
-              toast.error(response.data[0].message);
-            }
-          } catch (error) {
-            console.error('Error handling sample edit:', error);
-            toast.error('Failed to handle sample edit');
+
+      const handleSampleEdit = async () => {
+        try {
+          const queryParams = new URLSearchParams();
+          queryParams.append('role', parsedUser.role);
+          if (parsedUser.hospital_name && parsedUser.role !== 'SuperAdmin') {
+            queryParams.append('hospital_name', parsedUser.hospital_name);
           }
-        };
-    
-        handleSampleEdit();
+
+          const response = await axios.get(`/api/store?${queryParams.toString()}`);
+          if (response.data[0].status === 200) {
+            setEditData(response.data[0].data);
+            // console.log('response', response.data[0].data);
+          }
+          if (response.data[0].status === 404) {
+            // toast.error(response.data[0].message);
+          }
+        } catch (error) {
+          console.error('Error handling sample edit:', error);
+          toast.error('Failed to handle sample edit');
+        }
+      };
+
+      handleSampleEdit();
     }
   }, []);
-  
+
 
   const allTests = [
     'WES',
@@ -285,6 +283,7 @@ export const SampleRegistration = () => {
     if (res.status === 200) {
       toast.success('Sample registered successfully');
       form.reset();
+      selectedTests.length = 0; // Clear selected tests
     } else {
       toast.error('Sample registration failed');
     }
@@ -319,25 +318,19 @@ export const SampleRegistration = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {editData.map((sample) => (
-            <DropdownMenuItem key={sample.sample_id} 
-              onClick={() => {
-                console.log('sample', sample);
-                console.log('form',form.getValues());
-                Object.keys(sample).forEach(key => {
-                  // if(form.getValues(key) !== undefined) {
+              <DropdownMenuItem key={sample.sample_id}
+                onClick={() => {
+                  Object.keys(sample).forEach(key => {
                     form.setValue(key, sample[key] || '');
                     form.setValue('sample_name', sample.patient_name || '');
                     form.setValue('trf_file', sample.trf || '');
-                    form.setValue('father_husband_name',sample.father_husband_name || '');
-                    // form.setValue('selectedTestName', sample.test_name || '');
-                  setSelectedTests(sample.test_name ? sample.test_name.split(', ') : []);
-                    console.log('selectedTestName', form.getValues('selectedTestName'));
-                  // }
-                })
-              }}
-            >
-              {sample.sample_id} - {sample.patient_name}
-            </DropdownMenuItem>
+                    form.setValue('father_husband_name', sample.father_husband_name || '');
+                    setSelectedTests(sample.test_name ? sample.test_name.split(', ') : []);
+                  })
+                }}
+              >
+                {sample.sample_id} - {sample.patient_name}
+              </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
@@ -969,7 +962,7 @@ export const SampleRegistration = () => {
                           disabled
                           {...field}
                           className='my-2 border-2 border-orange-300'
-                          // value={trfFile ? trfFile.name : ''}
+                        // value={trfFile ? trfFile.name : ''}
                         />
                       </FormItem>
                     )}

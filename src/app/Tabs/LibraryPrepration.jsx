@@ -283,7 +283,7 @@ const LibraryPrepration = () => {
             sample_id: sampleids.join(',') // Join sample IDs with commas
           }
         });
-        console.log("Response data:", response.data);
+        // console.log("Response data:", response.data);
         if (response.data[0].status === 200) {
           const poolData = response.data[0].data;
           if (poolData && poolData.length > 0) {
@@ -519,14 +519,22 @@ const LibraryPrepration = () => {
             const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
 
             if (columnId === "lib_qubit" || columnId === "total_vol_for_2nm") {
-              updatedRow.nm_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : "";
+              const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
+              const size = parseFloat(updatedRow.size) || 0;
+              const nm_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : 0;
 
-              updatedRow.nm_conc = parseFloat(updatedRow.nm_conc).toFixed(2);
-              updatedRow.lib_vol_for_2nm =
-                nm_conc > 0 ? (Math.round(((2.5 * total_vol_for_2nm) / nm_conc) * 100) / 100) : "";
+              updatedRow.nm_conc = parseFloat(nm_conc.toFixed(2));
 
-              updatedRow.nfw_volu_for_2nm =
-                total_vol_for_2nm > 0 ? total_vol_for_2nm - lib_vol_for_2nm : "";
+              const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+
+              if (nm_conc > 0 && total_vol_for_2nm > 0) {
+                updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+                updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+              } else {
+                updatedRow.lib_vol_for_2nm = 0;
+                updatedRow.nfw_volu_for_2nm = total_vol_for_2nm; // Default to total_vol_for_2nm if lib_vol_for_2nm is invalid
+              }
+              return updatedRow;
             }
 
             if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
@@ -534,9 +542,9 @@ const LibraryPrepration = () => {
             }
 
             if (columnId === "size") {
-              console.log('nm_conc:', updatedRow.nm_conc);
+              // console.log('nm_conc:', updatedRow.nm_conc);
               updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
-              console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
+              // console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
             }
             if (columnId === "per_rxn_gdna" || columnId === "qubit_dna_hs") {
               updatedRow.gdna_volume_3x = qubit_dna_hs > 0 ? Math.ceil((per_rxn_gdna / qubit_dna_hs) * 3) : "";
@@ -553,9 +561,9 @@ const LibraryPrepration = () => {
             if (columnId === "stock_ng_ul") {
               const stock = parseFloat(value) || 0;
               updatedRow.stock_ng_ul = stock;
-              console.log('Parsed stock_ng_ul:', stock);
+              // console.log('Parsed stock_ng_ul:', stock);
               updatedRow.lib_vol_for_hyb = stock > 0 ? (200 / stock).toFixed(2) : "";
-              console.log('lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
+              // console.log('lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
             }
 
             if (columnId === "qubit_lib_qc_ng_ul") {
@@ -567,11 +575,11 @@ const LibraryPrepration = () => {
             }
             if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
               updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
-              console.log('nm_conc:', updatedRow.nm_conc);
-              console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
+              // console.log('nm_conc:', updatedRow.nm_conc);
+              // console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
             }
 
-            if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm" ) {
+            if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm") {
               updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
               updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
             }
@@ -586,7 +594,7 @@ const LibraryPrepration = () => {
   const handleSubmit = async () => {
     try {
       // Log all the input values
-      console.log("Table Rows:", tableRows);
+      // console.log("Table Rows:", tableRows);
 
       // Prepare the payload for the API call
       const payload = {
@@ -598,9 +606,9 @@ const LibraryPrepration = () => {
 
       // Make the API call
       const response = await axios.post('/api/update-sample-indicator', payload);
-      console.log("API Response:", response.data);
+      // console.log("API Response:", response.data);
       if (response.data[0].status === 200) {
-        console.log('response.data[0].message', response.data[0]);
+        // console.log('response.data[0].message', response.data[0]);
         toast.success("Sample indicator updated successfully!");
         // remove the localStorage item after successful update
         localStorage.removeItem('libraryPreparationData');
@@ -641,6 +649,9 @@ const LibraryPrepration = () => {
       />
     );
   };
+
+ 
+
   return (
     <div className="p-4 ">
       {!message ?

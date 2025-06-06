@@ -171,6 +171,8 @@ const Header = ({ activeTab, setActiveTab }) => {
               <button
                 onClick={() => {
                   Cookies.remove('user'); // Clear user cookie
+                  localStorage.removeItem('searchData'); // Clear search data from local storage
+                  localStorage.removeItem('libraryPreparationData')
                   router.push('/login'); // Redirect to login page
                 }}
                 className="p-2 bg-red-500 text-white font-bold rounded-lg cursor-pointer"

@@ -8,15 +8,18 @@ import Login from '../components/Login'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs'
 import AssignUser from '../components/AssignUser'
 import Cookies from 'js-cookie'
+import { Button } from '@/components/ui/button'
 
 const page = () => {
   const [user, setUser] = useState(null);
+  const [isUserLoaded, setIsUserLoaded] = useState(false); // Track if user is loaded
 
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
       setUser(JSON.parse(cookieUser));
     }
+    setIsUserLoaded(true); // Mark user as loaded
   }, []);
 
   return (
@@ -42,34 +45,42 @@ const page = () => {
             className="object-contain"
           />
         </div>
-        <Tabs defaultValue='login' className="w-full max-w-sm">
-          <TabsList className="flex justify-center mb-4 border-none rounded-lg ">
 
-            <TabsTrigger value='login' className='p-2 bg-orange-500 cursor-pointer text-white font-bold border rounded-lg'> Login </TabsTrigger>
-
-            <TabsTrigger value='request' className='p-2 bg-orange-500 text-white cursor-pointer font-bold border border-white rounded-lg'> Request </TabsTrigger>
-            
+        {/* Render Tabs only after user is loaded */}
+        {isUserLoaded && (
+          <Tabs
+            defaultValue={user && user.role === 'SuperAdmin' ? 'Assign-User' : 'login'}
+            className="w-full max-w-sm"
+          >
+            <TabsList className="flex justify-center mb-4 border-none rounded-lg ">
+              <TabsTrigger value="login" className="p-2 bg-orange-500 cursor-pointer text-white font-bold border rounded-lg">
+                Login
+              </TabsTrigger>
+              <TabsTrigger value="request" className="p-2 bg-orange-500 text-white cursor-pointer font-bold border border-white rounded-lg">
+                Request
+              </TabsTrigger>
+              {user && user.role === 'SuperAdmin' && (
+                <TabsTrigger value="Assign-User" className="p-2 bg-orange-500 text-white cursor-pointer font-bold border border-white rounded-lg">
+                  Assign User
+                </TabsTrigger>
+              )}
+            </TabsList>
+            <TabsContent value="login">
+              <Login />
+            </TabsContent>
+            <TabsContent value="request">
+              <Request />
+            </TabsContent>
             {user && user.role === 'SuperAdmin' && (
-              <TabsTrigger value='Assign-User' className='p-2 bg-orange-500 text-white cursor-pointer font-bold border border-white rounded-lg'> Assign User </TabsTrigger>
-            )}
-          </TabsList>
-          <TabsContent value='login'>
-            <Login />
-          </TabsContent>
-          <TabsContent value='request'>
-            <Request />
-          </TabsContent>
-          {
-            user && user.role === 'SuperAdmin' && (
-              <TabsContent value='Assign-User'>
+              <TabsContent value="Assign-User">
                 <AssignUser />
               </TabsContent>
-            )
-          }
-        </Tabs>
+            )}
+          </Tabs>
+        )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default page
+export default page;

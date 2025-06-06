@@ -1,57 +1,73 @@
-// the data which is displayed in the browser convert it to the excel file and download it
-
+import ExcelJS from 'exceljs';
+import { NextResponse } from 'next/server';
 
 export async function POST(request) {
-    // I only wnat that data which is displayed in the browser
-    const body = await request.json();
-    const { data } = body;
-    const { sample_id, test_name, client_name, patient_name, registration_date, dna_isolation, lib_prep, under_seq, seq_completed } = data[0];
-    let response = {};
     try {
+        const body = await request.json();
+        const { data } = body;
+
+        if (!data || data.length === 0) {
+            return NextResponse.json({
+                status: 400,
+                message: 'No data provided to generate the Excel file.',
+            });
+        }
+
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Sample Data');
 
-        // Add column headers
-        worksheet.columns = [
-            { header: 'Sample ID', key: 'sample_id', width: 15 },
-            { header: 'Patient Name', key: 'patient_name', width: 20 },
-            { header: 'Reg Date', key: 'registration_date', width: 20 },
-            { header: 'Test Name', key: 'test_name', width: 20 },
-            { header: 'Client Name', key: 'client_name', width: 20 },
-            { header: 'DNA Isolation', key: 'dna_isolation', width: 20 },
-            { header: 'Library Preparation', key: 'lib_prep', width: 20 },
-            { header: 'Under Sequencing', key: 'under_seq', width: 20 },
-            { header: 'Sequencing Completed', key: 'seq_completed', width: 20 },
+        // Dynamically generate column headers based on the keys in the first row of the data
+        const columns = Object.keys(data[0]).map((key) => ({
+            header: key.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase()), // Format headers
+            key: key,
+            width: 20,
+        }));
 
-        ];
+        worksheet.columns = columns;
 
-        // Add data rows
-        data.forEach((item) => {
+        // Transform data to replace "Yes" and "No" with symbols and format dates
+        const transformedData = data.map((item) => {
+            const updatedItem = { ...item };
+
+            // Format "Yes" and "No" values
+            ['dna_isolation', 'lib_prep', 'under_seq', 'seq_completed'].forEach((key) => {
+                if (updatedItem[key] !== undefined) {
+                    updatedItem[key] = updatedItem[key] === 'Yes' ? '✔' : '✘';
+                }
+            });
+
+            // Format dates to yyyy/mm/dd
+            ['registration_date', 'seq_run_date', 'phenotype_rec_date'].forEach((key) => {
+                if (updatedItem[key]) {
+                    const date = new Date(updatedItem[key]);
+                    updatedItem[key] = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                }
+            });
+
+            return updatedItem;
+        });
+
+        // Add transformed data rows
+        transformedData.forEach((item) => {
             worksheet.addRow(item);
         });
 
-        // Set response headers
+        // Write the Excel file to a buffer
         const buffer = await workbook.xlsx.writeBuffer();
-        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        const url = URL.createObjectURL(blob);
 
-        response = {
-            status: 200,
-            message: "Excel file created successfully",
-            url,
-        };
+        // Return the buffer as a downloadable file
+        return new NextResponse(buffer, {
+            headers: {
+                'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'Content-Disposition': 'attachment; filename=sample_data.xlsx',
+            },
+        });
     } catch (error) {
-        console.error("Error in convert-to-excel API", error);
-        response = {
+        console.error('Error generating Excel file:', error);
+        return NextResponse.json({
             status: 500,
-            message: "Internal server error",
-        };
+            message: 'Internal Server Error',
+            error: error.message,
+        });
     }
-    return new Response(JSON.stringify(response), {
-        status: response.status,
-        headers: {
-            'Content-Type': 'application/json',
-            'Content-Disposition': `attachment; filename=sample_data.xlsx`,
-        },
-    });
 }

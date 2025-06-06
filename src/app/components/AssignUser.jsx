@@ -1,11 +1,20 @@
+'use client';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import axios from 'axios';
-import React, { useEffect } from 'react';
+import Cookies from 'js-cookie';
+import React, { useEffect, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 
 const AssignUser = () => {
-  const [users, setUsers] = React.useState([]);
+  const [users, setUsers] = useState([]);
+  const [admin, setAdmin] = useState(null);
+  useEffect(() => {
+    const cookieUser = Cookies.get('user');
+    if (cookieUser) {
+      setAdmin(JSON.parse(cookieUser));
+    }
+  },[]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -164,8 +173,13 @@ const AssignUser = () => {
             )}
           </TableBody>
         </Table>
-        <ToastContainer />
+        {admin && admin.role === 'SuperAdmin' && (
+          <Button className="mt-4 bg-orange-500 text-white hover:bg-orange-600 ">
+            <a href="/" className="text-white font-bold">Dashboard</a>
+          </Button>
+        )}
       </div>
+        <ToastContainer />
     </div>
   );
 };

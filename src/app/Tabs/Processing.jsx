@@ -99,7 +99,6 @@ const Processing = () => {
     'CS',
     'Clinical Exome',
     'Myeloid',
-    'Cardio',
     'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
@@ -193,7 +192,7 @@ const Processing = () => {
                       sample_indicator: col.key,
                       indicator_status: checked ? "Yes" : "No",
                     };
-                    console.log("Payload for API call:", payload);
+                    // console.log("Payload for API call:", payload);
 
                     try {
                       // Make the API call
@@ -201,7 +200,7 @@ const Processing = () => {
                         data: payload,
                       });
 
-                      console.log("API response:", response.data);
+                      // console.log("API response:", response.data);
                       if (response.data[0].status === 200) {
                         // update the localstorage with the updated data
                         const updatedRows = tableRows.map((row, idx) =>
@@ -272,7 +271,7 @@ const Processing = () => {
                       data: payload,
                     });
 
-                    console.log("API response:", response.data);
+                    // console.log("API response:", response.data);
                     if (response.data[0].status === 200) {
                       // update the localstorage with the updated data
                       const updatedRows = tableRows.map((row, idx) =>
@@ -369,7 +368,7 @@ const Processing = () => {
       dept_name: getValue("dept_name"),
       run_id: getValue("run_id"),
     };
-    if(user && user.role !== "SuperAdmin"){
+    if (user && user.role !== "SuperAdmin") {
       data.hospital_name = user.hospital_name; // Add hospital_name from user data
     }
 
@@ -425,12 +424,49 @@ const Processing = () => {
     dispatch(setActiveTab("library-prepration"));
   };
 
-  useEffect(()=>{
-    if(localStorage.getItem("searchData")){
+  useEffect(() => {
+    if (localStorage.getItem("searchData")) {
       const storedData = JSON.parse(localStorage.getItem("searchData"));
       setTableRows(storedData);
     }
-  },[])
+  }, [])
+
+  const handleSaveToExcel = async () => {
+    try {
+      // Get visible columns
+      const visibleColumns = Object.keys(table.getState().columnVisibility).filter(
+        (key) => table.getState().columnVisibility[key]
+      );
+
+      // Filter tableRows to include only visible columns
+      const filteredData = tableRows.map((row) => {
+        const filteredRow = {};
+        visibleColumns.forEach((key) => {
+          filteredRow[key] = row[key];
+        });
+        return filteredRow;
+      });
+
+      // Send filtered data to the API
+      const response = await axios.post(
+        '/api/convert-to-excel',
+        { data: filteredData },
+        { responseType: 'blob' }
+      );
+
+      // Create a URL for the file and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'sample_data.xlsx'); // Set the file name
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast.error('An error occurred while saving the data.');
+    }
+  };
 
   return (
     <div className="p-4">
@@ -668,15 +704,12 @@ const Processing = () => {
       <div className="flex justify-between items-center mb-4">
         <Button
           className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12"
-          onClick={() => {
-            // Save logic here
-            console.log("Save clicked");
-          }}
+          onClick={handleSaveToExcel}
         >
           Save
         </Button>
 
-        {isAnyLibPrepChecked && (
+        {isAnyLibPrepChecked && !tableRows.some(row => row.under_seq === "Yes") && (
           <Button
             className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (isAnyLibPrepChecked ? "" : "opacity-50")}
             onClick={handleSendForLibraryPreparation}

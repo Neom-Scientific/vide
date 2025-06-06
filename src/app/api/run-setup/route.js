@@ -45,10 +45,11 @@ export async function POST(request) {
               final_pool_conc_vol_2nm_next_seq_550,
               nfw_vol_2nm_next_seq_550,
               count,
-              table_data
+              table_data,
+              ht_buffer_next_seq_1000_2000
             ) VALUES (
               $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27
+              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28
             )`,
             [
                 run_id,
@@ -77,7 +78,8 @@ export async function POST(request) {
                 setup.final_pool_conc_vol_2nm_next_seq_550,
                 setup.nfw_vol_2nm_next_seq_550,
                 setup.sample_ids.length,
-                setup.table_data
+                setup.table_data,
+                setup.ht_buffer_next_seq_1000_2000
             ]
         );
 
@@ -88,7 +90,12 @@ export async function POST(request) {
             if (sampleIds.length > 0) {
                 for (const id of sampleIds) {
                     await pool.query(`UPDATE pool_info SET run_id = $1 WHERE sample_id = $2`, [run_id, id]);
-                    await pool.query(`UPDATE master_sheet SET run_id = $1 WHERE sample_id = $2`, [run_id, id]);
+                    await pool.query(
+                        `UPDATE master_sheet 
+                         SET run_id = $1, seq_run_date = $2 
+                         WHERE sample_id = $3`,
+                        [run_id, setup.seq_run_date, id]
+                    );
                 }
             }
         }

@@ -22,6 +22,7 @@ import { z } from 'zod'
 import { ChevronDown } from "lucide-react";
 import Cookies from 'js-cookie';
 import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
 
 
 const formSchema = z.object({
@@ -41,19 +42,18 @@ const Reports = () => {
   const [rowSelection, setRowSelection] = useState({});
   let rows = [];
   const [tableRows, setTableRows] = useState(rows);
-  const [user,setUser] = useState(null);
-  useEffect(()=>{
+  const [user, setUser] = useState(null);
+  useEffect(() => {
     const CookieUser = Cookies.get('user');
     if (CookieUser) {
       setUser(JSON.parse(CookieUser));
     }
-  },[]);
+  }, []);
   const allTests = [
     'WES',
     'CS',
     'Clinical Exome',
     'Myeloid',
-    'Cardio',
     'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
@@ -65,20 +65,28 @@ const Reports = () => {
     { key: 'hospital_name', label: 'Hospital Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
-    { key: 'registration_date', label: 'Registration Date' },
-    { key: 'dept_name', label: 'Department Name' },
     { key: 'run_id', label: 'Run ID' },
+    { key: 'sample_id', label: 'Sample ID' },
+    { key: 'registration_date', label: 'Registration Date' },
     { key: 'sample_date', label: 'Sample Date' },
+    { key: 'patient_name', label: 'Patient Name' },
+    { key: 'client_name', label: 'Client Name' },
+    { key: 'seq_run_date', label: 'Sequencing Run Date' },
+    { key: 'phenotype_rec_date', label: 'Phenotype Receiving Date' },
+    { key: 'tantive_report_date', label: 'Tantive Report Date' },
+    { key: 'tat_days', label: 'TAT Days' },
     { key: 'sample_type', label: 'Sample Type' },
+    { key: 'test_name', label: 'Test Name' },
     { key: 'trf', label: 'TRF' },
+    { key: 'report_status', label: 'Report Status' },
+    { key: 'report_link', label: 'Report Link' },
+    { key: 'doctor_name', label: 'Doctor Name' },
+    { key: 'dept_name', label: 'Department Name' },
     { key: 'collection_date_time', label: 'Collection Date Time' },
     { key: 'storage_condition', label: 'Storage Condition' },
     { key: 'prority', label: 'Prority' },
     { key: 'hospital_id', label: 'Hospital ID' },
     { key: 'client_id', label: 'Client ID' },
-    { key: 'client_name', label: 'Client Name' },
-    { key: 'sample_id', label: 'Sample ID' },
-    { key: 'patient_name', label: 'Patient Name' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
     { key: 'sex', label: 'Sex' },
@@ -90,9 +98,7 @@ const Reports = () => {
     { key: 'country', label: 'Country' },
     { key: 'patient_mobile', label: "Patient's Mobile" },
     { key: 'docter_mobile', label: "Doctor's Mobile" },
-    { key: 'docter_name', label: 'Doctor Name' },
     { key: 'email', label: 'Email' },
-    { key: 'test_name', label: 'Test Name' },
     { key: 'remarks', label: 'Remarks' },
     { key: 'clinical_history', label: 'Clinical History' },
     { key: 'repeat_required', label: 'Repeat Required' },
@@ -113,6 +119,7 @@ const Reports = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
+
   ];
 
   const form = useForm({
@@ -138,8 +145,9 @@ const Reports = () => {
       enableSorting: false,
       enableHiding: false,
     },
+
     ...allColumns.map(col => {
-      if (col.key === "registration_date") {
+      if (col.key === "registration_date" || col.key === "phenotype_rec_date") {
         return {
           accessorKey: col.key,
           id: col.key, // Use the key as the id
@@ -159,6 +167,25 @@ const Reports = () => {
           },
         };
       }
+
+      if(col.key === "seq_run_date"){
+        return{
+          accessorKey: col.key,
+          id: col.key, // Use the key as the id
+          header: col.label,
+          cell: info => {
+            const value = info.getValue();
+            if (!value) return "";
+            const date = new Date(value);
+            if (isNaN(date)) return value;
+            // Format: YYYY-MM-DD
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+          },
+        }
+      }
       return {
         accessorKey: col.key,
         id: col.key, // Use the key as the id for other columns
@@ -169,22 +196,31 @@ const Reports = () => {
 
   const defaultVisible = [
     'sno',
+    'run_id',
     'sample_id',
-    'patient_name',
     'registration_date',
-    'test_name',
+    'patient_name',
     'client_name',
+    'seq_run_date',
+    'phenotype_rec_date',
+    'tantive_report_date',
+    'tat_days',
+    'sample_type',
+    'test_name',
     'trf',
-    'clinical_history',
+    'report_status',
+    'report_link',
+    'doctor_name',
+    'dept_name',
     'remarks',
   ]
 
   const [columnVisibility, setColumnVisibility] = useState(() =>
-      columns.reduce((acc, col) => {
-        acc[col.accessorKey] = defaultVisible.includes(col.accessorKey);
-        return acc;
-      }, {})
-    );
+    columns.reduce((acc, col) => {
+      acc[col.accessorKey] = defaultVisible.includes(col.accessorKey);
+      return acc;
+    }, {})
+  );
 
 
   const table = useReactTable({
@@ -214,7 +250,7 @@ const Reports = () => {
     },
   });
 
-  const handleSubmit = async() => {
+  const handleSubmit = async () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
@@ -227,25 +263,79 @@ const Reports = () => {
       dept_name: getValue("dept_name"),
       run_id: getValue("run_id"),
     };
-    if(user && user.role !== 'SuperAdmin'){
+    if (user && user.role !== 'SuperAdmin') {
       data.hospital_name = user.hospital_name;
     }
-    try{
-      const response = await axios.get(`/api/search`,{params: data});
+    try {
+      const response = await axios.get(`/api/search`, { params: data });
       if (response.data[0].status === 200) {
         const responseData = response.data[0].data;
         if (Array.isArray(responseData) && responseData.length > 0) {
-          setTableRows(responseData);
+          // Map the response data and calculate tantive_report_date
+          const updatedRows = responseData.map(row => {
+            const registrationDate = new Date(row.registration_date);
+            const tantiveReportDate = new Date(registrationDate);
+            tantiveReportDate.setDate(tantiveReportDate.getDate() + 7); // Add 7 days
+            // const formattedTantiveReportDate = `${tantiveReportDate.getFullYear()}-${String(tantiveReportDate.getMonth() + 1).padStart(2, '0')}-${String(tantiveReportDate.getDate()).padStart(2, '0')}`;
+            const tatDays = Math.ceil((tantiveReportDate - registrationDate) / (1000 * 60 * 60 * 24)); // Difference in days
+            return {
+              ...row,
+              phenotype_rec_date: row.registration_date, // Set phenotype_rec_date to registration_date
+              tantive_report_date: tantiveReportDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+              tat_days: tatDays,
+            };
+          });
+
+          console.log('updatedRows', updatedRows);
+          console.log('sample_id:', updatedRows[0]?.sample_id);
+          setTableRows(updatedRows);
         } else {
           setTableRows([]);
           console.warn("No data found for the given filters.");
         }
       } else {
-        console.error("Failed to fetch data:", response.statusText);
+        toast.error(response.data[0].message || "Failed to retrieve data");
       }
     }
-    catch(error) {
+    catch (error) {
       console.error("Error in handleSubmit:", error);
+    }
+  }
+
+  const handleSaveToExcel = async () => {
+    try {
+      // Get visible columns
+      const visibleColumns = Object.keys(table.getState().columnVisibility).filter(
+        (key) => table.getState().columnVisibility[key]
+      );
+
+      // Filter tableRows to include only visible columns
+      const filteredData = tableRows.map((row) => {
+        const filteredRow = {};
+        visibleColumns.forEach((key) => {
+          filteredRow[key] = row[key];
+        });
+        return filteredRow;
+      });
+
+      // Send filtered data to the API
+      const response = await axios.post(
+        '/api/convert-to-excel',
+        { data: filteredData },
+        { responseType: 'blob' }
+      );
+
+      // Create a URL for the file and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'sample_data.xlsx'); // Set the file name
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast.error('An error occurred while saving the data.');
     }
   }
   return (
@@ -352,9 +442,8 @@ const Reports = () => {
           </div>
 
         </div>
+
         <div className="flex gap-4 mb-2">
-
-
           <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Doctor's Name</label>
             <Input
@@ -372,6 +461,7 @@ const Reports = () => {
               className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
+
           <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Run id</label>
             <Input
@@ -380,7 +470,9 @@ const Reports = () => {
               className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
+
         </div>
+        
         <div className='grid grid-cols-4 gap-4 mb-2 '>
 
           <div>
@@ -392,6 +484,7 @@ const Reports = () => {
             </Button>
           </div>
         </div>
+
       </div>
 
       {/* Column Selector Dropdown */}
@@ -466,6 +559,14 @@ const Reports = () => {
           </Table>
         </div>
       </div>
+
+      <Button 
+        className="bg-gray-700 hover:bg-gray-800 text-white cursor-pointer mb-4"
+        onClick={handleSaveToExcel}
+      >
+        Save as Excel
+      </Button>
+      <ToastContainer/>
     </div>
   )
 }

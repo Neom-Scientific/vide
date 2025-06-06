@@ -19,28 +19,29 @@ const formSchema = z.object({
   seq_run_date: z.string().min(1, 'Sequence run date is required'),
   total_gb_available: z.string().min(1, 'Total GB available is required'),
   instument_type: z.string().min(1, 'Instrument type is required'),
-  pool_size: z.string().min(1, 'Pool size is required'),
+  pool_size: z.number().min(1, 'Pool size is required'),
   pool_conc: z.string().min(1, 'Pool concentration is required'),
   nm_cal: z.number().min(1, 'nM calibration is required'),
   total_required: z.number().min(1, 'Total required is required'),
-  dinatured_lib_next_seq_550: z.number().optional(1, 'Dinatured library is required'),
-  total_volume_next_seq_550: z.number().optional(1, 'Total volume is required'),
+  dinatured_lib_next_seq_550: z.number().optional(),
+  total_volume_next_seq_550: z.number().optional(),
   final_pool_vol_ul: z.number().min(1, 'Final pool volume (ul) is required'),
-  loading_conc_550: z.number().optional(1, 'Loading concentration (550) is required'),
-  lib_required_next_seq_550: z.number().optional(1, 'Library required is required'),
-  buffer_volume_next_seq_550: z.number().optional(1, 'Buffer volume is required'),
-  final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().optional(1, 'Final pool concentration volume (2nM) is required'),
-  rsbetween_vol_2nm_next_seq_1000_2000: z.number().optional(1, 'RS Between volume (2nM) is required'),
-  total_volume_2nm_next_seq_1000_2000: z.number().optional(1, 'Total volume (2nM) is required'),
-  vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().optional(1, 'Volume of 2nM for 600pM is required'),
-  vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().optional(1, 'Volume of RS Between for 600pM is required'),
-  total_volume_600pm_next_seq_1000_2000: z.number().optional(1, 'Total volume (600pM) is required'),
-  loading_conc_1000_2000: z.number().optional(1, 'Loading concentration (1000/2000) is required'),
+  loading_conc_550: z.number().optional(),
+  lib_required_next_seq_550: z.number().optional(),
+  buffer_volume_next_seq_550: z.number().optional(),
+  final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().optional(),
+  rsbetween_vol_2nm_next_seq_1000_2000: z.number().optional(),
+  total_volume_2nm_next_seq_1000_2000: z.number().optional(),
+  vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().optional(),
+  vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().optional(),
+  total_volume_600pm_next_seq_1000_2000: z.number().optional(),
+  loading_conc_1000_2000: z.number().optional(),
   select_application: z.array(z.string()).optional(),
-  total_volume_2nm_next_seq_550: z.number().optional(1, 'Total volume (2nM) is required'),
-  final_pool_conc_vol_2nm_next_seq_550: z.number().optional(1, 'Final pool concentration volume (2nM) is required'),
-  nfw_vol_2nm_next_seq_550: z.number().optional(1, 'NFW volume (2nM) is required'),
+  total_volume_2nm_next_seq_550: z.number().optional(),
+  final_pool_conc_vol_2nm_next_seq_550: z.number().optional(),
+  nfw_vol_2nm_next_seq_550: z.number().optional(),
   table_data: z.string().optional(),
+  ht_buffer_next_seq_1000_2000: z.number().optional(),
 })
 
 const RunSetup = () => {
@@ -57,32 +58,33 @@ const RunSetup = () => {
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      application: '',
+      // application: '',
       seq_run_date: '',
-      total_gb_available: '',
+      total_gb_available: '0',
       instument_type: '',
-      pool_size: '',
-      pool_conc: '',
+      pool_size: 0, // Ensure numeric default value
+      pool_conc: '0',
       nm_cal: 0,
       total_required: 0,
       final_pool_vol_ul: 0,
       selected_application: '',
       dinatured_lib_next_seq_550: 20,
-      total_volume_next_seq_550: 0,
-      loading_conc_550: 0,
-      lib_required_next_seq_550: 0,
-      buffer_volume_next_seq_550: 0,
-      final_pool_conc_vol_2nm_next_seq_1000_2000: 0,
-      rsbetween_vol_2nm_next_seq_1000_2000: 0,
-      total_volume_2nm_next_seq_1000_2000: 0,
-      vol_of_2nm_for_600pm_next_seq_1000_2000: 0,
-      vol_of_rs_between_for_600pm_next_seq_1000_2000: 0,
-      total_volume_600pm_next_seq_1000_2000: 0,
+      total_volume_next_seq_550: 0, // Ensure numeric default value
+      loading_conc_550: 0, // Ensure numeric default value
+      lib_required_next_seq_550: 0, // Ensure numeric default value
+      buffer_volume_next_seq_550: 0, // Ensure numeric default value
+      final_pool_conc_vol_2nm_next_seq_1000_2000: 0, // Ensure numeric default value
+      rsbetween_vol_2nm_next_seq_1000_2000: 0, // Ensure numeric default value
+      total_volume_2nm_next_seq_1000_2000: 0, // Ensure numeric default value
+      vol_of_2nm_for_600pm_next_seq_1000_2000: 0, // Ensure numeric default value
+      vol_of_rs_between_for_600pm_next_seq_1000_2000: 0, // Ensure numeric default value
+      total_volume_600pm_next_seq_1000_2000: 0, // Ensure numeric default value
       loading_conc_1000_2000: 600,
-      total_volume_2nm_next_seq_550: 0,
-      final_pool_conc_vol_2nm_next_seq_550: 0,
-      nfw_vol_2nm_next_seq_550: 0,
-      table_data: []
+      total_volume_2nm_next_seq_550: 0, // Ensure numeric default value
+      final_pool_conc_vol_2nm_next_seq_550: 0, // Ensure numeric default value
+      nfw_vol_2nm_next_seq_550: 0, // Ensure numeric default value
+      ht_buffer_next_seq_1000_2000: 0, // Ensure numeric default value
+      table_data: [],
     },
   });
 
@@ -156,26 +158,20 @@ const RunSetup = () => {
       const filteredPoolData = poolData.filter((pool) =>
         selectedTestNames.includes(pool.test_name)
       );
-      // console.log('data', data);
-      console.log('table_data',JSON.parse(data.table_data));
 
-      // Extract sample_ids from the filtered data
       const selectedSampleIds = filteredPoolData.map((pool) => pool.sample_id);
 
-      // console.log("Selected Sample IDs:", selectedSampleIds);
-
-      // Submit the form data along with the selected sample_ids
       const response = await axios.post('/api/run-setup', {
         setup: {
           ...data,
-          table_data: data.table_data, // Parse the table_data from string to object
-          sample_ids: selectedSampleIds, // Include only the selected sample_ids
-          hospital_name: user.hospital_name, // Include hospital name in the request
+          table_data: data.table_data, // Use table_data from form state
+          sample_ids: selectedSampleIds,
+          hospital_name: user.hospital_name,
         },
       });
+
       if (response.data[0].status === 200) {
         toast.success("Run setup submitted successfully!");
-        // Reset the form and state after successful submission
         form.reset();
         setSelectedTestNames([]);
         setSelectedCheckboxes([]);
@@ -183,17 +179,15 @@ const RunSetup = () => {
       } else if (response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the provided hospital name and test name");
       }
-    }
-    catch (error) {
+    } catch (error) {
       console.error("Error submitting form:", error);
       toast.error("An error occurred while submitting the form.");
-      return;
     }
-  }
-
+  };
 
   const validateTotalGbAvailable = () => {
     const totalRequired = form.getValues("total_required"); // Get the current value of total_required
+    console.log('totalRequired', totalRequired);
     const totalGbAvailable = form.getValues("total_gb_available"); // Get the current value of total_gb_available
 
     if (Number(totalGbAvailable) < Number(totalRequired)) {
@@ -287,28 +281,6 @@ const RunSetup = () => {
 
     setAvgSize(avgSize); // Update the avgSize state
 
-    // Calculate the total data required for selected checkboxes
-    const totalDataRequired = poolData
-      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
-      .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
-
-    // Update the Total Required field in the form
-    form.setValue("total_required", totalDataRequired);
-
-    // Calculate the percentage of Total Available GB for each test_name
-    const totalGbAvailable = Number(form.getValues("total_gb_available")); // Get total GB available from the form
-    const percentageData = poolData
-      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
-      .map((pool) => ({
-        test_name: pool.test_name,
-        percentage: totalGbAvailable > 0
-          ? parseFloat(((pool.data_required / totalGbAvailable) * 100).toFixed(2))
-          : 0,
-      }));
-    setPercentage(percentageData);
-
-    console.log("Percentage Data:", percentageData);
-
     // Trigger validation for total_gb_available
     validateTotalGbAvailable();
   };
@@ -343,10 +315,12 @@ const RunSetup = () => {
 
   useEffect(() => {
     if (avgSize && !isNaN(avgSize)) {
-      form.setValue("pool_size", avgSize.toString()); // Set the value programmatically
+      form.setValue("pool_size", avgSize); // Set the value programmatically
+
       form.trigger("pool_size"); // Trigger validation for the pool_size field
     }
   }, [avgSize]); // Watch for changes in avgSize
+
 
   useEffect(() => {
     const updatedTableData = selectedTestNames.map((test) => {
@@ -375,8 +349,19 @@ const RunSetup = () => {
       };
     });
 
-    form.setValue("table_data", JSON.stringify(updatedTableData)); // Update table_data in form state
-  }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]); // Watch for changes in dependencies
+    // Update table_data directly in the form state
+    form.setValue("table_data", JSON.stringify(updatedTableData));
+  }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]);
+
+  useEffect(() => {
+    // Calculate the total required data based on selected test names
+    const totalRequired = poolData
+      .filter((pool) => selectedTestNames.includes(pool.test_name)) // Filter pool data for selected test names
+      .reduce((sum, pool) => sum + (pool.data_required || 0), 0); // Sum up the data_required values
+
+    form.setValue("total_required", totalRequired); // Update the total_required field in the form
+  }, [selectedTestNames, poolData]); // Trigger the effect whenever selectedTestNames or poolData change
+
 
   return (
     <div>
@@ -396,7 +381,7 @@ const RunSetup = () => {
                       field.onChange(e); // Update form state
                       handleTestNameChange(e.target.value); // Fetch pool data and update state
                     }}
-                    className="mb-2 w-full p-2 border rounded">
+                    className="mb-2 w-full p-2 border-2 border-orange-300 rounded">
                     <option value="">Select application</option>
                     {testNames && testNames.map((test) => (
                       <option
@@ -423,7 +408,7 @@ const RunSetup = () => {
                     placeholder="Enter final pool volume (ul)"
                     value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid numeric value
                     onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} // Convert input to number
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300"
                     required
                   />
                   {form.formState.errors.final_pool_vol_ul && (
@@ -514,11 +499,11 @@ const RunSetup = () => {
                   <FormLabel className="mb-2">Total Required (GB)</FormLabel>
                   <Input
                     {...field}
-                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    value={field.value ?? 0}
                     type="number"
                     disabled
                     placeholder="Enter total required"
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300"
                   />
                 </FormItem>
               )}
@@ -535,11 +520,11 @@ const RunSetup = () => {
                     {...field}
                     min="0"
                     required
-                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    value={field.value ?? 0}
                     onBlur={() => validateTotalGbAvailable()} // Trigger validation on blur
                     type="number"
                     placeholder="Enter total GB available"
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300"
                   />
                   {form.formState.errors.total_gb_available && (
                     <p className="text-red-500 text-sm">
@@ -560,7 +545,7 @@ const RunSetup = () => {
                   <Input
                     {...field}
                     type="date"
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300"
                     required
                   />
 
@@ -582,9 +567,8 @@ const RunSetup = () => {
                     step="0.01"
                     value={field.value !== undefined && !isNaN(field.value) ? field.value.toString() : "0"} // Ensure valid value
                     onChange={(e) => field.onChange(e.target.value === "" ? "0" : e.target.value)} // Handle empty input
-
                     placeholder="Enter pool concentration"
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300"
                   />
                 </FormItem>
 
@@ -599,13 +583,13 @@ const RunSetup = () => {
                 <FormItem>
                   <FormLabel className="mb-2">Average Final Pool Size (Tapestation)</FormLabel>
                   <Input
-                    required
                     {...field}
                     type="number"
-                    min="0"
-                    onChange={(e) => field.onChange(e.target.value)}
+                    step="0.01" // Allow decimal values
+                    value={field.value !== undefined && !isNaN(field.value) ? field.value : ''} // Ensure valid value
+                    onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} // Convert input to number
                     placeholder="Enter pool size"
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300" 
                   />
                   {form.formState.errors.pool_size && (
                     <p className="text-red-500 text-sm">
@@ -627,10 +611,10 @@ const RunSetup = () => {
                   <Input
                     required
                     {...field}
-                    value={field.value || new Date().toISOString().split("T")[0]} // Default to today's date if value is invalid
+                    value={field.value ?? 0}
                     type="number"
                     placeholder="Enter nM calculation"
-                    className="mb-2"
+                    className="mb-2 border-2 border-orange-300"
                   />
                   {form.formState.errors.nm_cal && (
                     <p className="text-red-500 text-sm">
@@ -655,7 +639,7 @@ const RunSetup = () => {
                       field.onChange(e); // Update form state
                       setInstrumentType(e.target.value); // Update instrument type state
                     }}
-                    className="mb-2 w-full p-2 border rounded"
+                    className="mb-2 w-full p-2 border-2 border-orange-300 rounded"
                     required>
                     <option value="">Select instrument type</option>
                     <option value="NextSeq_550">NextSeq 550</option>
@@ -681,7 +665,7 @@ const RunSetup = () => {
                         value={field.value ?? ""}
                         onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                         placeholder="Enter Total Volume (2nM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                       {form.formState.errors.total_volume_2nm_next_seq_1000_2000 && (
                         <p className="text-red-500 text-sm">
@@ -703,7 +687,7 @@ const RunSetup = () => {
                         {...field}
                         type="number"
                         placeholder="Enter Volulme for Final Pool conc 2nM"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -720,7 +704,7 @@ const RunSetup = () => {
                         {...field}
                         type="number"
                         placeholder="Enter RS Between (2nM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -731,14 +715,14 @@ const RunSetup = () => {
                   name='dinatured_lib_next_seq_550'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="mb-2">Denatured Library</FormLabel>
+                      <FormLabel className="mb-2">Stock Conc(pM)</FormLabel>
                       <Input
                         {...field}
                         type="number"
                         value={field.value ?? ""}
                         onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
-                        placeholder="Enter Dinatured Library"
-                        className="mb-2"
+                        placeholder="Enter Stock Concentration"
+                        className="mb-2 border-2 border-orange-300"
                       />
                       {form.formState.errors.dinatured_lib_next_seq_550 && (
                         <p className="text-red-500 text-sm">
@@ -763,7 +747,7 @@ const RunSetup = () => {
                         value={field.value ?? ""}
                         onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                         placeholder="Enter Total Volume"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                       {form.formState.errors.total_volume_next_seq_550 && (
                         <p className="text-red-500 text-sm">
@@ -780,14 +764,14 @@ const RunSetup = () => {
                   name='loading_conc_550'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="mb-2">Loading Concentration(pM)</FormLabel>
+                      <FormLabel className="mb-2">Required Concentration(pM)</FormLabel>
                       <Input
                         {...field}
                         type="number"
                         value={field.value ?? ""}
                         onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
-                        placeholder="Enter Loading Conc"
-                        className="mb-2"
+                        placeholder="Enter Required Concentration"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -799,12 +783,12 @@ const RunSetup = () => {
                   name='lib_required_next_seq_550'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="mb-2">Library Required</FormLabel>
+                      <FormLabel className="mb-2">Volume from Stock</FormLabel>
                       <Input
                         {...field}
                         type="number"
-                        placeholder="Enter Library Required"
-                        className="mb-2"
+                        placeholder="Enter Volume from Stock"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -816,13 +800,18 @@ const RunSetup = () => {
                   name='buffer_volume_next_seq_550'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="mb-2">Buffer Volume</FormLabel>
+                      <FormLabel className="mb-2"> HT Buffer</FormLabel>
                       <Input
                         {...field}
                         type="number"
-                        placeholder="Enter Buffer Volume"
-                        className="mb-2"
+                        placeholder="Enter HT Buffer"
+                        className="mb-2 border-2 border-orange-300"
                       />
+                      {form.formState.errors.ht_buffer_next_seq_1000_2000 && (
+                        <p className="text-red-500 text-sm">
+                          {form.formState.errors.ht_buffer_next_seq_1000_2000.message}
+                        </p>
+                      )}
                     </FormItem>
                   )}
                 />
@@ -836,17 +825,17 @@ const RunSetup = () => {
                 {/* total volume for 2nM */}
                 <FormField
                   control={form.control}
-                  name='total_volume_2nm_next_seq_1000_2000'
+                  name="total_volume_2nm_next_seq_1000_2000"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="mb-2">Total Volume (2nM)</FormLabel>
                       <Input
                         {...field}
                         type="number"
-                        value={field.value ?? ""}
-                        onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                        value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid numeric value
+                        onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} // Convert input to number
                         placeholder="Enter Total Volume (2nM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                       {form.formState.errors.total_volume_2nm_next_seq_1000_2000 && (
                         <p className="text-red-500 text-sm">
@@ -867,8 +856,10 @@ const RunSetup = () => {
                       <Input
                         {...field}
                         type="number"
+                        value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid value
+                        onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                         placeholder="Enter Volulme for Final Pool conc 2nM"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -884,8 +875,10 @@ const RunSetup = () => {
                       <Input
                         {...field}
                         type="number"
+                        value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid value
+                        onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                         placeholder="Enter RS Between (2nM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -903,7 +896,7 @@ const RunSetup = () => {
                         type="number"
                         placeholder="Enter Loading Concentration"
                         value={600}
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -922,7 +915,7 @@ const RunSetup = () => {
                         value={field.value ?? ""}
                         onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                         placeholder="Enter Total Volume(600pM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                       {form.formState.errors.total_volume_600pm_next_seq_1000_2000 && (
                         <p className="text-red-500 text-sm">
@@ -944,7 +937,7 @@ const RunSetup = () => {
                         {...field}
                         type="number"
                         placeholder="Enter Volume of 2nM conc(600pM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -961,7 +954,7 @@ const RunSetup = () => {
                         {...field}
                         type="number"
                         placeholder="Enter Volume of RS Between(600pM)"
-                        className="mb-2"
+                        className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
                   )}
@@ -972,7 +965,7 @@ const RunSetup = () => {
               </>
             ) : ""}
 
-            {/* Retrieve table data on submit */}
+            {/* Retrieve table data on submit
             <FormField
               control={form.control}
               name="table_data"
@@ -984,7 +977,7 @@ const RunSetup = () => {
                   />
                 </FormItem>
               )}
-            />
+            /> */}
 
             <Button
               type="submit"
