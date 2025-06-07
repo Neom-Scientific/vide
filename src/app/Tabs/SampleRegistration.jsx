@@ -3,7 +3,7 @@ import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import React, { useEffect, useState } from 'react'
 import { set, useForm } from 'react-hook-form'
-import { z } from 'zod'
+import { object, z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
 import { Button } from '@/components/ui/button'
@@ -11,6 +11,7 @@ import { toast, ToastContainer } from 'react-toastify'
 import Dialogbox from '@/app/components/Dialogbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Cookies from 'js-cookie'
+import { CldOgImage } from 'next-cloudinary'
 
 const formSchema = z.object({
   sample_id: z.string().min(1, 'Sample ID is required'),
@@ -22,12 +23,10 @@ const formSchema = z.object({
     .email('Invalid email address'),
   // test_name: z.string().min(1, 'Test Name is required'),
   selectedTestName: z.string().min(1, 'Add the test name to confirm'),
-  registration_date: z.string().min(1, 'Registration Date is required'),
   hospital_id: z.string().min(1, 'Hospital ID is required'),
   patient_name: z.string().min(1, 'Patient Name is required'),
   trf: z.string().min(1, 'TRF is required'),
   specimen_quality: z.string().min(1, 'Specimen Quality is required'),
-  selectedTestName: z.string().min(1, 'Selected Test Name is required'),
   age: z.string().min(1, 'Age is required'),
   clinical_history: z.string().min(1, 'Clinical History is required'),
   systolic_bp: z.string().optional(),
@@ -41,31 +40,30 @@ const formSchema = z.object({
   statin: z.string().optional(),
   aspirin_therapy: z.string().optional(),
   sample_name: z.string().min(1, 'Sample Name is required'),
+  trf_file: z.string().optional(),
 })
 
 export const SampleRegistration = () => {
-  const [showTestModal, setShowTestModal] = useState(false);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
-  const [newTestName, setNewTestName] = useState('');
   const [trfFile, setTrfFile] = useState(null);
   const [trfUrl, setTrfUrl] = useState('');
   const [selectedTests, setSelectedTests] = useState([]);
   const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
   const [testToRemove, setTestToRemove] = useState(null); // <-- Add this line
-
-  const user = JSON.parse(Cookies.get('user') || '{}');
-
+  const [user, setUser] = useState(null);
+  const [editData, setEditData] = useState([]);
 
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
   const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
 
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
       // hosptial and doctor information
-      hospital_name: user.hospital_name || '',
-      hospital_id: user.hospital_id || '',
+      hospital_name: user?.hospital_name || '',
+      hospital_id: user?.hospital_id || '',
       doctor_name: '',
       dept_name: '',
       doctor_mobile: '',
@@ -115,8 +113,47 @@ export const SampleRegistration = () => {
       repeat_required: '',
       repeat_reason: '',
       repeat_date: '',
+      trf_file: '',
     }
   })
+  useEffect(() => {
+    const cookieUser = Cookies.get('user');
+    if (cookieUser) {
+      const parsedUser = JSON.parse(cookieUser);
+      setUser(parsedUser);
+
+      console.log('parsedUser', parsedUser);
+      form.reset({
+        hospital_name: parsedUser.hospital_name || '',
+        hospital_id: parsedUser.hospital_id || '',
+      })
+
+      const handleSampleEdit = async () => {
+        try {
+          const queryParams = new URLSearchParams();
+          queryParams.append('role', parsedUser.role);
+          if (parsedUser.hospital_name && parsedUser.role !== 'SuperAdmin') {
+            queryParams.append('hospital_name', parsedUser.hospital_name);
+          }
+
+          const response = await axios.get(`/api/store?${queryParams.toString()}`);
+          if (response.data[0].status === 200) {
+            setEditData(response.data[0].data);
+            // console.log('response', response.data[0].data);
+          }
+          if (response.data[0].status === 404) {
+            // toast.error(response.data[0].message);
+          }
+        } catch (error) {
+          console.error('Error handling sample edit:', error);
+          toast.error('Failed to handle sample edit');
+        }
+      };
+
+      handleSampleEdit();
+    }
+  }, []);
+
 
   const allTests = [
     'WES',
@@ -202,9 +239,11 @@ export const SampleRegistration = () => {
         const url = URL.createObjectURL(file);
         setTrfUrl(url);
         form.setValue('trf', file.name); // Store file name if needed
+        form.setValue('trf_file', file.name); // Store the file object
       } else {
         setTrfUrl('');
         form.setValue('trf', '');
+        form.setValue('trf_file', '');
       }
       // if(file){
       //   const formData = new FormData();
@@ -245,6 +284,7 @@ export const SampleRegistration = () => {
     if (res.status === 200) {
       toast.success('Sample registered successfully');
       form.reset();
+      selectedTests.length = 0; // Clear selected tests
     } else {
       toast.error('Sample registration failed');
     }
@@ -267,8 +307,82 @@ export const SampleRegistration = () => {
     }
   };
 
+  const handleUpdate = async () => {
+    const allData = form.getValues();
+    const sampleId = allData.sample_id;
+
+    if (!sampleId) {
+      toast.error("Sample ID is required");
+      return;
+    }
+
+    const updates = { ...allData }; // Prepare updates object
+    delete updates.sample_id; // Remove sample_id from updates (it's used as a key)
+    delete updates.sample_name; // Exclude sample_name
+    delete updates.trf_file; // Exclude trf_file
+
+    // Convert empty strings for date fields to null
+    const dateFields = ['DOB', 'registration_date', 'sample_date', 'repeat_date'];
+    dateFields.forEach(field => {
+      if (updates[field] === '') {
+        updates[field] = null;
+      }
+    });
+
+    try {
+      const res = await axios.put('/api/store', {
+        sample_id: sampleId,
+        updates,
+      });
+
+      if (res.status === 200) {
+        toast.success('Sample updated successfully');
+        form.reset();
+        selectedTests.length = 0; // Clear selected tests
+      } else {
+        toast.error('Sample update failed');
+      }
+    } catch (error) {
+      console.error('Error updating sample:', error);
+      toast.error('Sample update failed');
+    }
+  };
+
+
   return (
     <div className='p-4'>
+      {user && user.role !== 'NormalUser' && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant='outline' className='mb-4'>
+              Edit Samples
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            {editData.map((sample) => (
+              <DropdownMenuItem key={sample.sample_id}
+                onClick={() => {
+                  Object.keys(sample).forEach(key => {
+                    const dateFields = ['DOB', 'registration_date', 'sample_date', 'repeat_date'];
+                    if (dateFields.includes(key) && sample[key] === '') {
+                      form.setValue(key, null);
+                    } else {
+                      form.setValue(key, sample[key] || '');
+                    }
+                    form.setValue(key, sample[key] || '');
+                    form.setValue('sample_name', sample.patient_name || '');
+                    form.setValue('trf_file', sample.trf || '');
+                    form.setValue('father_husband_name', sample.father_husband_name || '');
+                    setSelectedTests(sample.test_name ? sample.test_name.split(', ') : []);
+                  })
+                }}
+              >
+                {sample.sample_id} - {sample.patient_name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
       {/*  <div className=' text-orange-500 text-lg font-semibold'>Sample Detail</div> */}
       <div className='p-4'>
         <Form {...form}>
@@ -363,8 +477,6 @@ export const SampleRegistration = () => {
                   </FormItem>
                 )}
               />
-
-
 
 
               {/* DOB */}
@@ -883,7 +995,7 @@ export const SampleRegistration = () => {
                   {/* trf file name */}
                   <FormField
                     control={form.control}
-                    name='trf-file'
+                    name='trf_file'
                     render={({ field }) => (
                       <FormItem className='my-2'>
                         <div className="flex justify-between items-center">
@@ -898,7 +1010,7 @@ export const SampleRegistration = () => {
                           disabled
                           {...field}
                           className='my-2 border-2 border-orange-300'
-                          value={trfFile ? trfFile.name : ''}
+                        // value={trfFile ? trfFile.name : ''}
                         />
                       </FormItem>
                     )}
@@ -1352,16 +1464,6 @@ export const SampleRegistration = () => {
 
             </div>
 
-            <div className='grid grid-cols-4 gap-6 mt-4'>
-
-
-            </div>
-
-            <div className='grid grid-cols-4 gap-6 mt-4'>
-              {/* test name button */}
-
-            </div>
-
 
             <Button
               type='submit'
@@ -1369,6 +1471,19 @@ export const SampleRegistration = () => {
             >
               Submit
             </Button>
+
+            {
+              user && user.role !== 'NormalUser' && (
+                <Button
+                  type='button'
+                  className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 ml-2'
+                  onClick={handleUpdate}
+                >
+                  Update
+                </Button>
+              )
+            }
+
             <Button
               type='reset'
               className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'

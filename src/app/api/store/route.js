@@ -41,7 +41,18 @@ export async function POST(request) {
             repeat_required,
             repeat_reason,
             repeat_date,
-            selectedTestName
+            selectedTestName,
+            systolic_bp,
+            diastolic_bp,
+            total_cholesterol,
+            hdl_cholesterol,
+            ldl_cholesterol,
+            diabetes,
+            smoker,
+            hypertension_treatment,
+            statin,
+            aspirin_therapy,
+            tantive_report_date
         } = body;
 
         const data = await pool.query('select $1 from master_sheet',[sample_id]);
@@ -119,14 +130,31 @@ export async function POST(request) {
                 repeat_required,
                 repeat_reason,
                 repeat_date,
-                internal_id
+                internal_id,
+                systolic_bp,
+                diastolic_bp,
+                total_cholesterol,
+                hdl_cholesterol,
+                ldl_cholesterol,
+                diabetes,
+                smoker,
+                hypertension_treatment,
+                statin,
+                aspirin_therapy,
+                dna_isolation,
+                lib_prep,
+                under_seq,
+                seq_completed,
+                tantive_report_date,
+                hpo_status,
+                annotation
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17, $18,
                 $19, $20, $21, $22, $23, $24, $25,
                 $26, $27, $28, $29, $30,
-                $31,$32,$33,$34,$35,$36
+                $31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41, $42, $43, $44, $45, $46,$47, $48,$49,$50,$51,$52,$53
             )
             RETURNING *
         `;
@@ -166,7 +194,24 @@ export async function POST(request) {
             repeat_required,
             repeat_reason,
             repeat_date || null,
-            internal_id
+            internal_id,
+            systolic_bp || null,
+            diastolic_bp || null,
+            total_cholesterol || null,
+            hdl_cholesterol || null,
+            ldl_cholesterol || null,
+            diabetes || null,
+            smoker || null,
+            hypertension_treatment || null,
+            statin || null,
+            aspirin_therapy || null,
+            "No",
+            "No",
+            "No",
+            "No",
+            new Date(new Date(registration_date).getTime() + 7 * 24 * 60 * 60 * 1000) || null, // tantive_report_date = registration_date + 7 days
+            "No", // hpo_status
+            "No" // annotaion
         ];
         const result = await pool.query(query, values);
         const insertedData = result.rows[0];
@@ -186,3 +231,112 @@ export async function POST(request) {
     }
 
 }
+
+export async function GET(request) {
+    const { searchParams } = new URL(request.url);
+    const role = searchParams.get('role');
+    const hospital_name = searchParams.get('hospital_name');
+    console.log('role', role);
+    console.log('hospital_name', hospital_name);
+
+    try {
+        let response = [];
+
+        if (!role) {
+            response.push({
+                status: 400,
+                message: 'Role is required',
+            });
+            return NextResponse.json(response);
+        }
+
+        if (role === 'SuperAdmin') {
+            // Fetch all data for SuperAdmin
+            const { rows } = await pool.query('SELECT * FROM master_sheet');
+            if (rows.length === 0) {
+                response.push({
+                    status: 404,
+                    message: 'No data found',
+                });
+            } else {
+                response.push({
+                    status: 200,
+                    data: rows,
+                });
+            }
+        } else if (hospital_name) {
+            // Fetch data for a specific hospital
+            const { rows } = await pool.query('SELECT * FROM master_sheet WHERE hospital_name = $1', [hospital_name]);
+            if (rows.length === 0) {
+                response.push({
+                    status: 404,
+                    message: 'No data found for the specified hospital',
+                });
+            } else {
+                response.push({
+                    status: 200,
+                    data: rows,
+                });
+            }
+        } else {
+            response.push({
+                status: 400,
+                message: 'Hospital name is required for non-SuperAdmin roles',
+            });
+        }
+
+        return NextResponse.json(response);
+    } catch (error) {
+        console.error('Error executing query', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}
+
+export async function PUT(request) {
+    try {
+      const body = await request.json();
+      const { sample_id, updates } = body;
+  
+      // Validate input
+      if (!sample_id || !updates || typeof updates !== "object") {
+        return NextResponse.json(
+          { status: 400, message: "Sample ID and updates are required" },
+          { status: 400 }
+        );
+      }
+  
+      // Build dynamic query for updates
+      const columns = Object.keys(updates);
+      const values = Object.values(updates);
+      values.push(sample_id); // Add sample_id as the last parameter
+  
+      const setClause = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+      const query = `
+        UPDATE master_sheet
+        SET ${setClause}
+        WHERE sample_id = $${columns.length + 1}
+        RETURNING *
+      `;
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rowCount === 0) {
+        return NextResponse.json(
+          { status: 404, message: "No data found for the provided sample ID" },
+          { status: 404 }
+        );
+      }
+  
+      return NextResponse.json({
+        status: 200,
+        message: "Data updated successfully",
+        data: result.rows[0], // Return the updated row
+      });
+    } catch (error) {
+      console.error("Error updating data:", error);
+      return NextResponse.json(
+        { status: 500, message: "Internal Server Error", error: error.message },
+        { status: 500 }
+      );
+    }
+  }

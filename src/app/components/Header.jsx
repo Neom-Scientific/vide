@@ -17,13 +17,21 @@ const defaultAvatars = [
 
 const Header = ({ activeTab, setActiveTab }) => {
   const router = useRouter();
+  const [user, setUser] = useState(null); // State to hold user data
+
   useEffect(() => {
-    const user = JSON.parse(Cookies.get('user') || '{}');
-    if(Object.keys(user).length === 0){ // Check if user object is empty
+    const cookieUser = Cookies.get('user');
+        if (cookieUser) {
+          setUser(JSON.parse(cookieUser));
+        }
+  },[]);
+  // const user = JSON.parse(Cookies.get('user') || '{}');
+  useEffect(() => {
+    if (user && Object.keys(user).length === 0) { // Check if user object is empty
       router.push('/login'); // Redirect to login if user is not logged in
     }
-  },[]);
-  
+  }, [user]);
+
   const [darkMode, setDarkMode] = useState(
     typeof window !== "undefined"
       ? document.documentElement.classList.contains("dark")
@@ -159,6 +167,29 @@ const Header = ({ activeTab, setActiveTab }) => {
                 </div>
               )}
             </li>
+            <li>
+              <button
+                onClick={() => {
+                  Cookies.remove('user'); // Clear user cookie
+                  localStorage.removeItem('searchData'); // Clear search data from local storage
+                  localStorage.removeItem('libraryPreparationData')
+                  router.push('/login'); // Redirect to login page
+                }}
+                className="p-2 bg-red-500 text-white font-bold rounded-lg cursor-pointer"
+              >
+                Logout
+              </button>
+            </li>
+            {user && user.role === "SuperAdmin" && (
+              <li>
+                <button
+                  onClick={() => router.push('/login')}
+                  className="p-2 bg-blue-500 text-white font-bold  rounded-lg cursor-pointer"
+                >
+                  Login
+                </button>
+              </li>
+            )}
           </ul>
         </nav>
       </div>

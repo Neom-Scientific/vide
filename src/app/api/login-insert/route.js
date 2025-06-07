@@ -43,6 +43,7 @@ export async function POST(request) {
                     email: userData.rows[0].email,
                     hospital_name: userData.rows[0].hospital_name,
                     hospital_id: userData.rows[0].hospital_id,
+                    role : userData.rows[0].role,
                 },
                 message: 'Login successful',
             });

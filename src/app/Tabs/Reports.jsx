@@ -16,10 +16,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ChevronDown } from "lucide-react";
+import Cookies from 'js-cookie';
+import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
 
 
 const formSchema = z.object({
@@ -39,12 +42,18 @@ const Reports = () => {
   const [rowSelection, setRowSelection] = useState({});
   let rows = [];
   const [tableRows, setTableRows] = useState(rows);
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const CookieUser = Cookies.get('user');
+    if (CookieUser) {
+      setUser(JSON.parse(CookieUser));
+    }
+  }, []);
   const allTests = [
     'WES',
     'CS',
     'Clinical Exome',
     'Myeloid',
-    'Cardio',
     'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
@@ -56,20 +65,32 @@ const Reports = () => {
     { key: 'hospital_name', label: 'Hospital Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
-    { key: 'registration_date', label: 'Registration Date' },
-    { key: 'dept_name', label: 'Department Name' },
     { key: 'run_id', label: 'Run ID' },
+    { key: 'sample_id', label: 'Sample ID' },
+    { key: 'registration_date', label: 'Registration Date' },
     { key: 'sample_date', label: 'Sample Date' },
+    { key: 'patient_name', label: 'Patient Name' },
+    { key: 'client_name', label: 'Client Name' },
+    { key: 'seq_run_date', label: 'Sequencing Run Date' },
+    { key: 'phenotype_rec_date', label: 'Phenotype Receiving Date' },
+    { key: 'tantive_report_date', label: 'Tantive Report Date' },
+    { key: 'report_releasing_date', label: 'Report Releasing Date' },
+    { key: 'tat_days', label: 'TAT Days' },
     { key: 'sample_type', label: 'Sample Type' },
+    { key: 'test_name', label: 'Test Name' },
     { key: 'trf', label: 'TRF' },
+    { key: 'report_status', label: 'Report Status' },
+    { key: 'report_link', label: 'Report Link' },
+    { key: 'upload_report', label: 'Upload Report' },
+    { key: 'hpo_status', label: 'HPO Status' },
+    { key: 'annotation', label: 'Annotation' },
+    { key: 'doctor_name', label: 'Doctor Name' },
+    { key: 'dept_name', label: 'Department Name' },
     { key: 'collection_date_time', label: 'Collection Date Time' },
     { key: 'storage_condition', label: 'Storage Condition' },
     { key: 'prority', label: 'Prority' },
     { key: 'hospital_id', label: 'Hospital ID' },
     { key: 'client_id', label: 'Client ID' },
-    { key: 'client_name', label: 'Client Name' },
-    { key: 'sample_id', label: 'Sample ID' },
-    { key: 'patient_name', label: 'Patient Name' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
     { key: 'sex', label: 'Sex' },
@@ -81,11 +102,9 @@ const Reports = () => {
     { key: 'country', label: 'Country' },
     { key: 'patient_mobile', label: "Patient's Mobile" },
     { key: 'docter_mobile', label: "Doctor's Mobile" },
-    { key: 'docter_name', label: 'Doctor Name' },
     { key: 'email', label: 'Email' },
-    { key: 'test_name', label: 'Test Name' },
-    { key: 'remarks', label: 'Remarks' },
     { key: 'clinical_history', label: 'Clinical History' },
+    { key: 'remarks', label: 'Remarks' },
     { key: 'repeat_required', label: 'Repeat Required' },
     { key: 'repeat_reason', label: 'Repeat Reason' },
     { key: 'repeat_date', label: 'Repeat Date' },
@@ -104,6 +123,7 @@ const Reports = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
+
   ];
 
   const form = useForm({
@@ -120,6 +140,98 @@ const Reports = () => {
     }
   })
 
+  const handleChangeCheckbox = async (e, columnKey, sampleId) => {
+    const isChecked = e.target.checked;
+    try {
+      console.log('Updating:', sampleId, columnKey, isChecked);
+
+      // Prepare the updates object
+      const updates = {
+        [columnKey]: isChecked ? "Yes" : "No", // Dynamically set the column value
+      };
+
+      // Send the PUT request with the correct structure
+      const response = await axios.put('/api/store', {
+        sample_id: sampleId, // Pass the sample_id
+        updates, // Pass the updates object
+      });
+
+      if (response.data.status === 200) {
+        toast.success(`Updated ${columnKey} successfully!`);
+        // Update the tableRows state to reflect the change
+        setTableRows(prevRows =>
+          prevRows.map(row =>
+            row.sample_id === sampleId
+              ? { ...row, [columnKey]: isChecked ? "Yes" : "No" }
+              : row
+          )
+        );
+      } else {
+        toast.error(`Failed to update ${columnKey}: ${response.data.message}`);
+      }
+    } catch (error) {
+      console.error("Error updating data:", error);
+      toast.error("An error occurred while updating the data.");
+    }
+  };
+
+  const handleFileUpload = async (file, sampleId) => {
+    if (!file) {
+      toast.error("No file selected");
+      return;
+    }
+  
+    try {
+      // Prepare the form data
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      // Upload the file to the backend
+      // const uploadResponse = await axios.post("/api/upload", formData, {
+      //   headers: {
+      //     "Content-Type": "multipart/form-data",
+      //   },
+      // });
+  
+      // if (uploadResponse.status === 200) {
+      //   const reportLink = uploadResponse.data.fileUrl; // Assuming the backend returns the file URL
+  
+        // Prepare the updates object
+        const updates = {
+          report_link: file.name, // Use the file name as the report link
+          report_releasing_date: new Date().toISOString(), // Current date in ISO format
+          report_status: "Reported", // Set the report status to "Reported"
+        };
+        console.log('updates', updates);
+  
+        // Send the PUT request to update the database
+        const response = await axios.put("/api/store", {
+          sample_id: sampleId,
+          updates,
+        });
+  
+        if (response.data.status === 200) {
+          toast.success("Report uploaded and updated successfully!");
+          // Update the tableRows state to reflect the change
+          setTableRows((prevRows) =>
+            prevRows.map((row) =>
+              row.sample_id === sampleId
+                ? { ...row, ...updates }
+                : row
+            )
+          );
+        } else {
+          toast.error(`Failed to update report: ${response.data.message}`);
+        }
+      // } else {
+      //   toast.error("Failed to upload the file");
+      // }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("An error occurred while uploading the file.");
+    }
+  };
+
   const columns = [
     {
       accessorKey: "sno",
@@ -129,8 +241,9 @@ const Reports = () => {
       enableSorting: false,
       enableHiding: false,
     },
+
     ...allColumns.map(col => {
-      if (col.key === "registration_date") {
+      if (col.key === "registration_date" || col.key === "phenotype_rec_date") {
         return {
           accessorKey: col.key,
           id: col.key, // Use the key as the id
@@ -150,6 +263,67 @@ const Reports = () => {
           },
         };
       }
+
+      if (col.key === "seq_run_date" || col.key === "tantive_report_date" || col.key === "report_releasing_date" || col.key === "repeat_date") {
+        return {
+          accessorKey: col.key,
+          id: col.key, // Use the key as the id
+          header: col.label,
+          cell: info => {
+            const value = info.getValue();
+            if (!value) return "";
+            const date = new Date(value);
+            if (isNaN(date)) return value;
+            // Format: YYYY-MM-DD
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+          },
+        }
+      }
+
+      // Render checkboxes for hpo_status and annotation
+      if (col.key === "hpo_status" || col.key === "annotation") {
+        return {
+          accessorKey: col.key,
+          id: col.key, // Use the key as the id
+          header: col.label,
+          cell: info => {
+            const value = info.getValue();
+            const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
+            return (
+              <input
+                type="checkbox"
+                checked={value === "Yes"} // Assume "Yes" means checked
+                onChange={(e) => handleChangeCheckbox(e, col.key, sampleId)} // Pass columnKey and sampleId
+              />
+            );
+          },
+        };
+      }
+
+       // Render Upload Report column for SuperAdmin
+    if (col.key === "upload_report") {
+      return {
+        accessorKey: col.key,
+        id: col.key, // Use the key as the id
+        header: col.label,
+        cell: info => {
+          const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
+          return user?.role === "SuperAdmin" ? (
+            <input
+              type="file"
+              className='border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800'
+              onChange={(e) => handleFileUpload(e.target.files[0], sampleId)} // Handle file upload
+              accept=".pdf,.doc,.docx" // Accept PDF and Word documents
+              />
+          ) : null;
+        },
+      };
+    }
+
+
       return {
         accessorKey: col.key,
         id: col.key, // Use the key as the id for other columns
@@ -160,22 +334,36 @@ const Reports = () => {
 
   const defaultVisible = [
     'sno',
+    'run_id',
     'sample_id',
-    'patient_name',
     'registration_date',
-    'test_name',
+    'patient_name',
     'client_name',
+    'seq_run_date',
+    'phenotype_rec_date',
+    'tantive_report_date',
+    'report_releasing_date',
+    'tat_days',
+    'sample_type',
+    'test_name',
     'trf',
+    'report_status',
+    'report_link',
+    ...( user && user?.role === 'SuperAdmin' ? ['upload_report'] : []), // Show 'upload_report' only for SuperAdmin
+    'hpo_status',
+    'annotation',
+    'doctor_name',
+    'dept_name',
     'clinical_history',
     'remarks',
   ]
 
   const [columnVisibility, setColumnVisibility] = useState(() =>
-      columns.reduce((acc, col) => {
-        acc[col.accessorKey] = defaultVisible.includes(col.accessorKey);
-        return acc;
-      }, {})
-    );
+    columns.reduce((acc, col) => {
+      acc[col.accessorKey] = defaultVisible.includes(col.accessorKey);
+      return acc;
+    }, {})
+  );
 
 
   const table = useReactTable({
@@ -205,9 +393,94 @@ const Reports = () => {
     },
   });
 
-  const handleSubmit = (data) => {
-    console.log('Form submitted with data:', data);
-    // Here you can handle the form submission, e.g., send data to an API
+  const handleSubmit = async () => {
+    const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
+
+    const data = {
+      sample_id: getValue("sample_id"),
+      test_name: selectedTestNames.join(","),
+      sample_status: getValue("sample_status"),
+      from_date: getValue("from_date"),
+      to_date: getValue("to_date"),
+      doctor_name: getValue("doctor_name"),
+      dept_name: getValue("dept_name"),
+      run_id: getValue("run_id"),
+    };
+    if (user && user.role !== 'SuperAdmin') {
+      data.hospital_name = user.hospital_name;
+    }
+    try {
+      const response = await axios.get(`/api/search`, { params: data });
+      if (response.data[0].status === 200) {
+        const responseData = response.data[0].data;
+        if (Array.isArray(responseData) && responseData.length > 0) {
+          // Map the response data and calculate tantive_report_date
+          const updatedRows = responseData.map(row => {
+            const registrationDate = new Date(row.registration_date);
+            const tantiveReportDate = new Date(registrationDate);
+            tantiveReportDate.setDate(tantiveReportDate.getDate() + 7); // Add 7 days
+            // const formattedTantiveReportDate = `${tantiveReportDate.getFullYear()}-${String(tantiveReportDate.getMonth() + 1).padStart(2, '0')}-${String(tantiveReportDate.getDate()).padStart(2, '0')}`;
+            const tatDays = Math.ceil((tantiveReportDate - registrationDate) / (1000 * 60 * 60 * 24)); // Difference in days
+            return {
+              ...row,
+              phenotype_rec_date: row.registration_date, // Set phenotype_rec_date to registration_date
+              tantive_report_date: row.tantive_report_date, // Format as YYYY-MM-DD
+              report_realising_date: row.report_realising_date || '', // Ensure report_realising_date is set
+              tat_days: tatDays,
+            };
+          });
+
+          console.log('updatedRows', updatedRows);
+          console.log('sample_id:', updatedRows[0]?.sample_id);
+          setTableRows(updatedRows);
+        } else {
+          setTableRows([]);
+          console.warn("No data found for the given filters.");
+        }
+      } else {
+        toast.error(response.data[0].message || "Failed to retrieve data");
+      }
+    }
+    catch (error) {
+      console.error("Error in handleSubmit:", error);
+    }
+  }
+
+  const handleSaveToExcel = async () => {
+    try {
+      // Get visible columns
+      const visibleColumns = Object.keys(table.getState().columnVisibility).filter(
+        (key) => table.getState().columnVisibility[key]
+      );
+
+      // Filter tableRows to include only visible columns
+      const filteredData = tableRows.map((row) => {
+        const filteredRow = {};
+        visibleColumns.forEach((key) => {
+          filteredRow[key] = row[key];
+        });
+        return filteredRow;
+      });
+
+      // Send filtered data to the API
+      const response = await axios.post(
+        '/api/convert-to-excel',
+        { data: filteredData },
+        { responseType: 'blob' }
+      );
+
+      // Create a URL for the file and trigger download
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'sample_data.xlsx'); // Set the file name
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Error saving data:', error);
+      toast.error('An error occurred while saving the data.');
+    }
   }
   return (
     <div className="p-4">
@@ -282,12 +555,12 @@ const Reports = () => {
             </div>
           </div>
           <div className="me-5">
-            <label className="block font-semibold mb-1">Sample Status</label>
+            <label className="block font-semibold mb-1">Status</label>
             <select
               name='sample_status'
               className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
-              <option value="">Select Sample Status</option>
+              <option value="">Select Status</option>
               <option value="ready">Ready for Reporting</option>
               <option value="reported">Reported</option>
             </select>
@@ -313,9 +586,8 @@ const Reports = () => {
           </div>
 
         </div>
+
         <div className="flex gap-4 mb-2">
-
-
           <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Doctor's Name</label>
             <Input
@@ -333,6 +605,7 @@ const Reports = () => {
               className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
+
           <div className="me-5">
             <label className="block font-semibold mb-1 mt-2">Run id</label>
             <Input
@@ -341,18 +614,21 @@ const Reports = () => {
               className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             />
           </div>
+
         </div>
+
         <div className='grid grid-cols-4 gap-4 mb-2 '>
 
           <div>
             <Button
               type='submit'
-              onClick={() => { handlesubmit() }}
+              onClick={handleSubmit}
               className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-full">
               Retrieve
             </Button>
           </div>
         </div>
+
       </div>
 
       {/* Column Selector Dropdown */}
@@ -427,6 +703,14 @@ const Reports = () => {
           </Table>
         </div>
       </div>
+
+      <Button
+        className="bg-gray-700 hover:bg-gray-800 text-white cursor-pointer mb-4"
+        onClick={handleSaveToExcel}
+      >
+        Save as Excel
+      </Button>
+      <ToastContainer />
     </div>
   )
 }

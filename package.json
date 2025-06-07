@@ -26,6 +26,7 @@
     "cloudinary": "^2.6.1",
     "clsx": "^2.1.1",
     "dotenv": "^16.5.0",
+    "exceljs": "^4.4.0",
     "express": "^5.1.0",
     "firebase": "^11.8.1",
     "googleapis": "^149.0.0",

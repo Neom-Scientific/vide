@@ -1,6 +1,5 @@
 import "./globals.css";
 import ClientLayout from "./client-layout";
-import Sidebar from "./components/Sidebar";
 
 
 export const metadata = {
