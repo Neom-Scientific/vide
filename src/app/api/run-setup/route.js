@@ -118,7 +118,10 @@ export async function POST(request) {
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const hospital_name = searchParams.get('hospital_name');
+    const  role  = searchParams.get('role')
     try {
+        console.log('role', role);
+        console.log('hospital_name', hospital_name);
         const response = [];
         if (!hospital_name) {
             response.push({
@@ -126,20 +129,42 @@ export async function GET(request) {
                 message: "Hospital name is required"
             });
         }
-        const { rows } = await pool.query(
-            `SELECT run_id, total_required, total_gb_available, selected_application, table_data, count FROM run_setup WHERE hospital_name = $1 ORDER BY seq_run_date DESC;`,
-            [hospital_name]
-        );
-        if (rows.length === 0) {
+        if (!role) {
             response.push({
-                status: 404,
-                message: "No run setups found for the provided hospital name"
+                status: 400,
+                message: "Role is required"
             });
-        } else {
-            response.push({
-                status: 200,
-                data: rows
-            });
+        }
+        if (role === 'SuperAdmin') {
+            const { rows } = await pool.query(` SELECT run_id , total_required, total_gb_available, selected_application, table_data, count FROM run_setup ORDER BY seq_run_date DESC;`);
+            if (rows.length === 0) {
+                response.push({
+                    status: 404,
+                    message: "No run setups found"
+                });
+            } else {
+                response.push({
+                    status: 200,
+                    data: rows
+                });
+            }
+        }
+        else {
+            const { rows } = await pool.query(
+                `SELECT run_id, total_required, total_gb_available, selected_application, table_data, count FROM run_setup WHERE hospital_name = $1 ORDER BY seq_run_date DESC;`,
+                [hospital_name]
+            );
+            if (rows.length === 0) {
+                response.push({
+                    status: 404,
+                    message: "No run setups found for the provided hospital name"
+                });
+            } else {
+                response.push({
+                    status: 200,
+                    data: rows
+                });
+            }
         }
         return NextResponse.json(response);
     } catch (error) {

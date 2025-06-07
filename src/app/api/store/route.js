@@ -52,6 +52,7 @@ export async function POST(request) {
             hypertension_treatment,
             statin,
             aspirin_therapy,
+            tantive_report_date
         } = body;
 
         const data = await pool.query('select $1 from master_sheet',[sample_id]);
@@ -144,13 +145,16 @@ export async function POST(request) {
                 lib_prep,
                 under_seq,
                 seq_completed,
+                tantive_report_date,
+                hpo_status,
+                annotation
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17, $18,
                 $19, $20, $21, $22, $23, $24, $25,
                 $26, $27, $28, $29, $30,
-                $31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41, $42, $43, $44, $45, $46,$47, $48,$49,$50
+                $31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41, $42, $43, $44, $45, $46,$47, $48,$49,$50,$51,$52,$53
             )
             RETURNING *
         `;
@@ -205,6 +209,9 @@ export async function POST(request) {
             "No",
             "No",
             "No",
+            new Date(new Date(registration_date).getTime() + 7 * 24 * 60 * 60 * 1000) || null, // tantive_report_date = registration_date + 7 days
+            "No", // hpo_status
+            "No" // annotaion
         ];
         const result = await pool.query(query, values);
         const insertedData = result.rows[0];
@@ -243,7 +250,7 @@ export async function GET(request) {
             return NextResponse.json(response);
         }
 
-        if (!hospital_name && role === 'SuperAdmin') {
+        if (role === 'SuperAdmin') {
             // Fetch all data for SuperAdmin
             const { rows } = await pool.query('SELECT * FROM master_sheet');
             if (rows.length === 0) {
@@ -284,3 +291,52 @@ export async function GET(request) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
+
+export async function PUT(request) {
+    try {
+      const body = await request.json();
+      const { sample_id, updates } = body;
+  
+      // Validate input
+      if (!sample_id || !updates || typeof updates !== "object") {
+        return NextResponse.json(
+          { status: 400, message: "Sample ID and updates are required" },
+          { status: 400 }
+        );
+      }
+  
+      // Build dynamic query for updates
+      const columns = Object.keys(updates);
+      const values = Object.values(updates);
+      values.push(sample_id); // Add sample_id as the last parameter
+  
+      const setClause = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+      const query = `
+        UPDATE master_sheet
+        SET ${setClause}
+        WHERE sample_id = $${columns.length + 1}
+        RETURNING *
+      `;
+  
+      const result = await pool.query(query, values);
+  
+      if (result.rowCount === 0) {
+        return NextResponse.json(
+          { status: 404, message: "No data found for the provided sample ID" },
+          { status: 404 }
+        );
+      }
+  
+      return NextResponse.json({
+        status: 200,
+        message: "Data updated successfully",
+        data: result.rows[0], // Return the updated row
+      });
+    } catch (error) {
+      console.error("Error updating data:", error);
+      return NextResponse.json(
+        { status: 500, message: "Internal Server Error", error: error.message },
+        { status: 500 }
+      );
+    }
+  }

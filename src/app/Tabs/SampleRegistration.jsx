@@ -122,6 +122,7 @@ export const SampleRegistration = () => {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);
 
+      console.log('parsedUser', parsedUser);
       form.reset({
         hospital_name: parsedUser.hospital_name || '',
         hospital_id: parsedUser.hospital_id || '',
@@ -306,6 +307,47 @@ export const SampleRegistration = () => {
     }
   };
 
+  const handleUpdate = async () => {
+    const allData = form.getValues();
+    const sampleId = allData.sample_id;
+
+    if (!sampleId) {
+      toast.error("Sample ID is required");
+      return;
+    }
+
+    const updates = { ...allData }; // Prepare updates object
+    delete updates.sample_id; // Remove sample_id from updates (it's used as a key)
+    delete updates.sample_name; // Exclude sample_name
+    delete updates.trf_file; // Exclude trf_file
+
+    // Convert empty strings for date fields to null
+    const dateFields = ['DOB', 'registration_date', 'sample_date', 'repeat_date'];
+    dateFields.forEach(field => {
+      if (updates[field] === '') {
+        updates[field] = null;
+      }
+    });
+
+    try {
+      const res = await axios.put('/api/store', {
+        sample_id: sampleId,
+        updates,
+      });
+
+      if (res.status === 200) {
+        toast.success('Sample updated successfully');
+        form.reset();
+        selectedTests.length = 0; // Clear selected tests
+      } else {
+        toast.error('Sample update failed');
+      }
+    } catch (error) {
+      console.error('Error updating sample:', error);
+      toast.error('Sample update failed');
+    }
+  };
+
 
   return (
     <div className='p-4'>
@@ -321,6 +363,12 @@ export const SampleRegistration = () => {
               <DropdownMenuItem key={sample.sample_id}
                 onClick={() => {
                   Object.keys(sample).forEach(key => {
+                    const dateFields = ['DOB', 'registration_date', 'sample_date', 'repeat_date'];
+                    if (dateFields.includes(key) && sample[key] === '') {
+                      form.setValue(key, null);
+                    } else {
+                      form.setValue(key, sample[key] || '');
+                    }
                     form.setValue(key, sample[key] || '');
                     form.setValue('sample_name', sample.patient_name || '');
                     form.setValue('trf_file', sample.trf || '');
@@ -1423,6 +1471,19 @@ export const SampleRegistration = () => {
             >
               Submit
             </Button>
+
+            {
+              user && user.role !== 'NormalUser' && (
+                <Button
+                  type='button'
+                  className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 ml-2'
+                  onClick={handleUpdate}
+                >
+                  Update
+                </Button>
+              )
+            }
+
             <Button
               type='reset'
               className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'

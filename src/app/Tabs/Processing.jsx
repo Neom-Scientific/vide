@@ -706,7 +706,7 @@ const Processing = () => {
           className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12"
           onClick={handleSaveToExcel}
         >
-          Save
+          Save to excel
         </Button>
 
         {isAnyLibPrepChecked && !tableRows.some(row => row.under_seq === "Yes") && (

@@ -82,7 +82,7 @@ export async function GET(request) {
     }
 
     if (from_dates.length && to_dates.length) {
-      where.push(`sample_date BETWEEN $${idx++} AND $${idx++}`);
+      where.push(`registration_date BETWEEN $${idx++} AND $${idx++}`);
       values.push(from_dates[0], to_dates[0]);
     }
 

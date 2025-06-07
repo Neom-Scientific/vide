@@ -74,12 +74,16 @@ const Reports = () => {
     { key: 'seq_run_date', label: 'Sequencing Run Date' },
     { key: 'phenotype_rec_date', label: 'Phenotype Receiving Date' },
     { key: 'tantive_report_date', label: 'Tantive Report Date' },
+    { key: 'report_releasing_date', label: 'Report Releasing Date' },
     { key: 'tat_days', label: 'TAT Days' },
     { key: 'sample_type', label: 'Sample Type' },
     { key: 'test_name', label: 'Test Name' },
     { key: 'trf', label: 'TRF' },
     { key: 'report_status', label: 'Report Status' },
     { key: 'report_link', label: 'Report Link' },
+    { key: 'upload_report', label: 'Upload Report' },
+    { key: 'hpo_status', label: 'HPO Status' },
+    { key: 'annotation', label: 'Annotation' },
     { key: 'doctor_name', label: 'Doctor Name' },
     { key: 'dept_name', label: 'Department Name' },
     { key: 'collection_date_time', label: 'Collection Date Time' },
@@ -99,8 +103,8 @@ const Reports = () => {
     { key: 'patient_mobile', label: "Patient's Mobile" },
     { key: 'docter_mobile', label: "Doctor's Mobile" },
     { key: 'email', label: 'Email' },
-    { key: 'remarks', label: 'Remarks' },
     { key: 'clinical_history', label: 'Clinical History' },
+    { key: 'remarks', label: 'Remarks' },
     { key: 'repeat_required', label: 'Repeat Required' },
     { key: 'repeat_reason', label: 'Repeat Reason' },
     { key: 'repeat_date', label: 'Repeat Date' },
@@ -136,6 +140,98 @@ const Reports = () => {
     }
   })
 
+  const handleChangeCheckbox = async (e, columnKey, sampleId) => {
+    const isChecked = e.target.checked;
+    try {
+      console.log('Updating:', sampleId, columnKey, isChecked);
+
+      // Prepare the updates object
+      const updates = {
+        [columnKey]: isChecked ? "Yes" : "No", // Dynamically set the column value
+      };
+
+      // Send the PUT request with the correct structure
+      const response = await axios.put('/api/store', {
+        sample_id: sampleId, // Pass the sample_id
+        updates, // Pass the updates object
+      });
+
+      if (response.data.status === 200) {
+        toast.success(`Updated ${columnKey} successfully!`);
+        // Update the tableRows state to reflect the change
+        setTableRows(prevRows =>
+          prevRows.map(row =>
+            row.sample_id === sampleId
+              ? { ...row, [columnKey]: isChecked ? "Yes" : "No" }
+              : row
+          )
+        );
+      } else {
+        toast.error(`Failed to update ${columnKey}: ${response.data.message}`);
+      }
+    } catch (error) {
+      console.error("Error updating data:", error);
+      toast.error("An error occurred while updating the data.");
+    }
+  };
+
+  const handleFileUpload = async (file, sampleId) => {
+    if (!file) {
+      toast.error("No file selected");
+      return;
+    }
+  
+    try {
+      // Prepare the form data
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      // Upload the file to the backend
+      // const uploadResponse = await axios.post("/api/upload", formData, {
+      //   headers: {
+      //     "Content-Type": "multipart/form-data",
+      //   },
+      // });
+  
+      // if (uploadResponse.status === 200) {
+      //   const reportLink = uploadResponse.data.fileUrl; // Assuming the backend returns the file URL
+  
+        // Prepare the updates object
+        const updates = {
+          report_link: file.name, // Use the file name as the report link
+          report_releasing_date: new Date().toISOString(), // Current date in ISO format
+          report_status: "Reported", // Set the report status to "Reported"
+        };
+        console.log('updates', updates);
+  
+        // Send the PUT request to update the database
+        const response = await axios.put("/api/store", {
+          sample_id: sampleId,
+          updates,
+        });
+  
+        if (response.data.status === 200) {
+          toast.success("Report uploaded and updated successfully!");
+          // Update the tableRows state to reflect the change
+          setTableRows((prevRows) =>
+            prevRows.map((row) =>
+              row.sample_id === sampleId
+                ? { ...row, ...updates }
+                : row
+            )
+          );
+        } else {
+          toast.error(`Failed to update report: ${response.data.message}`);
+        }
+      // } else {
+      //   toast.error("Failed to upload the file");
+      // }
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      toast.error("An error occurred while uploading the file.");
+    }
+  };
+
   const columns = [
     {
       accessorKey: "sno",
@@ -168,8 +264,8 @@ const Reports = () => {
         };
       }
 
-      if(col.key === "seq_run_date"){
-        return{
+      if (col.key === "seq_run_date" || col.key === "tantive_report_date" || col.key === "report_releasing_date" || col.key === "repeat_date") {
+        return {
           accessorKey: col.key,
           id: col.key, // Use the key as the id
           header: col.label,
@@ -186,6 +282,48 @@ const Reports = () => {
           },
         }
       }
+
+      // Render checkboxes for hpo_status and annotation
+      if (col.key === "hpo_status" || col.key === "annotation") {
+        return {
+          accessorKey: col.key,
+          id: col.key, // Use the key as the id
+          header: col.label,
+          cell: info => {
+            const value = info.getValue();
+            const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
+            return (
+              <input
+                type="checkbox"
+                checked={value === "Yes"} // Assume "Yes" means checked
+                onChange={(e) => handleChangeCheckbox(e, col.key, sampleId)} // Pass columnKey and sampleId
+              />
+            );
+          },
+        };
+      }
+
+       // Render Upload Report column for SuperAdmin
+    if (col.key === "upload_report") {
+      return {
+        accessorKey: col.key,
+        id: col.key, // Use the key as the id
+        header: col.label,
+        cell: info => {
+          const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
+          return user?.role === "SuperAdmin" ? (
+            <input
+              type="file"
+              className='border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800'
+              onChange={(e) => handleFileUpload(e.target.files[0], sampleId)} // Handle file upload
+              accept=".pdf,.doc,.docx" // Accept PDF and Word documents
+              />
+          ) : null;
+        },
+      };
+    }
+
+
       return {
         accessorKey: col.key,
         id: col.key, // Use the key as the id for other columns
@@ -204,14 +342,19 @@ const Reports = () => {
     'seq_run_date',
     'phenotype_rec_date',
     'tantive_report_date',
+    'report_releasing_date',
     'tat_days',
     'sample_type',
     'test_name',
     'trf',
     'report_status',
     'report_link',
+    ...( user && user?.role === 'SuperAdmin' ? ['upload_report'] : []), // Show 'upload_report' only for SuperAdmin
+    'hpo_status',
+    'annotation',
     'doctor_name',
     'dept_name',
+    'clinical_history',
     'remarks',
   ]
 
@@ -281,7 +424,8 @@ const Reports = () => {
             return {
               ...row,
               phenotype_rec_date: row.registration_date, // Set phenotype_rec_date to registration_date
-              tantive_report_date: tantiveReportDate.toISOString().split('T')[0], // Format as YYYY-MM-DD
+              tantive_report_date: row.tantive_report_date, // Format as YYYY-MM-DD
+              report_realising_date: row.report_realising_date || '', // Ensure report_realising_date is set
               tat_days: tatDays,
             };
           });
@@ -411,12 +555,12 @@ const Reports = () => {
             </div>
           </div>
           <div className="me-5">
-            <label className="block font-semibold mb-1">Sample Status</label>
+            <label className="block font-semibold mb-1">Status</label>
             <select
               name='sample_status'
               className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
-              <option value="">Select Sample Status</option>
+              <option value="">Select Status</option>
               <option value="ready">Ready for Reporting</option>
               <option value="reported">Reported</option>
             </select>
@@ -472,7 +616,7 @@ const Reports = () => {
           </div>
 
         </div>
-        
+
         <div className='grid grid-cols-4 gap-4 mb-2 '>
 
           <div>
@@ -560,13 +704,13 @@ const Reports = () => {
         </div>
       </div>
 
-      <Button 
+      <Button
         className="bg-gray-700 hover:bg-gray-800 text-white cursor-pointer mb-4"
         onClick={handleSaveToExcel}
       >
         Save as Excel
       </Button>
-      <ToastContainer/>
+      <ToastContainer />
     </div>
   )
 }
