@@ -13,7 +13,7 @@ import { setActiveTab } from "@/lib/redux/slices/tabslice";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
-  const showSidebar = pathname !== "/login";
+  const showSidebar = pathname !== "/login" && pathname !== "/reset-password";
 
   return (
       <div className="bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
@@ -45,7 +45,7 @@ function ReduxWrapper({ children, showSidebar, pathname }) {
       )}
       <div className="p-1">
         {/* Render login page if on /login */}
-        {pathname === "/login" ? (
+        {pathname === "/login" || pathname === "/reset-password" ? (
           children
         ) : (
           <ReduxContent activeTab={activeTab} children={children} />

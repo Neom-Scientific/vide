@@ -9,7 +9,7 @@ export async function GET(request) {
         if (!hospital_name) {
             response.push({
                 status: 400,
-                message: "Hospital name is required"
+                message: "Organization Name is required"
             });
         }
         const {rows} = await pool.query(
@@ -27,7 +27,7 @@ export async function GET(request) {
         if (rows.length === 0) {
             response.push({
                 status: 404,
-                message: "No test names found for the provided hospital name"
+                message: "No test names found for the provided Organization Name"
             });
         }
         else{

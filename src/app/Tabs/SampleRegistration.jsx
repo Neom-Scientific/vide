@@ -1,7 +1,7 @@
 "use client"
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import React, { useEffect, useState } from 'react'
+import React, { use, useEffect, useState } from 'react'
 import { set, useForm } from 'react-hook-form'
 import { object, z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -121,8 +121,6 @@ export const SampleRegistration = () => {
     if (cookieUser) {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);
-
-      console.log('parsedUser', parsedUser);
       form.reset({
         hospital_name: parsedUser.hospital_name || '',
         hospital_id: parsedUser.hospital_id || '',
@@ -160,6 +158,7 @@ export const SampleRegistration = () => {
     'CS',
     'Clinical Exome',
     'Myeloid',
+    'HLA',
     'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
@@ -348,6 +347,14 @@ export const SampleRegistration = () => {
     }
   };
 
+  useEffect(() => {
+    // remove the searchData from localstorage
+    const searchData = localStorage.getItem('searchData');
+    if( searchData ) {
+      localStorage.removeItem('searchData');
+    }
+  },[]);
+
 
   return (
     <div className='p-4'>
@@ -390,30 +397,30 @@ export const SampleRegistration = () => {
 
             <div className='grid grid-cols-2 gap-6 col-span-3'>
 
-              {/* hospital name */}
+              {/* Organization Name */}
               <FormField
                 control={form.control}
                 name='hospital_name'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel >Hospital/Lab Name</FormLabel>
+                    <FormLabel >Organization Name</FormLabel>
                     <Input
-                      placeholder='Hospital Name'
+                      placeholder='Organization Name'
                       className='border-2 border-orange-300 my-2'
-                      disabled
+                      disabled={user?.role !== 'SuperAdmin'}
                       {...field} />
                   </FormItem>
                 )}
               />
 
-              {/* hospital id */}
+              {/* organization id */}
               <FormField
                 control={form.control}
                 name='hospital_id'
                 render={({ field }) => (
                   <FormItem className='my-2'>
                     <div className="flex justify-between items-center">
-                      <FormLabel>Hospital/Lab ID</FormLabel>
+                      <FormLabel>Organization ID</FormLabel>
                       {form.formState.errors.hospital_id && (
                         <p className='text-red-500 text-sm'>
                           {form.formState.errors.hospital_id.message}
@@ -421,7 +428,7 @@ export const SampleRegistration = () => {
                       )}
                     </div>
                     <Input
-                      disabled
+                      disabled={user?.role !== 'SuperAdmin'}
                       placeholder='Hospital ID'
                       className='my-2 border-2 border-orange-300'
                       {...field} />

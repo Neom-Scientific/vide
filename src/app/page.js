@@ -22,7 +22,6 @@ const Page = () => {
         const response = await axios.get(`/api/store?role=${user.role}&hospital_name=${user.hospital_name}`);
         if (response.data[0].status === 200) {
           const data = response.data[0].data || [];
-          console.log('masterSheetData', data);
           setMasterSheetData(data);
         }
       } catch (error) {

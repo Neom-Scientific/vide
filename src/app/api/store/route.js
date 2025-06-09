@@ -281,7 +281,7 @@ export async function GET(request) {
         } else {
             response.push({
                 status: 400,
-                message: 'Hospital name is required for non-SuperAdmin roles',
+                message: 'Organization Name is required for non-SuperAdmin roles',
             });
         }
 

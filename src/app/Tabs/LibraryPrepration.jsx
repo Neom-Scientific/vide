@@ -35,6 +35,7 @@ import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
 const LibraryPrepration = () => {
@@ -43,7 +44,6 @@ const LibraryPrepration = () => {
   const [testName, setTestName] = useState("");
   const [sorting, setSorting] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
-  const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
   const [getTheTestNames, setGetTheTestNames] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
@@ -107,7 +107,7 @@ const LibraryPrepration = () => {
     { key: 'i5_index_forward', label: 'i5 (forward)' },
     { key: 'i7_index', label: 'i7 index' },
     { key: 'size', label: 'Size (bp)' },
-    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
+    { key: 'lib_qubit', label: 'Lib Qubit ng/ul' },
     { key: 'nm_conc', label: 'nM conc' },
     { key: 'lib_vol_for_2nm', label: 'Library Volume for 2nM from 1/10 of nM' },
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 2nM' },
@@ -220,88 +220,51 @@ const LibraryPrepration = () => {
     }, {});
   });
 
-  // Define defaultVisible based on testName
-
-
-  // Initialize columnVisibility state
-
-
-  useEffect(() => {
-    const rows = localStorage.getItem('libraryPreparationData')
-      ? JSON.parse(localStorage.getItem('libraryPreparationData'))
-      : [];
-
-    if (!rows || rows.length === 0) {
-      setMessage(1);
-      return;
-    } else {
-      setMessage("");
-    }
-
-    setTestName(rows[0].test_name);
-
-    const updateRows = rows.map(row => ({
-      ...row
-    }));
-    setTableRows(updateRows);
-
-    const defaultVisible = getDefaultVisible(rows[0].test_name);
-    const visibleColumns = defaultVisible.reduce((acc, key) => {
-      acc[key] = true;
-      return acc;
-    }, {});
-
-    allColumns.forEach((col) => {
-      if (!visibleColumns.hasOwnProperty(col.key)) {
-        visibleColumns[col.key] = columnVisibility[col.key] || false; // Preserve user selection
-      }
-    });
-
-    setColumnVisibility(prev => {
-      const isEqual = Object.keys(visibleColumns).every(
-        key => prev[key] === visibleColumns[key]
-      );
-      return isEqual ? prev : visibleColumns;
-    });
-  }, [testName]);
-
   useEffect(() => {
     const fetchPoolInfo = async () => {
       try {
-
-        const storedData = JSON.parse(localStorage.getItem('libraryPreparationData'));
-        if (!storedData || storedData.length === 0) {
-          return setMessage(1); // No data available
-        }
-        const sampleids = storedData.map(row => row.sample_id).filter(id => id);
-        const testName = storedData.map(row => row.test_name).filter(name => name)[0];
+        const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+        // console.log('storedData:', storedData);
 
         const response = await axios.get(`/api/pool-data`, {
           params: {
             hospital_name: user.hospital_name,
             application: testName,
-            sample_id: sampleids.join(',') // Join sample IDs with commas
-          }
+            sample_id: Object.values(storedData).flatMap(row => row.sample_id).join(','),
+          },
         });
-        // console.log("Response data:", response.data);
+
         if (response.data[0].status === 200) {
           const poolData = response.data[0].data;
+
           if (poolData && poolData.length > 0) {
-            setTableRows(poolData);
-            setGetTheTestNames(poolData.map(row => row.test_name).filter(name => name));
-            setTestName(poolData[0].test_name);
-            localStorage.setItem('libraryPreparationData', JSON.stringify(poolData));
+            // Transform data into testName: [...] format
+            const newData = poolData.reduce((acc, row) => {
+              const testName = row.test_name;
+              if (!acc[testName]) {
+                acc[testName] = [];
+              }
+              acc[testName].push(row);
+              return acc;
+            }, {});
+
+            // Merge with existing data in localStorage
+            const mergedData = { ...storedData, ...newData };
+
+            setTableRows(newData[testName] || []);
+            setGetTheTestNames(Object.keys(mergedData));
+            setTestName(Object.keys(newData)[0]); // Set the first testName as default
+            localStorage.setItem('libraryPreparationData', JSON.stringify(mergedData));
           } else {
             setMessage(1);
           }
         }
-
-      }
-      catch (error) {
+      } catch (error) {
         console.error("Error fetching pool info:", error);
         toast.error("An error occurred while fetching pool info.");
       }
-    }
+    };
+
     fetchPoolInfo();
   }, []);
 
@@ -499,8 +462,8 @@ const LibraryPrepration = () => {
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex, columnId, value) => {
-        setTableRows((prev) =>
-          prev.map((row, idx) => {
+        setTableRows((prev) => {
+          const updatedRows = prev.map((row, idx) => {
             if (idx !== rowIndex) return row; // Only update the specific row
 
             // Update the current field
@@ -583,64 +546,68 @@ const LibraryPrepration = () => {
               updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
               updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
             }
-
             return updatedRow;
+
           })
-        );
+            const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+            storedData[testName] = updatedRows; // Update only the current testName's data
+            localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+            return updatedRows;
+        });
       },
     },
   });
 
   const handleSubmit = async () => {
     try {
-      // Log all the input values
-      // console.log("Table Rows:", tableRows);
+      const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
 
       // Prepare the payload for the API call
       const payload = {
-        hospital_name: user.hospital_name, // Include the hospital name from user data
-        testName: testName, // Include the test name
-        rows: tableRows, // Send all rows with updated values
+        hospital_name: user.hospital_name,
+        testName: testName,
+        rows: tableRows,
       };
 
+      console.log('payload:', payload);
 
-      // Make the API call
-      const response = await axios.post('/api/update-sample-indicator', payload);
-      // console.log("API Response:", response.data);
+      const response = await axios.post('/api/pool-data', payload);
+
       if (response.data[0].status === 200) {
-        // console.log('response.data[0].message', response.data[0]);
         toast.success("Sample indicator updated successfully!");
-        // remove the localStorage item after successful update
-        localStorage.removeItem('libraryPreparationData');
-        dispatch(setActiveTab("processing"));
-        setTableRows([]); // Clear the table rows after successful update
-        setMessage(1); // Set message to indicate no data available
-      }
-      if (response.data[0].status === 400) {
+
+        // Remove only the selected testName's data
+        const updatedData = { ...storedData };
+        delete updatedData[testName];
+
+        localStorage.setItem('libraryPreparationData', JSON.stringify(updatedData));
+        setTableRows([]); // Clear the table rows for the selected testName
+        // setMessage(1); // Set message to indicate no data available
+      } else if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
       }
     } catch (error) {
       console.error("Error updating values:", error);
       toast.error("An error occurred while updating the values.");
     }
-  }
+  };
 
 
 
   const InputCell = ({ value: initialValue, rowIndex, columnId, updateData }) => {
     const [value, setValue] = useState(initialValue || ""); // Ensure the initial value is not undefined
-
+  
     const handleChange = (e) => {
       setValue(e.target.value); // Update local state
     };
-
+  
     const handleBlur = () => {
-      updateData(rowIndex, columnId, value); // Update table rows on blur
+      updateData(rowIndex, columnId, value); // Update table rows and localStorage on blur
     };
-
+  
     return (
       <Input
-        className="border rounded p-1 text-xs w-[100px`]"
+        className="border rounded p-1 text-xs w-[100px]"
         value={value} // Ensure value is always defined
         type="text"
         placeholder={`Enter ${columnId}`}
@@ -650,53 +617,69 @@ const LibraryPrepration = () => {
     );
   };
 
- 
+  useEffect(() => {
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData'));
+    if (storedData) {
+      const testNames = Object.keys(storedData); // Extract keys from the stored data
+      setGetTheTestNames(testNames); // Update state with test names
+    }
+  }, []);
+
+  const handleTestNameSelection = (selectedTestName) => {
+    setTestName(selectedTestName); // Update the testName state
+    setSelectedSampleIndicator(selectedTestName); // Update the selectedSampleIndicator state
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData'));
+    if (storedData && storedData[selectedTestName]) {
+      setTableRows(storedData[selectedTestName]); // Update tableRows with the selected test's data
+    } else {
+      setTableRows([]); // Clear tableRows if no data is found for the selected test
+    }
+  };
+
+  useEffect(() => {
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData'));
+    if (storedData) {
+      const testNames = Object.keys(storedData); // Extract keys from the stored data
+      setGetTheTestNames(testNames); // Update state with test names
+
+      // Set default testName and tableRows based on the first key
+      if (testNames.length > 0) {
+        const defaultTestName = testNames[0];
+        setTestName(defaultTestName);
+        setTableRows(storedData[defaultTestName]);
+      }
+    }
+  }, []);
+  // console.log('deafault testName:', testName);
 
   return (
     <div className="p-4 ">
       {!message ?
         (<>
-          <div className="mb-4 flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="min-w-[180px]">
-                  Select Columns <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
-                {table
-                  .getAllLeafColumns()
-                  .filter((column) => column.getCanHide())
-                  .map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) => {
-                        setColumnVisibility((prev) => ({
-                          ...prev,
-                          [column.id]: value, // Toggle visibility for the selected column
-                        }));
-
-                        table.setColumnVisibility((prev) => ({
-                          ...prev,
-                          [column.id]: value, // Sync with the table's internal state
-                        }));
-                      }}
-                    >
-                      {column.columnDef.header}
-                    </DropdownMenuCheckboxItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <span className="text-sm text-gray-500">
-              Showing {Object.values(columnVisibility).filter(Boolean).length} of {columns.length} columns
-            </span>
+          <div className="mb-4 flex items-center gap-4 overflow-x-auto ">
+            <Tabs value={testName} className="w-full rounded-lg ">
+              <TabsList className="flex flex-nowrap bg-white dark:bg-gray-800 ">
+                {getTheTestNames.map((testName, index) => (
+                  <TabsTrigger
+                    key={index}
+                    value={testName}
+                    onClick={() => handleTestNameSelection(testName)}
+                    className={`text-sm px-4 py-2 cursor-pointer  font-bold rounded-lg ${testName === selectedSampleIndicator ? '' : 'bg-orange-400'
+                      }`}
+                  >
+                    {testName}
+                  </TabsTrigger>
+                ))}
+                {/* {getTheTestNames.length === 0 && (
+                  <span className="text-sm px-4 py-2 text-white font-bold">
+                    No Test Names Available
+                  </span>
+                )} */}
+              </TabsList>
+            </Tabs>
           </div>
 
-
           <div className="">
-
-
             {/* Table */}
             <div
               className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"

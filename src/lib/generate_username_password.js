@@ -3,7 +3,7 @@ export async function generateUsernamePassword(email, name, hospital_name, phone
     const sources = [email, name, hospital_name, phone_no];
     const usedIndices = new Set();
 
-    // generat a username from the first 4 characters of the hospital name (like Shri Ganga Ram Hospital) SGRH and a random number or if the hospital name is less than 4 characters then use the first 2 characters of the hospital name and a random number(like medanta the medicity) METM
+    // generat a username from the first 4 characters of the Organization Name (like Shri Ganga Ram Hospital) SGRH and a random number or if the Organization Name is less than 4 characters then use the first 2 characters of the Organization Name and a random number(like medanta the medicity) METM
     const words = hospital_name.trim().split(/\s+/);
 
     let prefix = '';

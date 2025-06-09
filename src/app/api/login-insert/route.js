@@ -1,5 +1,6 @@
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { use } from "react";
 
 export async function POST(request) {
     const body = await request.json();
@@ -35,6 +36,8 @@ export async function POST(request) {
             'INSERT INTO login_data (username, password) VALUES ($1, $2)',
             [username, password]
         );
+        const query = 'UPDATE request_form SET user_login = $1 WHERE username = $2';
+        await pool.query(query, [userData.rows[0].user_login + 1, username]);
         if (result.rowCount > 0) {
             response.push({
                 status: 200,
@@ -44,6 +47,7 @@ export async function POST(request) {
                     hospital_name: userData.rows[0].hospital_name,
                     hospital_id: userData.rows[0].hospital_id,
                     role : userData.rows[0].role,
+                    user_login:userData.rows[0].user_login,
                 },
                 message: 'Login successful',
             });

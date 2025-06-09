@@ -54,6 +54,7 @@ const Reports = () => {
     'CS',
     'Clinical Exome',
     'Myeloid',
+    'HLA',
     'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
@@ -62,7 +63,7 @@ const Reports = () => {
   ];
 
   const allColumns = [
-    { key: 'hospital_name', label: 'Hospital Name' },
+    { key: 'hospital_name', label: 'Organization Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'run_id', label: 'Run ID' },
@@ -180,49 +181,49 @@ const Reports = () => {
       toast.error("No file selected");
       return;
     }
-  
+
     try {
       // Prepare the form data
       const formData = new FormData();
       formData.append("file", file);
-  
+
       // Upload the file to the backend
       // const uploadResponse = await axios.post("/api/upload", formData, {
       //   headers: {
       //     "Content-Type": "multipart/form-data",
       //   },
       // });
-  
+
       // if (uploadResponse.status === 200) {
       //   const reportLink = uploadResponse.data.fileUrl; // Assuming the backend returns the file URL
-  
-        // Prepare the updates object
-        const updates = {
-          report_link: file.name, // Use the file name as the report link
-          report_releasing_date: new Date().toISOString(), // Current date in ISO format
-          report_status: "Reported", // Set the report status to "Reported"
-        };
-        console.log('updates', updates);
-  
-        // Send the PUT request to update the database
-        const response = await axios.put("/api/store", {
-          sample_id: sampleId,
-          updates,
-        });
-  
-        if (response.data.status === 200) {
-          toast.success("Report uploaded and updated successfully!");
-          // Update the tableRows state to reflect the change
-          setTableRows((prevRows) =>
-            prevRows.map((row) =>
-              row.sample_id === sampleId
-                ? { ...row, ...updates }
-                : row
-            )
-          );
-        } else {
-          toast.error(`Failed to update report: ${response.data.message}`);
-        }
+
+      // Prepare the updates object
+      const updates = {
+        report_link: file.name, // Use the file name as the report link
+        report_releasing_date: new Date().toISOString(), // Current date in ISO format
+        report_status: "Reported", // Set the report status to "Reported"
+      };
+      console.log('updates', updates);
+
+      // Send the PUT request to update the database
+      const response = await axios.put("/api/store", {
+        sample_id: sampleId,
+        updates,
+      });
+
+      if (response.data.status === 200) {
+        toast.success("Report uploaded and updated successfully!");
+        // Update the tableRows state to reflect the change
+        setTableRows((prevRows) =>
+          prevRows.map((row) =>
+            row.sample_id === sampleId
+              ? { ...row, ...updates }
+              : row
+          )
+        );
+      } else {
+        toast.error(`Failed to update report: ${response.data.message}`);
+      }
       // } else {
       //   toast.error("Failed to upload the file");
       // }
@@ -303,25 +304,25 @@ const Reports = () => {
         };
       }
 
-       // Render Upload Report column for SuperAdmin
-    if (col.key === "upload_report") {
-      return {
-        accessorKey: col.key,
-        id: col.key, // Use the key as the id
-        header: col.label,
-        cell: info => {
-          const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
-          return user?.role === "SuperAdmin" ? (
-            <input
-              type="file"
-              className='border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800'
-              onChange={(e) => handleFileUpload(e.target.files[0], sampleId)} // Handle file upload
-              accept=".pdf,.doc,.docx" // Accept PDF and Word documents
+      // Render Upload Report column for SuperAdmin
+      if (col.key === "upload_report") {
+        return {
+          accessorKey: col.key,
+          id: col.key, // Use the key as the id
+          header: col.label,
+          cell: info => {
+            const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
+            return user?.role === "SuperAdmin" ? (
+              <input
+                type="file"
+                className='border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800'
+                onChange={(e) => handleFileUpload(e.target.files[0], sampleId)} // Handle file upload
+                accept=".pdf,.doc,.docx" // Accept PDF and Word documents
               />
-          ) : null;
-        },
-      };
-    }
+            ) : null;
+          },
+        };
+      }
 
 
       return {
@@ -349,7 +350,7 @@ const Reports = () => {
     'trf',
     'report_status',
     'report_link',
-    ...( user && user?.role === 'SuperAdmin' ? ['upload_report'] : []), // Show 'upload_report' only for SuperAdmin
+    ...(user && user?.role === 'SuperAdmin' ? ['upload_report'] : []), // Show 'upload_report' only for SuperAdmin
     'hpo_status',
     'annotation',
     'doctor_name',
@@ -493,7 +494,7 @@ const Reports = () => {
             <Input
               name='sample_id'
               placeholder="Sample id"
-              className="my-1 w-[150px] border-2 border-orange-300"
+              className="my-1 w-[200px] border-2 border-orange-300"
             />
           </div>
           <div className="me-5">
@@ -623,7 +624,7 @@ const Reports = () => {
             <Button
               type='submit'
               onClick={handleSubmit}
-              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-full">
+              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-[200px]">
               Retrieve
             </Button>
           </div>
@@ -631,85 +632,89 @@ const Reports = () => {
 
       </div>
 
-      {/* Column Selector Dropdown */}
-      <div className="mb-4 flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[180px]">
-              Select Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
-            {table
-              .getAllLeafColumns()
-              .slice() // Create a copy of the array
-              .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {column.columnDef.header}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <span className="text-sm text-gray-500">
-          Showing {Object.values(table.getState().columnVisibility).filter(Boolean).length || columns.length} of {columns.length} columns
-        </span>
-      </div>
-
-      {/* Table */}
-      <div className="">
-        <div
-          className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
-          style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
-        >
-          <Table className="min-w-full">
-            <TableHeader className="bg-orange-100 dark:bg-gray-800">
-              {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
+      {tableRows && tableRows.length > 0 && (
+        <div>
+          {/* Column Selector Dropdown */}
+          <div className="mb-4 flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[180px]">
+                  Select Columns <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
+                {table
+                  .getAllLeafColumns()
+                  .slice() // Create a copy of the array
+                  .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {column.columnDef.header}
+                    </DropdownMenuCheckboxItem>
                   ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id ?? row.index}>
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
-                    No data
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span className="text-sm text-gray-500">
+              Showing {Object.values(table.getState().columnVisibility).filter(Boolean).length || columns.length} of {columns.length} columns
+            </span>
+          </div>
 
-      <Button
-        className="bg-gray-700 hover:bg-gray-800 text-white cursor-pointer mb-4"
-        onClick={handleSaveToExcel}
-      >
-        Save as Excel
-      </Button>
+          {/* Table */}
+          <div className="">
+            <div
+              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
+              style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
+            >
+              <Table className="min-w-full">
+                <TableHeader className="bg-orange-100 dark:bg-gray-800">
+                  {table.getHeaderGroups().map(headerGroup => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map(header => (
+                        <TableHead key={header.id}>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map(row => (
+                      <TableRow key={row.id ?? row.index}>
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
+                        No data
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          <Button
+            className="bg-gray-700 hover:bg-gray-800 text-white cursor-pointer mb-4"
+            onClick={handleSaveToExcel}
+          >
+            Save as Excel
+          </Button>
+        </div>
+      )}
       <ToastContainer />
     </div>
   )

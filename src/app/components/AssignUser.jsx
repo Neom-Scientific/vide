@@ -12,9 +12,19 @@ const AssignUser = () => {
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
-      setAdmin(JSON.parse(cookieUser));
+      const fetchData = async () => {
+        const parsedUser = JSON.parse(cookieUser);
+        setAdmin(parsedUser);
+        const response = await axios.get(`/api/reset-password?role=${parsedUser.role}&username=${parsedUser.username}`);
+        if (response.data[0].status === 200) {
+          setUsers(response.data[0].data);
+        } else {
+          console.error('Failed to fetch data:', response.data[0].message);
+        }
+        fetchData();
+      }
     }
-  },[]);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -54,7 +64,7 @@ const AssignUser = () => {
     }
   }
 
-  const handleRole = async(id,role)=>{
+  const handleRole = async (id, role) => {
     console.log('id and role', id, role);
     try {
       const response = await axios.put('/api/request-insert', { id, role });
@@ -93,7 +103,7 @@ const AssignUser = () => {
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone No</TableHead>
 
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hospital Name</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization Name</TableHead>
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"> Current Role</TableHead>
 
@@ -142,8 +152,8 @@ const AssignUser = () => {
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <select className='bg-gray-50 border border-black text-gray-900 text-sm rounded-lg p-2'
-                       onChange={(e) => handleRole(user.id , e.target.value)}
-                       >
+                        onChange={(e) => handleRole(user.id, e.target.value)}
+                      >
                         <option value="NormalUser">NormalUser</option>
                         <option value="AdminUser">AdminUser</option>
                       </select>
@@ -179,7 +189,7 @@ const AssignUser = () => {
           </Button>
         )}
       </div>
-        <ToastContainer />
+      <ToastContainer />
     </div>
   );
 };

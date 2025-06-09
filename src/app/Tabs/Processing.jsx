@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -33,7 +33,6 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
-import { CldOgImage } from "next-cloudinary";
 import Cookies from "js-cookie";
 
 
@@ -41,7 +40,7 @@ const Processing = () => {
   const user = JSON.parse(Cookies.get("user") || "{}");
 
   const allColumns = [
-    { key: 'hospital_name', label: 'Hospital Name' },
+    { key: 'hospital_name', label: 'Organization Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
@@ -92,6 +91,65 @@ const Processing = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
+    { key: 'seq_run_date', label: 'Seq Run Date' },
+    { key: 'report_realising_date', label: 'Report Realising Date' },
+    { key: 'hpo_status', label: 'HPO Status' },
+    { key: 'annotation', label: 'Annotation' },
+    { key: 'report_link', label: 'Report Link' },
+    { key: 'report_status', label: 'Report Status' },
+    { key: 'report_releasing_date', label: 'Report Releasing Date' },
+    { key: 'conc_rxn', label: 'Conc RXN' },
+    { key: 'i5_index_reverse', label: 'I5 Index Reverse' },
+    { key: 'i7_index', label: 'I7 Index' },
+    { key: 'lib_qubit', label: 'Lib Qubit' },
+    { key: 'nm_conc', label: 'NM Conc' },
+    { key: 'nfw_volu_for_2nm', label: 'NFW Volu for 2nm' },
+    { key: 'total_vol_for_2nm', label: 'Total Vol for 2nm' },
+    { key: 'barcode', label: 'Barcode' },
+    { key: 'lib_vol_for_2nm', label: 'Lib Vol for 2nm' },
+    { key: 'qubit_dna', label: 'Qubit DNA' },
+    { key: 'per_rxn_gdna', label: 'Per RXN GDNA' },
+    { key: 'volume', label: 'Volume' },
+    { key: 'gdna_volume_3x', label: 'GDNA Volume 3X' },
+    { key: 'nfw', label: 'NFW' },
+    { key: 'plate_designation', label: 'Plate Designation' },
+    { key: 'well', label: 'Well' },
+    { key: 'qubit_lib_qc_ng_ul', label: 'Qubit Lib QC NG/UL' },
+    { key: 'stock_ng_ul', label: 'Stock NG/UL' },
+    { key: 'lib_vol_for_hyb', label: 'Lib Vol for HYB' },
+    { key: 'pool_no', label: 'Pool No' },
+    { key: 'size', label: 'Size' },
+    { key: 'i5_index_forward', label: 'I5 Index Forward' },
+    { key: 'sample_volume', label: 'Sample Volume' },
+    { key: 'pooling_volume', label: 'Pooling Volume' },
+    { key: 'pool_conc', label: 'Pool Conc' },
+    { key: 'one_tenth_of_nm_conc', label: 'One Tenth of NM Conc' },
+    { key: 'data_required', label: 'Data Required' },
+    { key: 'buffer_volume_next_seq_550', label: 'Buffer Volume Next Seq 550' },
+    { key: 'dinatured_lib_next_seq_550', label: 'Dinatured Lib Next Seq 550' },
+    { key: 'final_pool_conc_vol_2nm_next_seq_1000_2000', label: 'Final Pool Conc Vol 2nm Next Seq 1000-2000' },
+    { key: 'instument_type', label: 'Instrument Type' },
+    { key: 'lib_required_next_seq_550', label: 'Lib Required Next Seq 550' },
+    { key: 'loading_conc_550', label: 'Loading Conc 550' },
+    { key: 'loading_conc_1000_2000', label: 'Loading Conc 1000-2000' },
+    { key: 'nm_cal', label: 'NM Cal' },
+    { key: 'pool_conc_run_setup', label: 'Pool Conc Run Setup' },
+    { key: 'pool_size', label: 'Pool Size' },
+    { key: 'rsbetween_vol_2nm_next_seq_1000_2000', label: 'RS Between Vol 2nm Next Seq 1000-2000' },
+    { key: 'selected_application', label: 'Selected Application' },
+    { key: 'total_gb_available', label: 'Total GB Available' },
+    { key: 'total_required', label: 'Total Required' },
+    { key: 'total_volume_2nm_next_seq_1000_2000', label: 'Total Volume 2nm Next Seq 1000-2000' },
+    { key: 'total_volume_600pm_next_seq_1000_2000', label: 'Total Volume 600pm Next Seq 1000-2000' },
+    { key: 'total_volume_next_seq_550', label: 'Total Volume Next Seq 550' },
+    { key: 'vol_of_2nm_for_600pm_next_seq_1000_2000', label: 'Vol of 2nm for 600pm Next Seq 1000-2000' },
+    { key: 'vol_of_rs_between_for_600pm_next_seq_1000_2000', label: 'Vol of RS Between for 600pm Next Seq 1000-2000' },
+    { key: 'total_volume_2nm_next_seq_550', label: 'Total Volume 2nm Next Seq 550' },
+    { key: 'final_pool_conc_vol_2nm_next_seq_550', label: 'Final Pool Conc Vol 2nm Next Seq 550' },
+    { key: 'nfw_vol_2nm_next_seq_550', label: 'NFW Vol 2nm Next Seq 550' },
+    { key: 'final_pool_vol_ul', label: 'Final Pool Vol (ul)' },
+    { key: 'ht_buffer_next_seq_1000_2000', label: 'HT Buffer Next Seq 1000-2000' },
+    { key: 'actions', label: 'Actions' },
   ];
 
   const allTests = [
@@ -99,6 +157,7 @@ const Processing = () => {
     'CS',
     'Clinical Exome',
     'Myeloid',
+    'HLA',
     'SGS',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
@@ -110,11 +169,16 @@ const Processing = () => {
 
   const [tableRows, setTableRows] = useState(rows);
   const [selectedTestNames, setSelectedTestNames] = useState([]);
-  const [showLibPrepColumns, setShowLibPrepColumns] = useState(false);
-  const [getTheTestNames, setGetTheTestNames] = useState([]);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
-  const [selectedLibPrepTestName, setSelectedLibPrepTestName] = useState(null);
   const dispatch = useDispatch();
+
+  const handleEditRow = (rowData) => {
+    // Save the row data to localStorage or Redux for use in the SampleRegistration tab
+    localStorage.setItem("editRowData", JSON.stringify(rowData));
+  
+    // Navigate to the SampleRegistration tab
+    dispatch(setActiveTab("sample-registration"));
+  };
 
   // Build columns for tanstack table
   const columns = [
@@ -122,163 +186,66 @@ const Processing = () => {
       accessorKey: "sno",
       header: "S. No.",
       cell: ({ row }) => row.index + 1,
-      enableSorting: false,
+      enableSorting: true,
       enableHiding: false,
     },
-    ...allColumns.map(col => {
+    ...allColumns.map((col) => {
       if (col.key === "registration_date") {
         return {
           accessorKey: col.key,
           header: col.label,
-          cell: info => {
+          enableSorting: true,
+          cell: (info) => {
             const value = info.getValue();
             if (!value) return "";
             const date = new Date(value);
             if (isNaN(date)) return value;
             // Format: YYYY-MM-DD HH:mm
             const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            const hh = String(date.getHours()).padStart(2, '0');
-            const min = String(date.getMinutes()).padStart(2, '0');
+            const mm = String(date.getMonth() + 1).padStart(2, "0");
+            const dd = String(date.getDate()).padStart(2, "0");
+            const hh = String(date.getHours()).padStart(2, "0");
+            const min = String(date.getMinutes()).padStart(2, "0");
             return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
           },
         };
       }
-      // ...your checkbox logic for dna_isolation, etc...
-      if (
-        ["dna_isolation", "lib_prep", "under_seq", "seq_completed"].includes(col.key)
-      ) {
-        if (col.key === "lib_prep") {
-          return {
-            accessorKey: col.key,
-            header: col.label,
-            cell: info => {
-              const isChecked = info.getValue() === "Yes";
-              const rowIdx = info.row.index;
-              const currentTestName = info.row.original.test_name;
-
-              return (
-                <Checkbox
-                  checked={isChecked}
-                  onCheckedChange={async checked => {
-                    // Validate test_name before allowing selection
-                    if (checked) {
-                      if (
-                        selectedLibPrepTestName &&
-                        selectedLibPrepTestName !== currentTestName
-                      ) {
-                        toast.warning(
-                          `You can only select Library Prep for rows with the same test name: ${selectedLibPrepTestName}`
-                        );
-                        return;
-                      }
-
-                      // Set the selected test_name if valid
-                      setSelectedLibPrepTestName(currentTestName);
-                    } else {
-                      // Clear the selected test_name if no rows are selected
-                      const remainingRows = tableRows.filter(
-                        row => row.lib_prep === "Yes" && row.test_name === currentTestName
-                      );
-                      if (remainingRows.length === 1) {
-                        setSelectedLibPrepTestName(null);
-                      }
-                    }
-
-
-                    const payload = {
-                      sample_id: info.row.original.sample_id,
-                      sample_indicator: col.key,
-                      indicator_status: checked ? "Yes" : "No",
-                    };
-                    // console.log("Payload for API call:", payload);
-
-                    try {
-                      // Make the API call
-                      const response = await axios.put("/api/update-sample-indicator", {
-                        data: payload,
-                      });
-
-                      // console.log("API response:", response.data);
-                      if (response.data[0].status === 200) {
-                        // update the localstorage with the updated data
-                        const updatedRows = tableRows.map((row, idx) =>
-                          idx === rowIdx ? { ...row, lib_prep: checked ? "Yes" : "No" } : row
-                        );
-                        setTableRows(updatedRows);
-                        localStorage.setItem("searchData", JSON.stringify(updatedRows));
-                      } else {
-                        toast.error(response.data[0].message || "Failed to update sample indicator.");
-                      }
-                    } catch (error) {
-                      console.error("Error updating sample indicator:", error);
-                      toast.error("An error occurred while updating the sample indicator.");
-                    }
-
-                    // Update the state to show/hide the columns
-                    setShowLibPrepColumns(checked);
-
-                    // Update the row data
-                    setTableRows(prev =>
-                      prev.map((row, idx) =>
-                        idx === rowIdx
-                          ? { ...row, lib_prep: checked ? "Yes" : "No" }
-                          : row
-                      )
-                    );
-                  }}
-                />
-              );
-            },
-          };
-        }
+  
+      if (["dna_isolation", "lib_prep", "under_seq", "seq_completed"].includes(col.key)) {
         return {
           accessorKey: col.key,
           header: col.label,
-          cell: info => {
+          enableSorting: true,
+          cell: (info) => {
             const isChecked = info.getValue() === "Yes";
             const rowIdx = info.row.index;
-            const currentTestName = info.row.original.test_name;
-
+  
             return (
               <Checkbox
                 checked={isChecked}
-                onCheckedChange={async checked => {
-                  // Update the row data locally
+                onCheckedChange={async (checked) => {
                   const updatedRow = {
                     ...info.row.original,
                     [col.key]: checked ? "Yes" : "No",
                   };
-
-                  // Update the state
-                  setTableRows(prev =>
-                    prev.map((row, idx) =>
-                      idx === rowIdx ? updatedRow : row
-                    )
+  
+                  setTableRows((prev) =>
+                    prev.map((row, idx) => (idx === rowIdx ? updatedRow : row))
                   );
-
-                  // Prepare the API payload
+  
                   const payload = {
                     sample_id: updatedRow.sample_id,
                     sample_indicator: col.key,
                     indicator_status: checked ? "Yes" : "No",
                   };
-
+  
                   try {
-                    // Make the API call
-                    const response = await axios.put("/api/update-sample-indicator", {
-                      data: payload,
-                    });
-
-                    // console.log("API response:", response.data);
+                    const response = await axios.put("/api/pool-data", { data: payload });
                     if (response.data[0].status === 200) {
-                      // update the localstorage with the updated data
                       const updatedRows = tableRows.map((row, idx) =>
                         idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
                       );
                       setTableRows(updatedRows);
-                      localStorage.setItem("searchData", JSON.stringify(updatedRows));
                     } else {
                       toast.error(response.data[0].message || "Failed to update sample indicator.");
                     }
@@ -292,13 +259,40 @@ const Processing = () => {
           },
         };
       }
-
+  
       return {
         accessorKey: col.key,
         header: col.label,
-        cell: info => info.getValue() || "",
+        enableSorting: true,
+        cell: (info) => info.getValue() || "",
       };
-    }),
+      
+    },{
+      accessorKey: "actions",
+      header: "Actions",
+      enableSorting: false,
+      enableHiding: false,
+      cell: ({ row }) => {
+        const rowData = row.original; // Get the row data
+        const userRole = user?.role;
+    
+        console.log("User object:", user); // Debugging user object
+        console.log("userRole:", userRole); // Debugging userRole
+    
+        if (userRole === "AdminUser" || userRole === "SuperAdmin") {
+          return (
+            <Button
+              variant="outline"
+              className="text-sm"
+              onClick={() => handleEditRow(rowData)}
+            >
+              Edit
+            </Button>
+          );
+        }
+        // return null; // Hide the button for other roles
+      },
+    },),
   ];
 
   // Only these columns are visible by default
@@ -353,6 +347,22 @@ const Processing = () => {
       },
     },
   });
+  useEffect(() => {
+    // Load saved data from localStorage if available
+    const savedData = localStorage.getItem("searchData");
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      // Map the data to ensure checkbox fields are "Yes"/"No"
+      const mappedData = parsedData.map((row) => ({
+        ...row,
+        dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+        lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+        under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+        seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+      }));
+      setTableRows(mappedData); // Update the tableRows state with the mapped data
+    }
+  }, []);
 
   const handlesubmit = async () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
@@ -385,7 +395,7 @@ const Processing = () => {
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
         setTableRows(mappedData); // Update the tableRows state with the mapped data
-        localStorage.setItem("searchData", JSON.stringify(mappedData)); // Store the data in localStorage
+        localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the given filters.");
         setTableRows([]);
@@ -404,32 +414,48 @@ const Processing = () => {
   const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
 
   const handleSendForLibraryPreparation = () => {
-
     const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
     if (checkedRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
 
-    // Check if data already exists in localStorage
-    if (localStorage.getItem("libraryPreparationData")) {
-      toast.warning("Some rows are already present in the Library Preparation.");
-      return;
-    }
+    // Group new rows by test_name
+    const newGroupedData = checkedRows.reduce((acc, row) => {
+      const testName = row.test_name;
+      if (!acc[testName]) {
+        acc[testName] = [];
+      }
+      acc[testName].push(row);
+      return acc;
+    }, {});
 
-    // Save the checked rows to localStorage or a shared state
-    localStorage.setItem("libraryPreparationData", JSON.stringify(checkedRows));
+    // Fetch existing data from localStorage and merge
+    const existingData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
+    const mergedData = { ...existingData };
 
-    // Navigate to the LibraryPreparation tab
+    Object.keys(newGroupedData).forEach(testName => {
+      if (!mergedData[testName]) {
+        mergedData[testName] = [];
+      }
+
+      // Prevent duplicate sample_ids if necessary
+      const existingIds = new Set(mergedData[testName].map(r => r.sample_id));
+      newGroupedData[testName].forEach(row => {
+        if (!existingIds.has(row.sample_id)) {
+          mergedData[testName].push(row);
+        }
+      });
+    });
+
+    // Save back to localStorage
+    localStorage.setItem("libraryPreparationData", JSON.stringify(mergedData));
+
+    // Navigate
     dispatch(setActiveTab("library-prepration"));
   };
 
-  useEffect(() => {
-    if (localStorage.getItem("searchData")) {
-      const storedData = JSON.parse(localStorage.getItem("searchData"));
-      setTableRows(storedData);
-    }
-  }, [])
+
 
   const handleSaveToExcel = async () => {
     try {
@@ -480,7 +506,7 @@ const Processing = () => {
             <Input
               name='sample_id'
               placeholder="Sample id"
-              className="my-1 w-[150px] border-2 border-orange-300"
+              className="my-1 w-[200px] border-2 border-orange-300"
             />
           </div>
           <div className="me-5">
@@ -622,103 +648,114 @@ const Processing = () => {
             <Button
               type='submit'
               onClick={() => { handlesubmit() }}
-              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-full">
+              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-[200px]">
               Retrieve
             </Button>
           </div>
         </div>
       </div>
 
-      {/* Column Selector Dropdown */}
-      <div className="mb-4 flex items-center gap-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="min-w-[180px]">
-              Select Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
-            {table
-              .getAllLeafColumns()
-              .slice() // Create a copy of the array
-              .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {column.columnDef.header}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <span className="text-sm text-gray-500">
-          Showing {Object.values(table.getState().columnVisibility).filter(Boolean).length || columns.length} of {columns.length} columns
-        </span>
-      </div>
-
-      {/* Table */}
-      <div className="">
-        <div
-          className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
-          style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
-        >
-          <Table className="min-w-full">
-            <TableHeader className="bg-orange-100 dark:bg-gray-800">
-              {table.getHeaderGroups().map(headerGroup => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map(header => (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
-                    </TableHead>
+      {tableRows && tableRows.length > 0 && (
+        <>
+          {/* Column Selector Dropdown */}
+          <div className="mb-4 flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[180px]">
+                  Select Columns <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
+                {table
+                  .getAllLeafColumns()
+                  .slice() // Create a copy of the array
+                  .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {column.columnDef.header}
+                    </DropdownMenuCheckboxItem>
                   ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map(row => (
-                  <TableRow key={row.id ?? row.index}>
-                    {row.getVisibleCells().map(cell => (
-                      <TableCell key={cell.id}>
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span className="text-sm text-gray-500">
+              Showing {Object.values(table.getState().columnVisibility).filter(Boolean).length || columns.length} of {columns.length} columns
+            </span>
+          </div>
+
+          {/* Table */}
+          <div className="">
+            <div
+              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
+              style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
+            >
+              <Table className="min-w-full">
+                <TableHeader className="bg-orange-100 dark:bg-gray-800">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className="cursor-pointer"
+                          onClick={header.column.getToggleSortingHandler()} // Add sorting handler
+                        >
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                          {/* Show sorting indicator */}
+                          {header.column.getIsSorted() === "asc"}
+                          {header.column.getIsSorted() === "desc"}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.length ? (
+                    table.getRowModel().rows.map(row => (
+                      <TableRow key={row.id ?? row.index}>
+                        {row.getVisibleCells().map(cell => (
+                          <TableCell key={cell.id}>
+                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
+                        No data
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
-                    No data
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-      <div className="flex justify-between items-center mb-4">
-        <Button
-          className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12"
-          onClick={handleSaveToExcel}
-        >
-          Save to excel
-        </Button>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+          <div className="flex justify-between items-center mb-4">
+            <Button
+              className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12"
+              onClick={handleSaveToExcel}
+            >
+              Save to excel
+            </Button>
 
-        {isAnyLibPrepChecked && !tableRows.some(row => row.under_seq === "Yes") && (
-          <Button
-            className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (isAnyLibPrepChecked ? "" : "opacity-50")}
-            onClick={handleSendForLibraryPreparation}
-          >
-            Send for Library Preparation
-          </Button>
-        )}
+            {isAnyLibPrepChecked && (
+              <Button
+                className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (isAnyLibPrepChecked ? "" : "opacity-50")}
+                onClick={handleSendForLibraryPreparation}
+              >
+                Send for Library Preparation
+              </Button>
+            )}
 
-      </div>
+          </div>
+        </>
+      )}
       <ToastContainer />
 
     </div>
