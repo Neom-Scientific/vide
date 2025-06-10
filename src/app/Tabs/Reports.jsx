@@ -182,12 +182,10 @@ const Reports = () => {
       toast.error("No file selected");
       return;
     }
-
     try {
       // Prepare the form data
       const formData = new FormData();
       formData.append("file", file);
-
       // Upload the file to the backend
       // const uploadResponse = await axios.post("/api/upload", formData, {
       //   headers: {
