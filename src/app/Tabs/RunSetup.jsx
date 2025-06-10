@@ -20,7 +20,7 @@ const formSchema = z.object({
   total_gb_available: z.string().min(1, 'Total GB available is required'),
   instument_type: z.string().min(1, 'Instrument type is required'),
   pool_size: z.number().min(1, 'Pool size is required'),
-  pool_conc: z.string().min(1, 'Pool concentration is required'),
+  pool_conc_run_setup: z.string().min(1, 'Pool concentration is required'),
   nm_cal: z.number().min(1, 'nM calibration is required'),
   total_required: z.number().min(1, 'Total required is required'),
   dinatured_lib_next_seq_550: z.number().optional(),
@@ -63,7 +63,7 @@ const RunSetup = () => {
       total_gb_available: '0',
       instument_type: '',
       pool_size: 0, // Ensure numeric default value
-      pool_conc: '0',
+      pool_conc_run_setup: '0',
       nm_cal: 0,
       total_required: 0,
       final_pool_vol_ul: 0,
@@ -92,7 +92,7 @@ const RunSetup = () => {
     const fetchTestNames = async () => {
       try {
         if (!user.hospital_name) {
-          console.error("Hospital name is missing");
+          console.error("Organization Name is missing");
           return;
         }
 
@@ -101,7 +101,7 @@ const RunSetup = () => {
           setTestNames(response.data[0].data);
         } else if (response.data[0].status === 404) {
           setTestNames([]);
-          console.log("No test names found for the provided hospital name");
+          console.log("No test names found for the provided Organization Name");
         }
       } catch (error) {
         console.error("Error fetching test names:", error);
@@ -115,7 +115,7 @@ const RunSetup = () => {
   const handleTestNameChange = async (selectedTestName) => {
     try {
       if (!user.hospital_name || !selectedTestName) {
-        console.log("Hospital name or test name is missing");
+        console.log("Organization Name or test name is missing");
         return;
       }
 
@@ -143,7 +143,7 @@ const RunSetup = () => {
         // Update poolData state
         setPoolData((prev) => [...prev, ...poolDataForTest]);
       } else if (response.data[0].status === 404) {
-        console.log("No pool data found for the provided hospital name and test name");
+        console.log("No pool data found for the provided Organization Name and test name");
       }
 
       // Reset the application field in the form
@@ -177,7 +177,7 @@ const RunSetup = () => {
         setSelectedCheckboxes([]);
         setPoolData([]);
       } else if (response.data[0].status === 404) {
-        toast.error(response.data[0].message || "No data found for the provided hospital name and test name");
+        toast.error(response.data[0].message || "No data found for the provided Organization Name and test name");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -302,16 +302,16 @@ const RunSetup = () => {
     }
   }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
 
-  const pool_conc = form.watch("pool_conc");
+  const pool_conc_run_setup = form.watch("pool_conc_run_setup");
 
   useEffect(() => {
-    if (avgSize && pool_conc && !isNaN(avgSize) && !isNaN(pool_conc)) {
-      const nM = parseFloat(((pool_conc / (avgSize * 660)) * 1000000).toFixed(9)); // Perform calculation
+    if (avgSize && pool_conc_run_setup && !isNaN(avgSize) && !isNaN(pool_conc_run_setup)) {
+      const nM = parseFloat(((pool_conc_run_setup / (avgSize * 660)) * 1000000).toFixed(9)); // Perform calculation
       form.setValue("nm_cal", nM); // Update nm_cal field
     } else {
       form.setValue("nm_cal", 0); // Set default value if inputs are invalid
     }
-  }, [avgSize, pool_conc]); // Watch for changes in pool_size and pool_conc
+  }, [avgSize, pool_conc_run_setup]); // Watch for changes in pool_size and pool_conc_run_setup
 
   useEffect(() => {
     if (avgSize && !isNaN(avgSize)) {
@@ -556,7 +556,7 @@ const RunSetup = () => {
             {/* pool concentration */}
             <FormField
               control={form.control}
-              name="pool_conc"
+              name="pool_conc_run_setup"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="mb-2">Final Pool Concentration (Qubit)</FormLabel>

@@ -36,7 +36,12 @@ const Login = () => {
                 toast.success(response.data[0].message);
                 console.log(response.data[0].data);
                 Cookies.set('user', JSON.stringify(response.data[0].data), { expires: 7 }); 
-                router.push('/');
+                if(response.data[0].data.user_login === 0) {
+                    router.push('/reset-password');
+                }
+                else {
+                    router.push('/');
+                }
             }
             else if (response.data[0].status === 401) {
                 toast.error(response.data[0].message);

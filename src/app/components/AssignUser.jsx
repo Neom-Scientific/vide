@@ -9,26 +9,27 @@ import { toast, ToastContainer } from 'react-toastify';
 const AssignUser = () => {
   const [users, setUsers] = useState([]);
   const [admin, setAdmin] = useState(null);
-  useEffect(() => {
-    const cookieUser = Cookies.get('user');
-    if (cookieUser) {
-      setAdmin(JSON.parse(cookieUser));
-    }
-  },[]);
 
   useEffect(() => {
+    const cookieUser = Cookies.get('user');
     const fetchData = async () => {
-      try {
-        const data = await axios.get('/api/request-insert');
-        if (data.status === 200) {
-          setUsers(data.data[0].data);
-        } else {
-          console.error('Failed to fetch data:', data.statusText);
+      if (cookieUser) {
+
+        try {
+          const parsedUser = JSON.parse(cookieUser);
+          setAdmin(parsedUser);
+          const data = await axios.get(`/api/request-insert?role=${parsedUser.role}&username=${parsedUser.username}`);
+          console.log('data', data);
+          if (data.status === 200) {
+            setUsers(data.data[0].data);
+          } else {
+            console.error('Failed to fetch data:', data.statusText);
+          }
+        } catch (e) {
+          console.error('Error in AssignUser component:', e);
         }
-      } catch (e) {
-        console.error('Error in AssignUser component:', e);
-      }
-    };
+      };
+    }
     fetchData();
   }, []);
 
@@ -54,7 +55,7 @@ const AssignUser = () => {
     }
   }
 
-  const handleRole = async(id,role)=>{
+  const handleRole = async (id, role) => {
     console.log('id and role', id, role);
     try {
       const response = await axios.put('/api/request-insert', { id, role });
@@ -93,7 +94,7 @@ const AssignUser = () => {
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone No</TableHead>
 
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hospital Name</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization Name</TableHead>
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"> Current Role</TableHead>
 
@@ -142,8 +143,8 @@ const AssignUser = () => {
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <select className='bg-gray-50 border border-black text-gray-900 text-sm rounded-lg p-2'
-                       onChange={(e) => handleRole(user.id , e.target.value)}
-                       >
+                        onChange={(e) => handleRole(user.id, e.target.value)}
+                      >
                         <option value="NormalUser">NormalUser</option>
                         <option value="AdminUser">AdminUser</option>
                       </select>
@@ -179,7 +180,7 @@ const AssignUser = () => {
           </Button>
         )}
       </div>
-        <ToastContainer />
+      <ToastContainer />
     </div>
   );
 };

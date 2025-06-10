@@ -25,7 +25,7 @@ export async function POST(request) {
               total_gb_available,
               instument_type,
               pool_size,
-              pool_conc,
+              pool_conc_run_setup,
               nM_cal,
               total_required,
               dinatured_lib_next_seq_550,
@@ -52,13 +52,77 @@ export async function POST(request) {
               $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28
             )`,
             [
-                run_id,
+            run_id,
+            setup.selected_application,
+            setup.seq_run_date,
+            setup.total_gb_available,
+            setup.instument_type,
+            setup.pool_size,
+            setup.pool_conc_run_setup,
+            setup.nM_cal,
+            setup.total_required,
+            setup.dinatured_lib_next_seq_550,
+            setup.total_volume_next_seq_550,
+            setup.loading_conc_550,
+            setup.lib_required_next_seq_550,
+            setup.buffer_volume_next_seq_550,
+            setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
+            setup.rsbetween_vol_2nm_next_seq_1000_2000,
+            setup.total_volume_2nm_next_seq_1000_2000,
+            setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
+            setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
+            setup.total_volume_600pm_next_seq_1000_2000,
+            setup.loading_conc_1000_2000,
+            setup.hospital_name,
+            setup.total_volume_2nm_next_seq_550,
+            setup.final_pool_conc_vol_2nm_next_seq_550,
+            setup.nfw_vol_2nm_next_seq_550,
+            setup.sample_ids.length,
+            setup.table_data,
+            setup.ht_buffer_next_seq_1000_2000
+            ]
+        );
+
+        if (setup.sample_ids && setup.sample_ids.length > 0) {
+            for (const sampleId of setup.sample_ids) {
+            await pool.query(
+                `UPDATE master_sheet SET 
+                  selected_application = $1,
+                  seq_run_date = $2,
+                  total_gb_available = $3,
+                  instument_type = $4,
+                  pool_size = $5,
+                  pool_conc_run_setup = $6,
+                  nM_cal = $7,
+                  total_required = $8,
+                  dinatured_lib_next_seq_550 = $9,
+                  total_volume_next_seq_550 = $10,
+                  loading_conc_550 = $11,
+                  lib_required_next_seq_550 = $12,
+                  buffer_volume_next_seq_550 = $13,
+                  final_pool_conc_vol_2nm_next_seq_1000_2000 = $14,
+                  rsbetween_vol_2nm_next_seq_1000_2000 = $15,
+                  total_volume_2nm_next_seq_1000_2000 = $16,
+                  vol_of_2nm_for_600pm_next_seq_1000_2000 = $17,
+                  vol_of_rs_between_for_600pm_next_seq_1000_2000 = $18,
+                  total_volume_600pm_next_seq_1000_2000 = $19,
+                  loading_conc_1000_2000 = $20,
+                  hospital_name = $21,
+                  total_volume_2nm_next_seq_550 = $22,
+                  final_pool_conc_vol_2nm_next_seq_550 = $23,
+                  nfw_vol_2nm_next_seq_550 = $24,
+                  count = $25,
+                  table_data = $26,
+                  ht_buffer_next_seq_1000_2000 = $27,
+                  run_id = $28
+                WHERE sample_id = $29`,
+                [
                 setup.selected_application,
                 setup.seq_run_date,
                 setup.total_gb_available,
                 setup.instument_type,
                 setup.pool_size,
-                setup.pool_conc,
+                setup.pool_conc_run_setup,
                 setup.nM_cal,
                 setup.total_required,
                 setup.dinatured_lib_next_seq_550,
@@ -79,9 +143,13 @@ export async function POST(request) {
                 setup.nfw_vol_2nm_next_seq_550,
                 setup.sample_ids.length,
                 setup.table_data,
-                setup.ht_buffer_next_seq_1000_2000
-            ]
-        );
+                setup.ht_buffer_next_seq_1000_2000,
+                run_id,
+                sampleId,
+                ]
+            );
+            }
+        }
 
         // I am passing the array of the sample_id with the name sample_ids
         console.log('sample_ids', setup.sample_ids);
@@ -90,12 +158,6 @@ export async function POST(request) {
             if (sampleIds.length > 0) {
                 for (const id of sampleIds) {
                     await pool.query(`UPDATE pool_info SET run_id = $1 WHERE sample_id = $2`, [run_id, id]);
-                    await pool.query(
-                        `UPDATE master_sheet 
-                         SET run_id = $1, seq_run_date = $2 
-                         WHERE sample_id = $3`,
-                        [run_id, setup.seq_run_date, id]
-                    );
                 }
             }
         }
@@ -126,7 +188,7 @@ export async function GET(request) {
         if (!hospital_name) {
             response.push({
                 status: 400,
-                message: "Hospital name is required"
+                message: "Organization Name is required"
             });
         }
         if (!role) {
@@ -157,7 +219,7 @@ export async function GET(request) {
             if (rows.length === 0) {
                 response.push({
                     status: 404,
-                    message: "No run setups found for the provided hospital name"
+                    message: "No run setups found for the provided Organization Name"
                 });
             } else {
                 response.push({
