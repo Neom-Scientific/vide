@@ -616,7 +616,7 @@ const LibraryPrepration = () => {
 
     return (
       <Input
-        className="border rounded p-1 text-xs w-[100px]"
+        className="border rounded p-1 text-xs w-[200px]"
         value={value} // Ensure value is always defined
         type="text"
         placeholder={`Enter ${columnId}`}

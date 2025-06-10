@@ -197,11 +197,20 @@ const Reports = () => {
       //   const reportLink = uploadResponse.data.fileUrl; // Assuming the backend returns the file URL
 
       // Prepare the updates object
+      const registrationDate = tableRows.find(row => row.sample_id === sampleId)?.registration_date;
+      const reportReleasingDate = new Date().toISOString(); // Current date in ISO format
+      const tatDays = Math.ceil(
+        (new Date(reportReleasingDate) - new Date(registrationDate)) / (1000 * 60 * 60 * 24)
+      ); // Calculate TAT days
       const updates = {
         report_link: file.name, // Use the file name as the report link
         report_releasing_date: new Date().toISOString(), // Current date in ISO format
         sample_status: "Reported", // Set the report status to "Reported"
+        tat_days: tatDays, // Set the TAT days
       };
+
+      console.log('updates:', updates);
+      console.log('sampleId:', sampleId);
 
       // Send the PUT request to update the database
       const response = await axios.put("/api/store", {
@@ -422,17 +431,11 @@ const Reports = () => {
         if (Array.isArray(responseData) && responseData.length > 0) {
           // Map the response data and calculate tantive_report_date
           const updatedRows = responseData.map(row => {
-            const registrationDate = new Date(row.registration_date);
-            const tantiveReportDate = new Date(registrationDate);
-            tantiveReportDate.setDate(tantiveReportDate.getDate() + 7); // Add 7 days
-            // const formattedTantiveReportDate = `${tantiveReportDate.getFullYear()}-${String(tantiveReportDate.getMonth() + 1).padStart(2, '0')}-${String(tantiveReportDate.getDate()).padStart(2, '0')}`;
-            const tatDays = Math.ceil((tantiveReportDate - registrationDate) / (1000 * 60 * 60 * 24)); // Difference in days
             return {
               ...row,
               phenotype_rec_date: row.registration_date, // Set phenotype_rec_date to registration_date
               tantive_report_date: row.tantive_report_date, // Format as YYYY-MM-DD
               report_realising_date: row.report_realising_date || '', // Ensure report_realising_date is set
-              tat_days: tatDays,
             };
           });
 
