@@ -55,7 +55,7 @@ export async function POST(request) {
             tantive_report_date
         } = body;
 
-        const data = await pool.query('select $1 from master_sheet',[sample_id]);
+        const data = await pool.query('select $1 from master_sheet', [sample_id]);
         const rows = data.rows.length;
         for (let i = 0; i < rows; i++) {
             if (data.rows[i].sample_id === sample_id) {
@@ -68,7 +68,7 @@ export async function POST(request) {
         }
 
         const date = new Date();
-        
+
 
         const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0'); // Pad month to two digits
@@ -220,14 +220,14 @@ export async function POST(request) {
         response.push({
             status: 200,
             message: "Data inserted successfully",
-            data:insertedId
+            data: insertedId
         });
 
         return NextResponse.json(response);
 
     } catch (e) {
         console.log(e);
-        return NextResponse.json({error: "Failed to insert data"}, {status: 500});
+        return NextResponse.json({ error: "Failed to insert data" }, { status: 500 });
     }
 
 }
@@ -293,50 +293,74 @@ export async function GET(request) {
 }
 
 export async function PUT(request) {
+    const body = await request.json();
+    const { sample_id, updates } = body;
     try {
-      const body = await request.json();
-      const { sample_id, updates } = body;
-  
-      // Validate input
-      if (!sample_id || !updates || typeof updates !== "object") {
-        return NextResponse.json(
-          { status: 400, message: "Sample ID and updates are required" },
-          { status: 400 }
-        );
-      }
-  
-      // Build dynamic query for updates
-      const columns = Object.keys(updates);
-      const values = Object.values(updates);
-      values.push(sample_id); // Add sample_id as the last parameter
-  
-      const setClause = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
-      const query = `
-        UPDATE master_sheet
-        SET ${setClause}
-        WHERE sample_id = $${columns.length + 1}
-        RETURNING *
-      `;
-  
-      const result = await pool.query(query, values);
-  
-      if (result.rowCount === 0) {
-        return NextResponse.json(
-          { status: 404, message: "No data found for the provided sample ID" },
-          { status: 404 }
-        );
-      }
-  
-      return NextResponse.json({
-        status: 200,
-        message: "Data updated successfully",
-        data: result.rows[0], // Return the updated row
-      });
+        const response = [];
+        if (!sample_id || !updates || typeof updates !== "object") {
+            response.push({
+                status: 400,
+                message: "Sample ID and updates are required.",
+            });
+            return NextResponse.json(response, { status: 400 });
+        }
+
+        // Only update fields that are present in the updates object (safe partial update)
+        const updatesCleanedLower = {};
+        Object.keys(updates).forEach(key => {
+            // Only include fields that are not empty string or undefined
+            if (updates[key] !== "" && updates[key] !== undefined) {
+                updatesCleanedLower[key.toLowerCase()] = updates[key];
+            } else if (updates[key] === null) {
+                // Allow explicit nulling if frontend sends null
+                // updatesCleanedLower[key.toLowerCase()] = null;
+            }
+        });
+
+        const columns = Object.keys(updatesCleanedLower);
+        const values = Object.values(updatesCleanedLower);
+        values.push(sample_id);
+
+        if (columns.length === 0) {
+            response.push({
+                status: 400,
+                message: "No valid fields to update.",
+            });
+            return NextResponse.json(response, { status: 400 });
+        }
+
+        const setClause = columns.map((column, index) => `${column} = $${index + 1}`).join(", ");
+        const query = `
+            UPDATE master_sheet
+            SET ${setClause}
+            WHERE sample_id = $${columns.length + 1}
+            RETURNING *
+        `;
+
+        const result = await pool.query(query, values);
+
+        if (result.rowCount === 0) {
+            response.push({
+                status: 404,
+                message: "Sample ID not found or no updates made.",
+            });
+        } else {
+            response.push({
+                status: 200,
+                message: "Data updated successfully.",
+                data: result.rows[0]
+            });
+        }
+        return NextResponse.json(response);
     } catch (error) {
-      console.error("Error updating data:", error);
-      return NextResponse.json(
-        { status: 500, message: "Internal Server Error", error: error.message },
-        { status: 500 }
-      );
+        console.error("Error updating data:", error);
+        return NextResponse.json(
+            {
+                status: 500,
+                message: "Internal Server Error",
+                error: error.message
+            },
+            { status: 500 }
+        );
     }
-  }
+}

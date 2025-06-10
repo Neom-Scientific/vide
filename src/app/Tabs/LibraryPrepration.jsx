@@ -220,6 +220,15 @@ const LibraryPrepration = () => {
     }, {});
   });
 
+  useEffect(()=>{
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+    if (Object.keys(storedData).length === 0) {
+      setMessage(1); // Set message to indicate no data available
+    } else {
+      setMessage(0); // Reset message if data is available
+    }
+  },[]);
+
   useEffect(() => {
     const fetchPoolInfo = async () => {
       try {
@@ -549,10 +558,10 @@ const LibraryPrepration = () => {
             return updatedRow;
 
           })
-            const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-            storedData[testName] = updatedRows; // Update only the current testName's data
-            localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
-            return updatedRows;
+          const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+          storedData[testName] = updatedRows; // Update only the current testName's data
+          localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+          return updatedRows;
         });
       },
     },
@@ -581,7 +590,7 @@ const LibraryPrepration = () => {
         delete updatedData[testName];
 
         localStorage.setItem('libraryPreparationData', JSON.stringify(updatedData));
-        setTableRows([]); // Clear the table rows for the selected testName
+        setTableRows([]); 
         // setMessage(1); // Set message to indicate no data available
       } else if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
@@ -596,15 +605,15 @@ const LibraryPrepration = () => {
 
   const InputCell = ({ value: initialValue, rowIndex, columnId, updateData }) => {
     const [value, setValue] = useState(initialValue || ""); // Ensure the initial value is not undefined
-  
+
     const handleChange = (e) => {
       setValue(e.target.value); // Update local state
     };
-  
+
     const handleBlur = () => {
       updateData(rowIndex, columnId, value); // Update table rows and localStorage on blur
     };
-  
+
     return (
       <Input
         className="border rounded p-1 text-xs w-[100px]"
@@ -650,7 +659,40 @@ const LibraryPrepration = () => {
       }
     }
   }, []);
-  // console.log('deafault testName:', testName);
+
+  const handleSaveAll = async () => {
+    try {
+      const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+      const hospital_name = user.hospital_name;
+
+      // Prepare an array of promises for all testNames
+      const savePromises = Object.entries(storedData).map(([testName, rows]) => {
+        return axios.post('/api/pool-data', {
+          hospital_name,
+          testName,
+          rows,
+        });
+      });
+
+      const results = await Promise.all(savePromises);
+
+      // Check if all were successful
+      const allSuccess = results.every(res => res.data[0]?.status === 200);
+
+      if (allSuccess) {
+        toast.success("All data saved successfully!");
+        localStorage.removeItem('libraryPreparationData');
+        message(1); // Set message to indicate no data available
+        setTableRows([]);
+        setGetTheTestNames([]);
+      } else {
+        toast.error("Some data could not be saved. Please check and try again.");
+      }
+    } catch (error) {
+      console.error("Error saving all data:", error);
+      toast.error("An error occurred while saving all data.");
+    }
+  };
 
   return (
     <div className="p-4 ">
@@ -721,6 +763,13 @@ const LibraryPrepration = () => {
               </Table>
             </div>
           </div>
+          <Button
+            type="button"
+            onClick={handleSaveAll}
+            className="bg-green-600 hover:bg-green-700 mt-5 text-white cursor-pointer ml-2 min-w-[120px] h-12"
+          >
+            Save All
+          </Button>
           <Button
             type="submit"
             onClick={handleSubmit}

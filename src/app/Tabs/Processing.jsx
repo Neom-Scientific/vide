@@ -149,7 +149,6 @@ const Processing = () => {
     { key: 'nfw_vol_2nm_next_seq_550', label: 'NFW Vol 2nm Next Seq 550' },
     { key: 'final_pool_vol_ul', label: 'Final Pool Vol (ul)' },
     { key: 'ht_buffer_next_seq_1000_2000', label: 'HT Buffer Next Seq 1000-2000' },
-    { key: 'actions', label: 'Actions' },
   ];
 
   const allTests = [
@@ -174,14 +173,129 @@ const Processing = () => {
 
   const handleEditRow = (rowData) => {
     // Save the row data to localStorage or Redux for use in the SampleRegistration tab
+    console.log('rowData:', rowData); // Debugging row data
     localStorage.setItem("editRowData", JSON.stringify(rowData));
-  
+
     // Navigate to the SampleRegistration tab
-    dispatch(setActiveTab("sample-registration"));
+    dispatch(setActiveTab("sample-register"));
   };
 
+  const isPrivilegedUser = user?.role === "AdminUser" || user?.role === "SuperAdmin";
   // Build columns for tanstack table
-  const columns = [
+  // const columns = [
+  //   {
+  //     accessorKey: "sno",
+  //     header: "S. No.",
+  //     cell: ({ row }) => row.index + 1,
+  //     enableSorting: true,
+  //     enableHiding: false,
+  //   },
+  //   ...allColumns.map((col) => {
+  //     if (col.key === "registration_date") {
+  //       return {
+  //         accessorKey: col.key,
+  //         header: col.label,
+  //         enableSorting: true,
+  //         cell: (info) => {
+  //           const value = info.getValue();
+  //           if (!value) return "";
+  //           const date = new Date(value);
+  //           if (isNaN(date)) return value;
+  //           // Format: YYYY-MM-DD HH:mm
+  //           const yyyy = date.getFullYear();
+  //           const mm = String(date.getMonth() + 1).padStart(2, "0");
+  //           const dd = String(date.getDate()).padStart(2, "0");
+  //           const hh = String(date.getHours()).padStart(2, "0");
+  //           const min = String(date.getMinutes()).padStart(2, "0");
+  //           return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+  //         },
+  //       };
+  //     }
+
+  //     if (["dna_isolation", "lib_prep", "under_seq", "seq_completed"].includes(col.key)) {
+  //       return {
+  //         accessorKey: col.key,
+  //         header: col.label,
+  //         enableSorting: true,
+  //         cell: (info) => {
+  //           const isChecked = info.getValue() === "Yes";
+  //           const rowIdx = info.row.index;
+
+  //           return (
+  //             <Checkbox
+  //               checked={isChecked}
+  //               onCheckedChange={async (checked) => {
+  //                 const updatedRow = {
+  //                   ...info.row.original,
+  //                   [col.key]: checked ? "Yes" : "No",
+  //                 };
+
+  //                 setTableRows((prev) =>
+  //                   prev.map((row, idx) => (idx === rowIdx ? updatedRow : row))
+  //                 );
+
+  //                 const payload = {
+  //                   sample_id: updatedRow.sample_id,
+  //                   sample_indicator: col.key,
+  //                   indicator_status: checked ? "Yes" : "No",
+  //                 };
+
+  //                 try {
+  //                   const response = await axios.put("/api/pool-data", { data: payload });
+  //                   if (response.data[0].status === 200) {
+  //                     const updatedRows = tableRows.map((row, idx) =>
+  //                       idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
+  //                     );
+  //                     setTableRows(updatedRows);
+  //                   } else {
+  //                     toast.error(response.data[0].message || "Failed to update sample indicator.");
+  //                   }
+  //                 } catch (error) {
+  //                   console.error("Error updating sample indicator:", error);
+  //                   toast.error("An error occurred while updating the sample indicator.");
+  //                 }
+  //               }}
+  //             />
+  //           );
+  //         },
+  //       };
+  //     }
+
+  //     return {
+  //       accessorKey: col.key,
+  //       header: col.label,
+  //       enableSorting: true,
+  //       cell: (info) => info.getValue() || "",
+  //     };
+
+  //   },{
+  //     accessorKey: "actions",
+  //     header: "Actions",
+  //     enableSorting: false,
+  //     enableHiding: false,
+  //     cell: ({ row }) => {
+  //       const rowData = row.original; // Get the row data
+  //       const userRole = user?.role;
+
+  //       console.log("User object:", user); // Debugging user object
+  //       console.log("userRole:", userRole); // Debugging userRole
+
+  //       if (userRole === "AdminUser" || userRole === "SuperAdmin") {
+  //         return (
+  //           <Button
+  //             variant="outline"
+  //             className="text-sm"
+  //             onClick={() => handleEditRow(rowData)}
+  //           >
+  //             Edit
+  //           </Button>
+  //         );
+  //       }
+  //       // return null; // Hide the button for other roles
+  //     },
+  //   },),
+  // ];
+  const columns = React.useMemo(() => [
     {
       accessorKey: "sno",
       header: "S. No.",
@@ -210,7 +324,6 @@ const Processing = () => {
           },
         };
       }
-  
       if (["dna_isolation", "lib_prep", "under_seq", "seq_completed"].includes(col.key)) {
         return {
           accessorKey: col.key,
@@ -219,7 +332,6 @@ const Processing = () => {
           cell: (info) => {
             const isChecked = info.getValue() === "Yes";
             const rowIdx = info.row.index;
-  
             return (
               <Checkbox
                 checked={isChecked}
@@ -228,17 +340,14 @@ const Processing = () => {
                     ...info.row.original,
                     [col.key]: checked ? "Yes" : "No",
                   };
-  
                   setTableRows((prev) =>
                     prev.map((row, idx) => (idx === rowIdx ? updatedRow : row))
                   );
-  
                   const payload = {
                     sample_id: updatedRow.sample_id,
                     sample_indicator: col.key,
                     indicator_status: checked ? "Yes" : "No",
                   };
-  
                   try {
                     const response = await axios.put("/api/pool-data", { data: payload });
                     if (response.data[0].status === 200) {
@@ -259,41 +368,32 @@ const Processing = () => {
           },
         };
       }
-  
       return {
         accessorKey: col.key,
         header: col.label,
         enableSorting: true,
         cell: (info) => info.getValue() || "",
       };
-      
-    },{
+    }),
+    ...(isPrivilegedUser ? [{
       accessorKey: "actions",
       header: "Actions",
       enableSorting: false,
       enableHiding: false,
       cell: ({ row }) => {
-        const rowData = row.original; // Get the row data
-        const userRole = user?.role;
-    
-        console.log("User object:", user); // Debugging user object
-        console.log("userRole:", userRole); // Debugging userRole
-    
-        if (userRole === "AdminUser" || userRole === "SuperAdmin") {
-          return (
-            <Button
-              variant="outline"
-              className="text-sm"
-              onClick={() => handleEditRow(rowData)}
-            >
-              Edit
-            </Button>
-          );
-        }
-        // return null; // Hide the button for other roles
+        const rowData = row.original;
+        return (
+          <Button
+            variant="outline"
+            className="text-sm"
+            onClick={() => handleEditRow(rowData)}
+          >
+            Edit
+          </Button>
+        );
       },
-    },),
-  ];
+    }] : []),
+  ], [allColumns, user, tableRows]);
 
   // Only these columns are visible by default
   const defaultVisible = [
@@ -306,6 +406,7 @@ const Processing = () => {
     "lib_prep",
     "under_seq",
     "seq_completed",
+    ...(isPrivilegedUser ? ["actions"] : []), // Only show actions for privileged users
   ];
 
   // Set initial column visibility: true for defaultVisible, false for others
@@ -334,7 +435,6 @@ const Processing = () => {
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex, columnId, value) => {
@@ -347,6 +447,7 @@ const Processing = () => {
       },
     },
   });
+
   useEffect(() => {
     // Load saved data from localStorage if available
     const savedData = localStorage.getItem("searchData");
@@ -394,6 +495,7 @@ const Processing = () => {
           under_seq: row.under_seq === "Yes" ? "Yes" : "No",
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
+        console.log('mappedData:', mappedData); // Debugging mapped data
         setTableRows(mappedData); // Update the tableRows state with the mapped data
         localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
@@ -410,7 +512,6 @@ const Processing = () => {
 
   };
 
-  // Check if any row has lib_prep set to "Yes"
   const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
 
   const handleSendForLibraryPreparation = () => {
@@ -454,8 +555,6 @@ const Processing = () => {
     // Navigate
     dispatch(setActiveTab("library-prepration"));
   };
-
-
 
   const handleSaveToExcel = async () => {
     try {
@@ -666,6 +765,24 @@ const Processing = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
+                <DropdownMenuCheckboxItem
+                  checked={Object.values(table.getState().columnVisibility).every(Boolean)} // Check if all are visible
+                  onCheckedChange={(value) =>
+                    table.getAllLeafColumns().forEach((column) => column.toggleVisibility(!!value))
+                  }
+                >
+                  Select All
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  // Deselect All: show only defaultVisible columns
+                  onClick={() => {
+                    table.getAllLeafColumns().forEach((column) => {
+                      column.toggleVisibility(defaultVisible.includes(column.id));
+                    });
+                  }}
+                >
+                  Deselect All
+                </DropdownMenuCheckboxItem>
                 {table
                   .getAllLeafColumns()
                   .slice() // Create a copy of the array

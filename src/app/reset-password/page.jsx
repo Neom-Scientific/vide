@@ -32,10 +32,14 @@ const page = () => {
     useEffect(() => {
         const cookieData = Cookies.get('user');
         if (cookieData) {
+            const parsedData = JSON.parse(cookieData);
+            setUser(parsedData);
+            if(parsedData.role !== 'SuperAdmin') {
+                router.push('/');
+            }
+            
             const fetchUser = async () => {
                 try {
-                    const parsedData = JSON.parse(cookieData);
-                    setUser(parsedData);
                     if (!parsedData || !parsedData.role || !parsedData.username) {
                         console.log('parsedData', parsedData);
                         console.error("User role or username is undefined");

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import SideImage from "../../../public/NEOM.png"
 import Image from 'next/image'
 import Request from '../components/Request'
@@ -9,15 +9,23 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs'
 import AssignUser from '../components/AssignUser'
 import Cookies from 'js-cookie'
 import { Button } from '@/components/ui/button'
+import { useRouter } from 'next/navigation'
 
 const page = () => {
   const [user, setUser] = useState(null);
   const [isUserLoaded, setIsUserLoaded] = useState(false); // Track if user is loaded
+  const router = useRouter();
+
+
 
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
-      setUser(JSON.parse(cookieUser));
+      const parsedUser = JSON.parse(cookieUser);
+      setUser(parsedUser);
+      if(parsedUser.role !== 'SuperAdmin') {
+        router.push('/');
+      }
     }
     setIsUserLoaded(true); // Mark user as loaded
   }, []);

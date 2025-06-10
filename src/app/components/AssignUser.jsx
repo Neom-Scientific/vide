@@ -9,36 +9,27 @@ import { toast, ToastContainer } from 'react-toastify';
 const AssignUser = () => {
   const [users, setUsers] = useState([]);
   const [admin, setAdmin] = useState(null);
-  useEffect(() => {
-    const cookieUser = Cookies.get('user');
-    if (cookieUser) {
-      const fetchData = async () => {
-        const parsedUser = JSON.parse(cookieUser);
-        setAdmin(parsedUser);
-        const response = await axios.get(`/api/reset-password?role=${parsedUser.role}&username=${parsedUser.username}`);
-        if (response.data[0].status === 200) {
-          setUsers(response.data[0].data);
-        } else {
-          console.error('Failed to fetch data:', response.data[0].message);
-        }
-        fetchData();
-      }
-    }
-  }, []);
 
   useEffect(() => {
+    const cookieUser = Cookies.get('user');
     const fetchData = async () => {
-      try {
-        const data = await axios.get('/api/request-insert');
-        if (data.status === 200) {
-          setUsers(data.data[0].data);
-        } else {
-          console.error('Failed to fetch data:', data.statusText);
+      if (cookieUser) {
+
+        try {
+          const parsedUser = JSON.parse(cookieUser);
+          setAdmin(parsedUser);
+          const data = await axios.get(`/api/request-insert?role=${parsedUser.role}&username=${parsedUser.username}`);
+          console.log('data', data);
+          if (data.status === 200) {
+            setUsers(data.data[0].data);
+          } else {
+            console.error('Failed to fetch data:', data.statusText);
+          }
+        } catch (e) {
+          console.error('Error in AssignUser component:', e);
         }
-      } catch (e) {
-        console.error('Error in AssignUser component:', e);
-      }
-    };
+      };
+    }
     fetchData();
   }, []);
 

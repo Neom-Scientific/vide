@@ -157,7 +157,8 @@ const Reports = () => {
         updates, // Pass the updates object
       });
 
-      if (response.data.status === 200) {
+      console.log('response:', response.data);
+      if (response.data[0].status === 200) {
         toast.success(`Updated ${columnKey} successfully!`);
         // Update the tableRows state to reflect the change
         setTableRows(prevRows =>
@@ -201,9 +202,8 @@ const Reports = () => {
       const updates = {
         report_link: file.name, // Use the file name as the report link
         report_releasing_date: new Date().toISOString(), // Current date in ISO format
-        report_status: "Reported", // Set the report status to "Reported"
+        sample_status: "Reported", // Set the report status to "Reported"
       };
-      console.log('updates', updates);
 
       // Send the PUT request to update the database
       const response = await axios.put("/api/store", {
@@ -211,7 +211,7 @@ const Reports = () => {
         updates,
       });
 
-      if (response.data.status === 200) {
+      if (response.data[0].status === 200) {
         toast.success("Report uploaded and updated successfully!");
         // Update the tableRows state to reflect the change
         setTableRows((prevRows) =>
@@ -233,105 +233,112 @@ const Reports = () => {
     }
   };
 
+  const isPrivilegedUser = user?.role === "SuperAdmin";
+
   const columns = [
     {
       accessorKey: "sno",
-      id: "sno", // Add a unique id
+      id: "sno",
       header: "S. No.",
       cell: ({ row }) => row.index + 1,
-      enableSorting: false,
+      enableSorting: true,
       enableHiding: false,
     },
-
-    ...allColumns.map(col => {
-      if (col.key === "registration_date" || col.key === "phenotype_rec_date") {
-        return {
-          accessorKey: col.key,
-          id: col.key, // Use the key as the id
-          header: col.label,
-          cell: info => {
-            const value = info.getValue();
-            if (!value) return "";
-            const date = new Date(value);
-            if (isNaN(date)) return value;
-            // Format: YYYY-MM-DD HH:mm
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            const hh = String(date.getHours()).padStart(2, '0');
-            const min = String(date.getMinutes()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-          },
-        };
-      }
-
-      if (col.key === "seq_run_date" || col.key === "tantive_report_date" || col.key === "report_releasing_date" || col.key === "repeat_date") {
-        return {
-          accessorKey: col.key,
-          id: col.key, // Use the key as the id
-          header: col.label,
-          cell: info => {
-            const value = info.getValue();
-            if (!value) return "";
-            const date = new Date(value);
-            if (isNaN(date)) return value;
-            // Format: YYYY-MM-DD
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, '0');
-            const dd = String(date.getDate()).padStart(2, '0');
-            return `${yyyy}-${mm}-${dd}`;
-          },
+    ...allColumns
+      .filter(col => col.key !== "upload_report") // Exclude upload_report here
+      .map(col => {
+        // Date formatting
+        if (col.key === "registration_date" || col.key === "phenotype_rec_date") {
+          return {
+            accessorKey: col.key,
+            id: col.key,
+            header: col.label,
+            cell: info => {
+              const value = info.getValue();
+              if (!value) return "";
+              const date = new Date(value);
+              if (isNaN(date)) return value;
+              const yyyy = date.getFullYear();
+              const mm = String(date.getMonth() + 1).padStart(2, '0');
+              const dd = String(date.getDate()).padStart(2, '0');
+              const hh = String(date.getHours()).padStart(2, '0');
+              const min = String(date.getMinutes()).padStart(2, '0');
+              return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            },
+          };
         }
-      }
-
-      // Render checkboxes for hpo_status and annotation
-      if (col.key === "hpo_status" || col.key === "annotation") {
+        if (
+          col.key === "seq_run_date" ||
+          col.key === "tantive_report_date" ||
+          col.key === "report_releasing_date" ||
+          col.key === "repeat_date"
+        ) {
+          return {
+            accessorKey: col.key,
+            id: col.key,
+            header: col.label,
+            cell: info => {
+              const value = info.getValue();
+              if (!value) return "";
+              const date = new Date(value);
+              if (isNaN(date)) return value;
+              const yyyy = date.getFullYear();
+              const mm = String(date.getMonth() + 1).padStart(2, '0');
+              const dd = String(date.getDate()).padStart(2, '0');
+              return `${yyyy}-${mm}-${dd}`;
+            },
+          };
+        }
+        // Checkboxes
+        if (col.key === "hpo_status" || col.key === "annotation") {
+          return {
+            accessorKey: col.key,
+            id: col.key,
+            header: col.label,
+            cell: info => {
+              const value = info.getValue();
+              const sampleId = info.row.original.sample_id;
+              return (
+                <input
+                  type="checkbox"
+                  checked={value === "Yes"}
+                  onChange={e => handleChangeCheckbox(e, col.key, sampleId)}
+                />
+              );
+            },
+          };
+        }
+        // Default
         return {
           accessorKey: col.key,
-          id: col.key, // Use the key as the id
+          id: col.key,
           header: col.label,
+        };
+      }),
+    // Only add upload_report column for SuperAdmin
+    ...(isPrivilegedUser
+      ? [
+        {
+          accessorKey: "upload_report",
+          id: "upload_report",
+          header: "Upload Report",
           cell: info => {
-            const value = info.getValue();
-            const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
+            const sampleId = info.row.original.sample_id;
             return (
               <input
-                type="checkbox"
-                checked={value === "Yes"} // Assume "Yes" means checked
-                onChange={(e) => handleChangeCheckbox(e, col.key, sampleId)} // Pass columnKey and sampleId
+                type="file"
+                className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
+                onChange={e => handleFileUpload(e.target.files[0], sampleId)}
+                accept=".pdf,.doc,.docx"
               />
             );
           },
-        };
-      }
-
-      // Render Upload Report column for SuperAdmin
-      if (col.key === "upload_report") {
-        return {
-          accessorKey: col.key,
-          id: col.key, // Use the key as the id
-          header: col.label,
-          cell: info => {
-            const sampleId = info.row.original.sample_id; // Get the sample_id dynamically
-            return user?.role === "SuperAdmin" ? (
-              <input
-                type="file"
-                className='border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800'
-                onChange={(e) => handleFileUpload(e.target.files[0], sampleId)} // Handle file upload
-                accept=".pdf,.doc,.docx" // Accept PDF and Word documents
-              />
-            ) : null;
-          },
-        };
-      }
-
-
-      return {
-        accessorKey: col.key,
-        id: col.key, // Use the key as the id for other columns
-        header: col.label,
-      };
-    }),
-  ]
+          enableSorting: true,
+          enableHiding: false,
+        },
+      ]
+      : []),
+  ];
 
   const defaultVisible = [
     'sno',
@@ -350,7 +357,7 @@ const Reports = () => {
     'trf',
     'report_status',
     'report_link',
-    ...(user && user?.role === 'SuperAdmin' ? ['upload_report'] : []), // Show 'upload_report' only for SuperAdmin
+    ...(isPrivilegedUser ? ["upload_report"] : []), // Only show actions for privileged users
     'hpo_status',
     'annotation',
     'doctor_name',
@@ -431,8 +438,6 @@ const Reports = () => {
             };
           });
 
-          console.log('updatedRows', updatedRows);
-          console.log('sample_id:', updatedRows[0]?.sample_id);
           setTableRows(updatedRows);
         } else {
           setTableRows([]);
@@ -675,10 +680,17 @@ const Reports = () => {
                   {table.getHeaderGroups().map(headerGroup => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map(header => (
-                        <TableHead key={header.id}>
+                        <TableHead
+                          key={header.id}
+                          className="cursor-pointer"
+                          onClick={header.column.getToggleSortingHandler()} // Add sorting handler
+                        >
                           {header.isPlaceholder
                             ? null
                             : flexRender(header.column.columnDef.header, header.getContext())}
+                          {/* Show sorting indicator */}
+                          {header.column.getIsSorted() === "asc"}
+                          {header.column.getIsSorted() === "desc"}
                         </TableHead>
                       ))}
                     </TableRow>
