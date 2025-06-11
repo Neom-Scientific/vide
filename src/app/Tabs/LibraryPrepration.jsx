@@ -107,12 +107,12 @@ const LibraryPrepration = () => {
     { key: 'i5_index_forward', label: 'i5 (forward)' },
     { key: 'i7_index', label: 'i7 index' },
     { key: 'size', label: 'Size (bp)' },
-    { key: 'lib_qubit', label: 'Lib Qubit ng/ul' },
+    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'nm_conc', label: 'nM conc' },
     { key: 'lib_vol_for_2nm', label: 'Library Volume for 2nM from 1/10 of nM' },
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 2nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
-    { key: 'qubit_dna', label: 'Qubit DNA' },
+    { key: 'qubit_dna', label: 'Qubit DNA(ng/ul)' },
     { key: 'per_rxn_gdna', label: 'Per Rxn gDNA' },
     { key: 'volume', label: 'Volume' },
     { key: 'gdna_volume_3x', label: 'gDNA Volume (3X)' },
@@ -501,7 +501,13 @@ const LibraryPrepration = () => {
 
               if (nm_conc > 0 && total_vol_for_2nm > 0) {
                 updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+                if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
+                  updatedRow.lib_vol_for_2nm = total_vol_for_2nm; // Cap lib_vol_for_2nm to total_vol_for_2nm
+                }
                 updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+                console.log('nfw_volu_for_2nm:', updatedRow.nfw_volu_for_2nm);
+                console.log('lib_vol_for_2nm:', updatedRow.lib_vol_for_2nm);
+                console.log('total_vol_for_2nm:', total_vol_for_2nm);
               } else {
                 updatedRow.lib_vol_for_2nm = 0;
                 updatedRow.nfw_volu_for_2nm = total_vol_for_2nm; // Default to total_vol_for_2nm if lib_vol_for_2nm is invalid
@@ -587,10 +593,10 @@ const LibraryPrepration = () => {
 
         // Remove only the selected testName's data
         const updatedData = { ...storedData };
-        delete updatedData[testName];
+        // delete updatedData[testName];
 
         localStorage.setItem('libraryPreparationData', JSON.stringify(updatedData));
-        setTableRows([]); 
+        // setTableRows([]); 
         // setMessage(1); // Set message to indicate no data available
       } else if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
@@ -616,7 +622,7 @@ const LibraryPrepration = () => {
 
     return (
       <Input
-        className="border rounded p-1 text-xs w-[100px]"
+        className="border rounded p-1 text-xs w-[200px]"
         value={value} // Ensure value is always defined
         type="text"
         placeholder={`Enter ${columnId}`}
@@ -681,7 +687,7 @@ const LibraryPrepration = () => {
 
       if (allSuccess) {
         toast.success("All data saved successfully!");
-        localStorage.removeItem('libraryPreparationData');
+        // localStorage.removeItem('libraryPreparationData');
         message(1); // Set message to indicate no data available
         setTableRows([]);
         setGetTheTestNames([]);
@@ -706,7 +712,7 @@ const LibraryPrepration = () => {
                     key={index}
                     value={testName}
                     onClick={() => handleTestNameSelection(testName)}
-                    className={`text-sm px-4 py-2 cursor-pointer  font-bold rounded-lg ${testName === selectedSampleIndicator ? '' : 'bg-orange-400'
+                    className={`text-sm px-4 py-2 cursor-pointer font-bold rounded-lg ${testName === selectedSampleIndicator ? 'bg-orange-400' : ''
                       }`}
                   >
                     {testName}

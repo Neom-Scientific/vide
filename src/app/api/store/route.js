@@ -55,16 +55,13 @@ export async function POST(request) {
             tantive_report_date
         } = body;
 
-        const data = await pool.query('select $1 from master_sheet', [sample_id]);
-        const rows = data.rows.length;
-        for (let i = 0; i < rows; i++) {
-            if (data.rows[i].sample_id === sample_id) {
-                response.push({
-                    status: 400,
-                    message: "Sample ID already exists"
-                });
-                return NextResponse.json(response, { status: response.status });
-            }
+        const data = await pool.query('SELECT sample_id FROM master_sheet WHERE sample_id = $1', [sample_id]);
+        if (data.rows.length > 0) {
+            response.push({
+                status: 400,
+                message: "Sample ID already exists"
+            });
+            return NextResponse.json(response);
         }
 
         const date = new Date();
@@ -91,7 +88,6 @@ export async function POST(request) {
                 status: 400,
                 message: "Internal ID already exists"
             });
-            return NextResponse.json(response, { status: response.status });
         }
         const query = `
             INSERT INTO master_sheet (

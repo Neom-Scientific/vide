@@ -51,7 +51,7 @@ export const SampleRegistration = () => {
   const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
   const [testToRemove, setTestToRemove] = useState(null); // <-- Add this line
   const [user, setUser] = useState(null);
-  const [editButton,setEditButton] = useState([]);
+  const [editButton, setEditButton] = useState([]);
 
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
@@ -205,34 +205,84 @@ export const SampleRegistration = () => {
     }
   }, [sample_name, form]);
 
+  // const uploadTrf = async (file) => {
+  //   setTrfFile(file);
+  //   try {
+  //     if (file) {
+  //       const url = URL.createObjectURL(file);
+  //       setTrfUrl(url);
+  //       form.setValue('trf', file.name); // Store file name if needed
+  //       form.setValue('trf_file', file.name); // Store the file object
+  //     } else {
+  //       setTrfUrl('');
+  //       form.setValue('trf', '');
+  //       form.setValue('trf_file', '');
+  //     }
+  //     // if(file){
+  //     //   const formData = new FormData();
+  //     //   formData.append('file', file);
+  //     //   const response = await axios.post('/api/upload', formData,{
+  //     //     headers:{
+  //     //      'Content-Type': 'multipart/form-data'
+  //     //     }
+  //     //   })
+  //     //   console.log('response', response);
+  //     // }
+  //   }
+  //   catch (error) {
+  //     console.error('Error uploading TRF:', error);
+  //   }
+  // }
   const uploadTrf = async (file) => {
     setTrfFile(file);
+    const allData = form.getValues();
+    console.log('allData', allData);
+
     try {
       if (file) {
-        const url = URL.createObjectURL(file);
-        setTrfUrl(url);
-        form.setValue('trf', file.name); // Store file name if needed
-        form.setValue('trf_file', file.name); // Store the file object
-      } else {
-        setTrfUrl('');
-        form.setValue('trf', '');
-        form.setValue('trf_file', '');
+        const reader = new FileReader();
+        reader.onload = async () => {
+          const base64 = reader.result.split(",")[1]; // clean base64
+          const formData = new URLSearchParams();
+
+          formData.append('file', base64);
+          // formData.append('filename', file.name);
+          formData.append('sample_id', allData.sample_id); // ensure this exists
+
+          try {
+            const response = await axios.post(
+              'https://script.google.com/macros/s/AKfycbywSuLQifi0bW7p99KacM5A7IEieqfZSuSX3RMXYMfFDBFdJlplkoEIAX3pfSyYrtBT/exec',
+              formData.toString(),
+              {
+                mode:'no-cors',
+                headers: {
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+              }
+            );
+
+            console.log('response', response.data);
+            toast.success('TRF uploaded successfully');
+
+            // Optional: if your Apps Script returns the file ID
+            const fileId = response.data.id; // You may need to log and verify this
+            const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
+            setTrfUrl(url);
+
+            form.setValue('trf', file.name);
+            form.setValue('trf_file', url);
+          } catch (error) {
+            console.error('Upload error:', error);
+            toast.error('TRF upload failed');
+          }
+        };
+        reader.readAsDataURL(file); // start reading
       }
-      // if(file){
-      //   const formData = new FormData();
-      //   formData.append('file', file);
-      //   const response = await axios.post('/api/upload', formData,{
-      //     headers:{
-      //      'Content-Type': 'multipart/form-data'
-      //     }
-      //   })
-      //   console.log('response', response);
-      // }
+    } catch (error) {
+      console.error('General error uploading TRF:', error);
     }
-    catch (error) {
-      console.error('Error uploading TRF:', error);
-    }
-  }
+  };
+
 
   useEffect(() => {
     return () => {
@@ -251,14 +301,20 @@ export const SampleRegistration = () => {
 
     // Now get all form data (including updated registration_date)
     const allData = form.getValues();
-    console.log(allData);
 
     const res = await axios.post('/api/store', allData);
-    if (res.status === 200) {
+    console.log('res', res);
+    if (res.data[0].status === 200) {
       toast.success('Sample registered successfully');
       form.reset();
       selectedTests.length = 0; // Clear selected tests
-    } else {
+      setTrfFile(null); // Reset TRF file
+      setTrfUrl(''); // Reset TRF URL
+    }
+    else if (res.data[0].status === 400) {
+      toast.error(res.data[0].message);
+    }
+    else {
       toast.error('Sample registration failed');
     }
   }
@@ -290,7 +346,8 @@ export const SampleRegistration = () => {
     }
 
     const updates = { ...allData }; // Prepare updates object
-    // delete updates.sample_id; // Remove sample_id from updates (it's used as a key)
+    delete updates.selectedTestName; // Exclude selectedTestName
+    updates.test_name = selectedTests.join(', '); // Join selected tests
     delete updates.sample_name; // Exclude sample_name
     delete updates.trf_file; // Exclude trf_file
 
@@ -327,19 +384,19 @@ export const SampleRegistration = () => {
   useEffect(() => {
     // remove the searchData from localstorage
     const searchData = localStorage.getItem('searchData');
-    if( searchData ) {
+    if (searchData) {
       localStorage.removeItem('searchData');
     }
-  },[]);
+  }, []);
 
   useEffect(() => {
     setEditButton(!!localStorage.getItem('editRowData'));
-  },[]);
+  }, []);
 
   useEffect(() => {
-   const editData = localStorage.getItem('editRowData');
-   if(editData){
-    const parsedData = JSON.parse(editData);
+    const editData = localStorage.getItem('editRowData');
+    if (editData) {
+      const parsedData = JSON.parse(editData);
       Object.keys(parsedData).forEach(key => {
         const dateFields = ['DOB', 'registration_date', 'sample_date', 'repeat_date'];
         if (dateFields.includes(key) && parsedData[key] === '') {
@@ -353,8 +410,8 @@ export const SampleRegistration = () => {
       form.setValue('trf_file', parsedData.trf || '');
       form.setValue('father_husband_name', parsedData.father_husband_name || '');
       setSelectedTests(parsedData.test_name ? parsedData.test_name.split(', ') : []);
-   }
-  },[])
+    }
+  }, [])
 
   return (
     <div className='p-4'>

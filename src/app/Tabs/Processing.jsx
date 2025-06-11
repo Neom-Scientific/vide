@@ -181,120 +181,6 @@ const Processing = () => {
   };
 
   const isPrivilegedUser = user?.role === "AdminUser" || user?.role === "SuperAdmin";
-  // Build columns for tanstack table
-  // const columns = [
-  //   {
-  //     accessorKey: "sno",
-  //     header: "S. No.",
-  //     cell: ({ row }) => row.index + 1,
-  //     enableSorting: true,
-  //     enableHiding: false,
-  //   },
-  //   ...allColumns.map((col) => {
-  //     if (col.key === "registration_date") {
-  //       return {
-  //         accessorKey: col.key,
-  //         header: col.label,
-  //         enableSorting: true,
-  //         cell: (info) => {
-  //           const value = info.getValue();
-  //           if (!value) return "";
-  //           const date = new Date(value);
-  //           if (isNaN(date)) return value;
-  //           // Format: YYYY-MM-DD HH:mm
-  //           const yyyy = date.getFullYear();
-  //           const mm = String(date.getMonth() + 1).padStart(2, "0");
-  //           const dd = String(date.getDate()).padStart(2, "0");
-  //           const hh = String(date.getHours()).padStart(2, "0");
-  //           const min = String(date.getMinutes()).padStart(2, "0");
-  //           return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-  //         },
-  //       };
-  //     }
-
-  //     if (["dna_isolation", "lib_prep", "under_seq", "seq_completed"].includes(col.key)) {
-  //       return {
-  //         accessorKey: col.key,
-  //         header: col.label,
-  //         enableSorting: true,
-  //         cell: (info) => {
-  //           const isChecked = info.getValue() === "Yes";
-  //           const rowIdx = info.row.index;
-
-  //           return (
-  //             <Checkbox
-  //               checked={isChecked}
-  //               onCheckedChange={async (checked) => {
-  //                 const updatedRow = {
-  //                   ...info.row.original,
-  //                   [col.key]: checked ? "Yes" : "No",
-  //                 };
-
-  //                 setTableRows((prev) =>
-  //                   prev.map((row, idx) => (idx === rowIdx ? updatedRow : row))
-  //                 );
-
-  //                 const payload = {
-  //                   sample_id: updatedRow.sample_id,
-  //                   sample_indicator: col.key,
-  //                   indicator_status: checked ? "Yes" : "No",
-  //                 };
-
-  //                 try {
-  //                   const response = await axios.put("/api/pool-data", { data: payload });
-  //                   if (response.data[0].status === 200) {
-  //                     const updatedRows = tableRows.map((row, idx) =>
-  //                       idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
-  //                     );
-  //                     setTableRows(updatedRows);
-  //                   } else {
-  //                     toast.error(response.data[0].message || "Failed to update sample indicator.");
-  //                   }
-  //                 } catch (error) {
-  //                   console.error("Error updating sample indicator:", error);
-  //                   toast.error("An error occurred while updating the sample indicator.");
-  //                 }
-  //               }}
-  //             />
-  //           );
-  //         },
-  //       };
-  //     }
-
-  //     return {
-  //       accessorKey: col.key,
-  //       header: col.label,
-  //       enableSorting: true,
-  //       cell: (info) => info.getValue() || "",
-  //     };
-
-  //   },{
-  //     accessorKey: "actions",
-  //     header: "Actions",
-  //     enableSorting: false,
-  //     enableHiding: false,
-  //     cell: ({ row }) => {
-  //       const rowData = row.original; // Get the row data
-  //       const userRole = user?.role;
-
-  //       console.log("User object:", user); // Debugging user object
-  //       console.log("userRole:", userRole); // Debugging userRole
-
-  //       if (userRole === "AdminUser" || userRole === "SuperAdmin") {
-  //         return (
-  //           <Button
-  //             variant="outline"
-  //             className="text-sm"
-  //             onClick={() => handleEditRow(rowData)}
-  //           >
-  //             Edit
-  //           </Button>
-  //         );
-  //       }
-  //       // return null; // Hide the button for other roles
-  //     },
-  //   },),
-  // ];
   const columns = React.useMemo(() => [
     {
       accessorKey: "sno",
@@ -355,6 +241,7 @@ const Processing = () => {
                         idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
                       );
                       setTableRows(updatedRows);
+                      localStorage.setItem("searchData", JSON.stringify(updatedRows)); // Save updated data to localStorage
                     } else {
                       toast.error(response.data[0].message || "Failed to update sample indicator.");
                     }
@@ -495,7 +382,7 @@ const Processing = () => {
           under_seq: row.under_seq === "Yes" ? "Yes" : "No",
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
-        console.log('mappedData:', mappedData); // Debugging mapped data
+        // console.log('mappedData:', mappedData); // Debugging mapped data
         setTableRows(mappedData); // Update the tableRows state with the mapped data
         localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
@@ -521,6 +408,14 @@ const Processing = () => {
       return;
     }
 
+    //I want to send only those rows whose total_vol_for_2nm is empty or null
+    // const filteredRows = checkedRows.filter(row => !row.total_vol_for_2nm || row.total_vol_for_2nm === "");
+    // if (filteredRows.length === 0) {
+    //   toast.warning("No rows selected for Library Preparation with empty total_vol_for_2nm.");
+    //   return;
+    // }
+    // console.log('filteredRows:', filteredRows); // Debugging filtered rows
+
     // Group new rows by test_name
     const newGroupedData = checkedRows.reduce((acc, row) => {
       const testName = row.test_name;
@@ -534,6 +429,8 @@ const Processing = () => {
     // Fetch existing data from localStorage and merge
     const existingData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
     const mergedData = { ...existingData };
+    console.log('mergedData:', mergedData); // Debugging merged data
+
 
     Object.keys(newGroupedData).forEach(testName => {
       if (!mergedData[testName]) {
@@ -807,8 +704,8 @@ const Processing = () => {
           {/* Table */}
           <div className="">
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
-              style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
+              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4 h-[400px] overflow-y-auto"
+              style={{ maxWidth: 'calc(100vw - 50px)' }}
             >
               <Table className="min-w-full">
                 <TableHeader className="bg-orange-100 dark:bg-gray-800">
