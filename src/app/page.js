@@ -4,63 +4,32 @@ import React, { useEffect, useState } from 'react'
 import { ToastContainer } from 'react-toastify';
 import axios from 'axios';
 import DynamicChartDisplay from './components/DynamicChartDisplay';
+import { run } from 'googleapis/build/src/apis/run';
+
+const tatMonthNames = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+];
 
 const Page = () => {
   const [masterSheetData, setMasterSheetData] = useState([]);
   const [poolData, setPoolData] = useState([]);
   const [user, setUser] = useState(null);
-  const [selectedRunId, setSelectedRunId] = useState('');
+
+  // Multi-select states
+  const [selectedRunId, setSelectedRunId] = useState([]);
+  const [selectedTestName, setSelectedTestName] = useState([]);
+  const [selectedYear, setSelectedYear] = useState([]);
+  const [selectedChartRunId, setSelectedChartRunId] = useState([]);
+
+  // TAT chart multi-select
+  const [selectedTatTestName, setSelectedTatTestName] = useState([]);
+  const [selectedTatMonth, setSelectedTatMonth] = useState([]);
+  const [selectedTatYear, setSelectedTatYear] = useState([]);
+
   const [tableData, setTableData] = useState([]);
 
-  // State for the new chart
-  const [selectedTestName, setSelectedTestName] = useState('');
-  const [selectedYear, setSelectedYear] = useState('');
-  const [selectedChartRunId, setSelectedChartRunId] = useState('');
-
-  // State for TAT chart
-  const [selectedTatTestName, setSelectedTatTestName] = useState('');
-  const [selectedTatMonth, setSelectedTatMonth] = useState('');
-  const [selectedTatYear, setSelectedTatYear] = useState('');
-  const uniqueApplications = Array.from(new Set(masterSheetData.map(item => item.application))).filter(Boolean);
-  const [selectedTatApplication, setSelectedTatApplication] = useState('');
-
-  // Define tatMonthNames
-  const tatMonthNames = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-  ];
-
-  // Only filter by test name and year for months dropdown
-  const filteredTatDataForMonths = masterSheetData.filter(item =>
-    (!selectedTatTestName || item.test_name === selectedTatTestName) &&
-    (!selectedTatYear || (item.registration_date || item.created_at || '').startsWith(selectedTatYear))
-  );
-
-  const uniqueTatMonths = Array.from(
-    new Set(
-      filteredTatDataForMonths
-        .map(item => {
-          const dateStr = item.registration_date || item.created_at;
-          if (!dateStr) return null;
-          const date = new Date(dateStr);
-          return tatMonthNames[date.getMonth()];
-        })
-        .filter(Boolean)
-    )
-  );
-
-  // Define filteredTatData
-  const filteredTatData = masterSheetData.filter(item =>
-    (!selectedTatTestName || item.test_name === selectedTatTestName) &&
-    (!selectedTatYear || (item.registration_date || item.created_at || '').startsWith(selectedTatYear)) &&
-    (!selectedTatMonth || (() => {
-      const dateStr = item.registration_date || item.created_at;
-      if (!dateStr) return false;
-      const date = new Date(dateStr);
-      return tatMonthNames[date.getMonth()] === selectedTatMonth;
-    })())
-  );
-
+  // Fetch pool data
   useEffect(() => {
     const cookieData = Cookies.get('user');
     if (cookieData) {
@@ -74,13 +43,14 @@ const Page = () => {
             setPoolData(data);
           }
         } catch (error) {
-          console.error('Error fetching master sheet data:', error);
+          console.error('Error fetching pool data:', error);
         }
       };
       fetchPoolData();
     }
   }, [user?.role]);
 
+  // Fetch master sheet data
   useEffect(() => {
     const fetchMasterSheetData = async () => {
       try {
@@ -99,24 +69,7 @@ const Page = () => {
     fetchMasterSheetData();
   }, []);
 
-  // Set default TAT dropdowns when masterSheetData loads
-  useEffect(() => {
-    if (masterSheetData.length > 0) {
-      // Find first test_name and year that have tat_days
-      const firstTatRow = masterSheetData.find(item => item.tat_days != null);
-      if (firstTatRow) {
-        if (!selectedTatTestName) setSelectedTatTestName(firstTatRow.test_name);
-        const year = (firstTatRow.registration_date || firstTatRow.created_at)
-          ? new Date(firstTatRow.registration_date || firstTatRow.created_at).getFullYear().toString()
-          : '';
-        if (!selectedTatYear && year) setSelectedTatYear(year);
-      }
-    }
-    // Only run when masterSheetData changes or if either is empty
-    // eslint-disable-next-line
-  }, [masterSheetData]);
-
-  // Extract unique run_ids
+  // Extract unique values
   const runIds = Array.from(new Set(poolData.map(item => item.run_id)))
     .sort((a, b) => {
       const numA = parseInt(a.split('_')[1], 10);
@@ -124,34 +77,11 @@ const Page = () => {
       return numB - numA;
     });
 
-  // Auto-select first run_id when runIds change
-  useEffect(() => {
-    if (runIds.length > 0 && !selectedRunId) {
-      setSelectedRunId(runIds[0]);
-    }
-  }, [runIds, selectedRunId]);
+  // Normalize test names for uniqueTestNames
+  const uniqueTestNames = Array.from(
+    new Set(masterSheetData.map(item => (item.test_name || '').trim()))
+  ).filter(Boolean);
 
-  // Update tableData when selectedRunId changes
-  useEffect(() => {
-    if (!selectedRunId) {
-      setTableData([]);
-      return;
-    }
-    const run = poolData.find(item => item.run_id === selectedRunId);
-    let parsedTable = [];
-    if (run && run.table_data) {
-      try {
-        parsedTable = typeof run.table_data === 'string'
-          ? JSON.parse(run.table_data)
-          : run.table_data;
-      } catch {
-        parsedTable = [];
-      }
-    }
-    setTableData(parsedTable);
-  }, [selectedRunId, poolData]);
-
-  const uniqueTestNames = Array.from(new Set(masterSheetData.map(item => item.test_name)));
   const uniqueYears = Array.from(
     new Set(masterSheetData.map(item => {
       const date = item.registration_date || item.created_at;
@@ -159,116 +89,166 @@ const Page = () => {
     }).filter(Boolean))
   ).sort((a, b) => b - a);
 
-  // Filter data for the new chart
-  const filteredChartData = masterSheetData.filter(item =>
-    (!selectedTestName || item.test_name === selectedTestName) &&
-    (!selectedYear || (item.registration_date || item.created_at || '').startsWith(selectedYear)) &&
-    (!selectedChartRunId || item.run_id === selectedChartRunId)
-  );
-
-  // Prepare chart data for the second chart
-  let chartDataArr;
-  if (selectedTestName && selectedYear) {
-    const monthNames = [
-      "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-      "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-    ];
-    const monthCounts = Array(12).fill(0);
-    filteredChartData.forEach(item => {
-      const dateStr = item.registration_date || item.created_at;
-      if (dateStr) {
-        const date = new Date(dateStr);
-        if (String(date.getFullYear()) === String(selectedYear)) {
-          monthCounts[date.getMonth()] += 1;
+  // Update tableData when selectedRunId changes (multi-select)
+  useEffect(() => {
+    if (!selectedRunId || selectedRunId.length === 0) {
+      setTableData([]);
+      return;
+    }
+    // Get all runs for selectedRunId array
+    const runs = poolData.filter(item => selectedRunId.includes(item.run_id));
+    let parsedTable = [];
+    runs.forEach(run => {
+      if (run && run.table_data) {
+        try {
+          const data = typeof run.table_data === 'string'
+            ? JSON.parse(run.table_data)
+            : run.table_data;
+          parsedTable = parsedTable.concat(data);
+        } catch {
+          // ignore
         }
       }
     });
-    chartDataArr = monthNames.map((label, idx) => ({
-      label,
-      value: monthCounts[idx]
-    })).filter(item => item.value > 0); // Only show months with data
-  } else {
-    // Default: group by test_name
-    const chartData = filteredChartData.reduce((acc, item) => {
-      const label = item.test_name;
-      acc[label] = (acc[label] || 0) + 1;
-      return acc;
-    }, {});
-    chartDataArr = Object.entries(chartData).map(([label, value]) => ({ label, value }));
-  }
+    setTableData(parsedTable);
+  }, [selectedRunId, poolData]);
 
-  // Prepare TAT chart data: group by month, average tat_days
-  const tatMonthData = Array(12).fill().map(() => []);
-  filteredTatData.forEach(item => {
-    const dateStr = item.registration_date || item.created_at;
-    if (dateStr && item.tat_days != null) {
-      const date = new Date(dateStr);
-      if (String(date.getFullYear()) === String(selectedTatYear)) {
-        tatMonthData[date.getMonth()].push(Number(item.tat_days));
-      }
-    }
-  });
-  const tatChartData = tatMonthNames.map((label, idx) => {
-    const arr = tatMonthData[idx];
-    const avg = arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-    return { label, value: avg };
-  }).filter(item => item.value > 0);
-
-  // Collect all tat_days as points with their month index
-  const tatScatterData = [];
-  filteredTatData.forEach(item => {
-    const dateStr = item.registration_date || item.created_at;
-    if (dateStr && item.tat_days != null) {
-      const date = new Date(dateStr);
-      if (String(date.getFullYear()) === String(selectedTatYear)) {
-        tatScatterData.push({
-          x: tatMonthNames[date.getMonth()],
-          y: Number(item.tat_days)
-        });
-      }
-    }
+  // --- Chart 1: Sample Count by Test Name (grouped by run_id) ---
+  // Group by run_id, then by test_name
+  const runIdTestNameMap = {};
+  tableData.forEach(item => {
+    if (!item.run_id) return;
+    if (!runIdTestNameMap[item.run_id]) runIdTestNameMap[item.run_id] = {};
+    if (!runIdTestNameMap[item.run_id][item.test_name]) runIdTestNameMap[item.run_id][item.test_name] = 0;
+    runIdTestNameMap[item.run_id][item.test_name] += item.sample_count || 1;
   });
 
-  // Prepare TAT line chart data
-  const tatLineData = filteredTatData
-    .filter(item => item.tat_days != null)
-    .map(item => {
-      const dateStr = item.registration_date || item.created_at;
-      const date = new Date(dateStr);
-      return {
-        x: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`, // e.g. "2025-06"
-        month: tatMonthNames[date.getMonth()],
-        y: Number(item.tat_days),
-        date: date // for sorting
-      };
-    })
-    .sort((a, b) => a.date - b.date); // sort by actual date
+  // Always show all selected run ids on x-axis
+  const runIdXAxisLabels = selectedRunId.length > 0 ? selectedRunId : runIds;
 
-  // For the first chart (run_id only)
-  const runIdChartData = tableData.map(item => ({
-    label: item.test_name,
-    value: item.sample_count,
+  // Get all test names present in selected runs (or all if none selected)
+  // const allTestNamesInRuns = Array.from(
+  //   new Set(
+  //     (selectedRunId.length > 0
+  //       ? selectedRunId.flatMap(runId => Object.keys(runIdTestNameMap[runId] || {}))
+  //       : Object.values(runIdTestNameMap).flatMap(obj => Object.keys(obj))
+  //     )
+  //   )
+  // );
+
+  // Prepare datasets for grouped bar chart
+  const allTestNamesInRuns = uniqueTestNames; // Always show all test names
+
+  const runIdChartData = allTestNamesInRuns.map(testName => ({
+    label: testName,
+    data: runIdXAxisLabels.map(runId => runIdTestNameMap[runId]?.[testName] || 0)
   }));
 
+
+  // --- Chart 2: Test Name Distribution ---
+  // Filter masterSheetData by selected test names, years, run ids
+  const filteredChartData = masterSheetData.filter(item =>
+    (selectedTestName.length === 0 || selectedTestName.map(n => n.trim()).includes((item.test_name || '').trim())) &&
+    (selectedYear.length === 0 || selectedYear.includes(String((item.registration_date || item.created_at || '').slice(0, 4)))) &&
+    (selectedChartRunId.length === 0 || selectedChartRunId.includes(item.run_id))
+  );
+
+  // When mapping for chart2XAxisLabels and chart2Datasets
+  let chart2XAxisLabels = selectedTestName.length > 0
+    ? selectedTestName.map(n => n.trim())
+    : uniqueTestNames;
+
+  let chart2Datasets = [{
+    label: "Samples",
+    data: chart2XAxisLabels.map(testName =>
+      filteredChartData.filter(item => (item.test_name || '').trim() === testName).length
+    )
+  }];
+
+  // --- Chart 3: TAT Days by Month (multi-select) ---
+  // Filter masterSheetData for TAT chart
+  const filteredTatData = masterSheetData.filter(item =>
+    (selectedTatTestName.length === 0 || selectedTatTestName.includes(item.test_name)) &&
+    (selectedTatYear.length === 0 || selectedTatYear.includes(String((item.registration_date || item.created_at || '').slice(0, 4)))) &&
+    (selectedTatMonth.length === 0 || (() => {
+      const dateStr = item.registration_date || item.created_at;
+      if (!dateStr) return false;
+      const date = new Date(dateStr);
+      return selectedTatMonth.includes(tatMonthNames[date.getMonth()]);
+    })())
+  );
+
+  // If years selected, show months on x-axis, grouped by test_name
+  let tatXAxisLabels = [];
+  let tatDatasets = [];
+  if (selectedTatYear.length > 0) {
+    tatXAxisLabels = tatMonthNames;
+    tatDatasets = (selectedTatTestName.length > 0 ? selectedTatTestName : uniqueTestNames).map(testName => {
+      const data = tatMonthNames.map((month, idx) => {
+        // For each month, average tat_days for this testName
+        const arr = filteredTatData.filter(item => {
+          const dateStr = item.registration_date || item.created_at;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return item.test_name === testName &&
+            selectedTatYear.includes(String(date.getFullYear())) &&
+            date.getMonth() === idx;
+        }).map(item => Number(item.tat_days));
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      });
+      return { label: testName, data };
+    });
+  } else if (selectedTatTestName.length > 0) {
+    // If test names selected, show test names on x-axis, grouped by year
+    tatXAxisLabels = selectedTatTestName;
+    tatDatasets = (selectedTatYear.length > 0 ? selectedTatYear : uniqueYears).map(year => {
+      const data = selectedTatTestName.map(testName => {
+        const arr = filteredTatData.filter(item => {
+          const dateStr = item.registration_date || item.created_at;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return item.test_name === testName &&
+            String(date.getFullYear()) === String(year);
+        }).map(item => Number(item.tat_days));
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      });
+      return { label: year, data };
+    });
+  } else {
+    // Default: group by month, average tat_days
+    tatXAxisLabels = tatMonthNames;
+    tatDatasets = [{
+      label: "TAT Days",
+      data: tatMonthNames.map((month, idx) => {
+        const arr = filteredTatData.filter(item => {
+          const dateStr = item.registration_date || item.created_at;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return date.getMonth() === idx;
+        }).map(item => Number(item.tat_days));
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      })
+    }];
+  }
+
+  // --- Funnel Chart ---
   const funnelSteps = [
     { key: "dna_isolation", label: "DNA Isolation" },
     { key: "lib_prep", label: "Library Prep" },
     { key: "under_seq", label: "Under Sequencing" },
     { key: "seq_completed", label: "Sequencing Completed" }
   ];
-
   const funnelChartData = funnelSteps.map(step => ({
     label: step.label,
     value: masterSheetData.filter(item => item[step.key] === "Yes").length
   }));
 
-  // console.log('selectedTatTestName:', selectedTatTestName);
-  // console.log('selectedTatYear:', selectedTatYear);
-  // console.log('filteredTatData:', filteredTatData);
-
+  console.log('tatDatasets:', tatDatasets);
+  console.log('tatXAxisLabels:', tatXAxisLabels);
   return (
     <div className='grid grid-cols-2 gap-4'>
       <div>
+        {/* Chart 1: Grouped bar chart by run_id and test_name */}
         <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
           <DynamicChartDisplay
             dropdowns={[
@@ -280,11 +260,16 @@ const Page = () => {
               }
             ]}
             chartTitle="Sample Count by Test Name"
-            chartData={runIdChartData}
+            chartType="bar-grouped"
+            chartData={{
+              labels: runIdXAxisLabels,
+              datasets: runIdChartData
+            }}
           />
         </div>
       </div>
       <div>
+        {/* Chart 2: Test Name Distribution */}
         <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
           <DynamicChartDisplay
             dropdowns={[
@@ -300,20 +285,19 @@ const Page = () => {
                 value: selectedYear,
                 onChange: setSelectedYear,
               },
-              {
-                label: "Select Run Id",
-                options: runIds,
-                value: selectedChartRunId,
-                onChange: setSelectedChartRunId,
-              }
             ]}
             chartTitle="Test Name Distribution"
-            chartData={chartDataArr}
+            chartType="bar-grouped"
+            chartData={{
+              labels: chart2XAxisLabels,
+              datasets: chart2Datasets
+            }}
             dropdownStacked={true}
           />
         </div>
       </div>
       <div>
+        {/* Chart 3: TAT Days by Month */}
         <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
           <DynamicChartDisplay
             dropdowns={[
@@ -331,20 +315,23 @@ const Page = () => {
               },
               {
                 label: "Select Month",
-                options: uniqueTatMonths,
+                options: tatMonthNames,
                 value: selectedTatMonth,
                 onChange: setSelectedTatMonth
               }
             ]}
             chartTitle="TAT Days by Month"
-            chartData={tatLineData.map(d => ({ x: d.month, y: d.y }))}
-            chartType="line"
+            chartType="line-grouped"
+            chartData={{
+              labels: tatXAxisLabels,
+              datasets: tatDatasets
+            }}
             dropdownStacked={true}
-            // chartHeight={400}
           />
         </div>
       </div>
       <div>
+        {/* Funnel chart */}
         <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
           <DynamicChartDisplay
             chartTitle="Sample Funnel"

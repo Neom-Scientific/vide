@@ -24,6 +24,7 @@
     "bcryptjs": "^3.0.2",
     "chart.js": "^4.4.9",
     "chartjs-chart-funnel": "^4.2.4",
+    "chartjs-plugin-datalabels": "^2.2.0",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.6.1",
     "clsx": "^2.1.1",

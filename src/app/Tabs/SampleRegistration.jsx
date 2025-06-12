@@ -205,83 +205,83 @@ export const SampleRegistration = () => {
     }
   }, [sample_name, form]);
 
-  // const uploadTrf = async (file) => {
-  //   setTrfFile(file);
-  //   try {
-  //     if (file) {
-  //       const url = URL.createObjectURL(file);
-  //       setTrfUrl(url);
-  //       form.setValue('trf', file.name); // Store file name if needed
-  //       form.setValue('trf_file', file.name); // Store the file object
-  //     } else {
-  //       setTrfUrl('');
-  //       form.setValue('trf', '');
-  //       form.setValue('trf_file', '');
-  //     }
-  //     // if(file){
-  //     //   const formData = new FormData();
-  //     //   formData.append('file', file);
-  //     //   const response = await axios.post('/api/upload', formData,{
-  //     //     headers:{
-  //     //      'Content-Type': 'multipart/form-data'
-  //     //     }
-  //     //   })
-  //     //   console.log('response', response);
-  //     // }
-  //   }
-  //   catch (error) {
-  //     console.error('Error uploading TRF:', error);
-  //   }
-  // }
   const uploadTrf = async (file) => {
     setTrfFile(file);
-    const allData = form.getValues();
-    console.log('allData', allData);
-
     try {
       if (file) {
-        const reader = new FileReader();
-        reader.onload = async () => {
-          const base64 = reader.result.split(",")[1]; // clean base64
-          const formData = new URLSearchParams();
-
-          formData.append('file', base64);
-          // formData.append('filename', file.name);
-          formData.append('sample_id', allData.sample_id); // ensure this exists
-
-          try {
-            const response = await axios.post(
-              'https://script.google.com/macros/s/AKfycbywSuLQifi0bW7p99KacM5A7IEieqfZSuSX3RMXYMfFDBFdJlplkoEIAX3pfSyYrtBT/exec',
-              formData.toString(),
-              {
-                mode:'no-cors',
-                headers: {
-                  "Content-Type": "application/x-www-form-urlencoded",
-                },
-              }
-            );
-
-            console.log('response', response.data);
-            toast.success('TRF uploaded successfully');
-
-            // Optional: if your Apps Script returns the file ID
-            const fileId = response.data.id; // You may need to log and verify this
-            const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
-            setTrfUrl(url);
-
-            form.setValue('trf', file.name);
-            form.setValue('trf_file', url);
-          } catch (error) {
-            console.error('Upload error:', error);
-            toast.error('TRF upload failed');
-          }
-        };
-        reader.readAsDataURL(file); // start reading
+        const url = URL.createObjectURL(file);
+        setTrfUrl(url);
+        form.setValue('trf', file.name); // Store file name if needed
+        form.setValue('trf_file', file.name); // Store the file object
+      } else {
+        setTrfUrl('');
+        form.setValue('trf', '');
+        form.setValue('trf_file', '');
       }
-    } catch (error) {
-      console.error('General error uploading TRF:', error);
+      // if(file){
+      //   const formData = new FormData();
+      //   formData.append('file', file);
+      //   const response = await axios.post('/api/upload', formData,{
+      //     headers:{
+      //      'Content-Type': 'multipart/form-data'
+      //     }
+      //   })
+      //   console.log('response', response);
+      // }
     }
-  };
+    catch (error) {
+      console.error('Error uploading TRF:', error);
+    }
+  }
+  // const uploadTrf = async (file) => {
+  //   setTrfFile(file);
+  //   const allData = form.getValues();
+  //   console.log('allData', allData);
+
+  //   try {
+  //     if (file) {
+  //       const reader = new FileReader();
+  //       reader.onload = async () => {
+  //         const base64 = reader.result.split(",")[1]; // clean base64
+  //         const formData = new URLSearchParams();
+
+  //         formData.append('file', base64);
+  //         // formData.append('filename', file.name);
+  //         formData.append('sample_id', allData.sample_id); // ensure this exists
+
+  //         try {
+  //           const response = await axios.post(
+  //             'https://script.google.com/macros/s/AKfycbywSuLQifi0bW7p99KacM5A7IEieqfZSuSX3RMXYMfFDBFdJlplkoEIAX3pfSyYrtBT/exec',
+  //             formData.toString(),
+  //             {
+  //               mode:'no-cors',
+  //               headers: {
+  //                 "Content-Type": "application/x-www-form-urlencoded",
+  //               },
+  //             }
+  //           );
+
+  //           console.log('response', response.data);
+  //           toast.success('TRF uploaded successfully');
+
+  //           // Optional: if your Apps Script returns the file ID
+  //           const fileId = response.data.id; // You may need to log and verify this
+  //           const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
+  //           setTrfUrl(url);
+
+  //           form.setValue('trf', file.name);
+  //           form.setValue('trf_file', url);
+  //         } catch (error) {
+  //           console.error('Upload error:', error);
+  //           toast.error('TRF upload failed');
+  //         }
+  //       };
+  //       reader.readAsDataURL(file); // start reading
+  //     }
+  //   } catch (error) {
+  //     console.error('General error uploading TRF:', error);
+  //   }
+  // };
 
 
   useEffect(() => {
