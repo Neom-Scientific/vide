@@ -24,6 +24,7 @@ export async function POST(request) {
                 status: 401,
                 message: 'Invalid password',
             });
+            return NextResponse.json(response);
         }
         const userEnable = userData.rows[0].status;
         if (userEnable === 'disable') {
@@ -31,6 +32,7 @@ export async function POST(request) {
                 status: 401,
                 message: 'Contact admin to enable your account',
             });
+            return NextResponse.json(response);
         }
         const result = await pool.query(
             'INSERT INTO login_data (username, password) VALUES ($1, $2)',
@@ -46,18 +48,19 @@ export async function POST(request) {
                     email: userData.rows[0].email,
                     hospital_name: userData.rows[0].hospital_name,
                     hospital_id: userData.rows[0].hospital_id,
-                    role : userData.rows[0].role,
-                    user_login:userData.rows[0].user_login,
+                    role: userData.rows[0].role,
+                    user_login: userData.rows[0].user_login,
                 },
                 message: 'Login successful',
             });
+            return NextResponse.json(response);
         } else {
             response.push({
                 status: 500,
                 message: 'Failed to login',
             });
+            return NextResponse.json(response)
         }
-        return NextResponse.json(response);
     }
     catch (error) {
         console.error('Error executing query', error);
