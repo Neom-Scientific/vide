@@ -114,53 +114,54 @@ const RunSetup = () => {
   }, []);
 
 
- const handleTestNameChange = async (selectedTestName) => {
-  try {
-    if (!user.hospital_name || !selectedTestName) {
-      console.log("Organization Name or test name is missing");
-      return;
+  const handleTestNameChange = async (selectedTestName) => {
+    try {
+      if (!user.hospital_name || !selectedTestName) {
+        console.log("Organization Name or test name is missing");
+        return;
+      }
+
+      // Prevent duplicates in the selectedTestName list
+      if (selectedTestNames.includes(selectedTestName)) {
+        console.log("Test name already selected");
+        return;
+      }
+
+      // Remove the selected test name from the dropdown
+      setTestNames((prev) => prev.filter((test) => test.test_name !== selectedTestName));
+
+      // Add the selected test name to the selected list
+      const updatedSelectedTestNames = [...selectedTestNames, selectedTestName];
+      setSelectedTestNames(updatedSelectedTestNames);
+
+      // Update the selected_application field in the form state
+      form.setValue("selected_application", updatedSelectedTestNames.join(", "));
+
+      // --- NEW: Get sample_ids for this test_name ---
+      const testObj = testNames.find(t => t.test_name === selectedTestName);
+      const sampleIdsParam = testObj && testObj.sample_ids && testObj.sample_ids.length > 0
+        ? testObj.sample_ids.join(',')
+        : '';
+
+      // Fetch pool data for the selected test name and sample_ids
+      const response = await axios.get(
+        `/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}${sampleIdsParam ? `&sample_id=${sampleIdsParam}` : ''}`
+      );
+      console.log('response', response.data);
+      if (response.data[0].status === 200) {
+        const poolDataForTest = response.data[0].data;
+        console.log('poolDataForTest', poolDataForTest);
+        setPoolData((prev) => [...prev, ...poolDataForTest]);
+      } else if (response.data[0].status === 404) {
+        console.log("No pool data found for the provided Organization Name and test name");
+      }
+
+      // Reset the application field in the form
+      form.setValue("application", ""); // Reset the select value
+    } catch (error) {
+      console.log("Error fetching pool data:", error);
     }
-
-    // Prevent duplicates in the selectedTestName list
-    if (selectedTestNames.includes(selectedTestName)) {
-      console.log("Test name already selected");
-      return;
-    }
-
-    // Remove the selected test name from the dropdown
-    setTestNames((prev) => prev.filter((test) => test.test_name !== selectedTestName));
-
-    // Add the selected test name to the selected list
-    const updatedSelectedTestNames = [...selectedTestNames, selectedTestName];
-    setSelectedTestNames(updatedSelectedTestNames);
-
-    // Update the selected_application field in the form state
-    form.setValue("selected_application", updatedSelectedTestNames.join(", "));
-
-    // --- NEW: Get sample_ids for this test_name ---
-    const testObj = testNames.find(t => t.test_name === selectedTestName);
-    const sampleIdsParam = testObj && testObj.sample_ids && testObj.sample_ids.length > 0
-      ? testObj.sample_ids.join(',')
-      : '';
-
-    // Fetch pool data for the selected test name and sample_ids
-    const response = await axios.get(
-      `/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}${sampleIdsParam ? `&sample_id=${sampleIdsParam}` : ''}`
-    );
-    console.log('response', response.data);
-    if (response.data[0].status === 200) {
-      const poolDataForTest = response.data[0].data;
-      setPoolData((prev) => [...prev, ...poolDataForTest]);
-    } else if (response.data[0].status === 404) {
-      console.log("No pool data found for the provided Organization Name and test name");
-    }
-
-    // Reset the application field in the form
-    form.setValue("application", ""); // Reset the select value
-  } catch (error) {
-    console.log("Error fetching pool data:", error);
-  }
-};
+  };
 
   const handleSubmit = async (data) => {
     try {
@@ -284,14 +285,23 @@ const RunSetup = () => {
       .filter((pool) => updatedCheckboxes.includes(pool.test_name))
       .map((pool) => Number(pool.size)); // Ensure size is a number
 
+    console.log('updatedSize', updatedSize);
     const avgSize = updatedSize.length > 0
       ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
       : 0;
+    console.log('avgSize', avgSize);
 
     setAvgSize(avgSize); // Update the avgSize state
 
+    const totalRequired = poolData
+      .filter((pool) => updatedCheckboxes.includes(pool.test_name)) // Filter pool data for selected test names
+      .reduce((sum, pool) => sum + (pool.data_required || 0), 0); // Sum up the data_required values
+
+    form.setValue("total_required", totalRequired); // Update the total_required field in the form
+
+    
     // Trigger validation for total_gb_available
-    validateTotalGbAvailable();
+    // validateTotalGbAvailable();
   };
 
   useEffect(() => {
@@ -315,7 +325,8 @@ const RunSetup = () => {
 
   useEffect(() => {
     if (avgSize && pool_conc_run_setup && !isNaN(avgSize) && !isNaN(pool_conc_run_setup)) {
-      const nM = parseFloat(((pool_conc_run_setup / (avgSize * 660)) * 1000000).toFixed(9)); // Perform calculation
+      const nM = parseFloat(((pool_conc_run_setup / (avgSize * 660)) * 1000000).toFixed(2)); // Perform calculation
+      console.log('nM', nM);
       form.setValue("nm_cal", nM); // Update nm_cal field
     } else {
       form.setValue("nm_cal", 0); // Set default value if inputs are invalid
@@ -364,11 +375,11 @@ const RunSetup = () => {
 
   useEffect(() => {
     // Calculate the total required data based on selected test names
-    const totalRequired = poolData
-      .filter((pool) => selectedTestNames.includes(pool.test_name)) // Filter pool data for selected test names
-      .reduce((sum, pool) => sum + (pool.data_required || 0), 0); // Sum up the data_required values
+    // const totalRequired = poolData
+    //   .filter((pool) => selectedTestNames.includes(pool.test_name)) // Filter pool data for selected test names
+    //   .reduce((sum, pool) => sum + (pool.data_required || 0), 0); // Sum up the data_required values
 
-    form.setValue("total_required", totalRequired); // Update the total_required field in the form
+    // form.setValue("total_required", totalRequired); // Update the total_required field in the form
   }, [selectedTestNames, poolData]); // Trigger the effect whenever selectedTestNames or poolData change
 
 
@@ -487,6 +498,20 @@ const RunSetup = () => {
                                       onChange={(e) => handleCheckboxChange(test, e.target.checked)} // Handle checkbox change
                                     />
                                   </TableCell>
+                                  <TableCell
+                                    className="cursor-pointer text-red-500"
+                                    onClick={() => {
+                                      setSelectedTestNames((prev) => prev.filter((name) => name !== test)); // Remove the test from selectedTestNames
+                                      setSelectedCheckboxes((prev) => prev.filter((name) => name !== test)); // Remove the test from selectedCheckboxes
+                                      setPoolData((prev) => prev.filter((pool) => pool.test_name !== test)); // Remove the pool data for the test
+                                      form.setValue("selected_application", form.getValues("selected_application").replace(test, '').replace(/,,/g, ',').trim()); // Update selected_application field
+                                      // send them to the applications
+                                      setAvgSize(0); // Reset avgSize
+                                      setTestNames((prev) => [...prev, { test_name: test }]); // Add the test back to the dropdown
+                                    }}
+                                  >
+                                    x
+                                  </TableCell>
                                 </TableRow>
                               );
                             })}
@@ -598,7 +623,7 @@ const RunSetup = () => {
                     value={field.value !== undefined && !isNaN(field.value) ? field.value : ''} // Ensure valid value
                     onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} // Convert input to number
                     placeholder="Enter pool size"
-                    className="mb-2 border-2 border-orange-300" 
+                    className="mb-2 border-2 border-orange-300"
                   />
                   {form.formState.errors.pool_size && (
                     <p className="text-red-500 text-sm">

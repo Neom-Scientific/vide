@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react'
 import { ToastContainer } from 'react-toastify';
 import axios from 'axios';
 import DynamicChartDisplay from './components/DynamicChartDisplay';
-import { run } from 'googleapis/build/src/apis/run';
 
 const tatMonthNames = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -243,8 +242,8 @@ const Page = () => {
     value: masterSheetData.filter(item => item[step.key] === "Yes").length
   }));
 
-  console.log('tatDatasets:', tatDatasets);
-  console.log('tatXAxisLabels:', tatXAxisLabels);
+  // console.log('tatDatasets:', tatDatasets);
+  // console.log('tatXAxisLabels:', tatXAxisLabels);
   return (
     <div className='grid grid-cols-2 gap-4'>
       <div>

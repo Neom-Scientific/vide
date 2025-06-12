@@ -1,4 +1,4 @@
-import React, { use, useEffect, useState, useMemo } from "react";
+import React, { use, useEffect, useState, useMemo, useRef } from "react";
 import {
   ColumnDef,
   SortingState,
@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CookingPot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -36,6 +36,7 @@ import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { set } from "react-hook-form";
 
 
 const LibraryPrepration = () => {
@@ -48,7 +49,12 @@ const LibraryPrepration = () => {
   const [getTheTestNames, setGetTheTestNames] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
   const user = JSON.parse(Cookies.get('user') || '{}');
+  const testNameRef = useRef(testName);
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    testNameRef.current = testName;
+  }, [testName]);
 
 
   const allColumns = [
@@ -101,7 +107,7 @@ const LibraryPrepration = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
-    { key: 'conc_rxn', label: 'conc/rxn' },
+    { key: 'conc_rxn', label: 'conc/rxn (ng/rxn)' },
     { key: 'barcode', label: 'Barcode' },
     { key: 'i5_index_reverse', label: 'i5 (reverse)' },
     { key: 'i5_index_forward', label: 'i5 (forward)' },
@@ -112,18 +118,18 @@ const LibraryPrepration = () => {
     { key: 'lib_vol_for_2nm', label: 'Library Volume for 2nM from 1/10 of nM' },
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 2nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
-    { key: 'qubit_dna', label: 'Qubit DNA(ng/ul)' },
-    { key: 'per_rxn_gdna', label: 'Per Rxn gDNA' },
-    { key: 'volume', label: 'Volume' },
-    { key: 'gdna_volume_3x', label: 'gDNA Volume (3X)' },
-    { key: 'nfw', label: 'NFW (3x)' },
+    { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
+    { key: 'per_rxn_gdna', label: 'Per Rxn gDNA (ng/rxn)' },
+    { key: 'volume', label: 'Volume (ul)' },
+    { key: 'gdna_volume_3x', label: 'gDNA Volume (ul) (3X)' },
+    { key: 'nfw', label: 'NFW (ul) (3x)' },
     { key: 'plate_designation', label: 'Plate Designation' },
     { key: 'well', label: 'Well No./Barcode' },
-    { key: 'qubit_lib_qc_ng_ul', label: 'Qubit Library QC (ng/ul)' },
+    { key: 'qubit_lib_qc_ng_ul', label: 'Library Qubit (ng/ul)' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
-    { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb' },
-    { key: 'sample_volume', label: 'Sample Volume' },
-    { key: 'pooling_volume', label: 'Pooling Volume' },
+    { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb (ul)' },
+    { key: 'sample_volume', label: 'Sample Volume (ul)' },
+    { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
     { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'data_required', label: 'Data Required(GB)' },
@@ -220,32 +226,44 @@ const LibraryPrepration = () => {
     }, {});
   });
 
-  useEffect(()=>{
+  useEffect(() => {
     const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
     if (Object.keys(storedData).length === 0) {
       setMessage(1); // Set message to indicate no data available
     } else {
       setMessage(0); // Reset message if data is available
     }
-  },[]);
+  }, []);
 
   useEffect(() => {
     const fetchPoolInfo = async () => {
       try {
         const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-        // console.log('storedData:', storedData);
-
+        const allSampleIds = Object.values(storedData)
+          .flatMap(arr => arr.map(row => row.sample_id))
+          .filter(Boolean); // removes undefined/null if any
+        const testName = Object.keys(storedData)[0];
+  
+        // If local data exists for this testName, use it and do not overwrite
+        if (testName && storedData[testName] && storedData[testName].length > 0) {
+          setTableRows(storedData[testName]);
+          setGetTheTestNames(Object.keys(storedData));
+          setTestName(testName);
+          return; // Do not fetch or overwrite with API data
+        }
+  
+        // Otherwise, fetch from API
         const response = await axios.get(`/api/pool-data`, {
           params: {
             hospital_name: user.hospital_name,
             application: testName,
-            sample_id: Object.values(storedData).flatMap(row => row.sample_id).join(','),
+            sample_id: allSampleIds.join(','), // Join sample IDs into a comma-separated string
           },
         });
-
+  
         if (response.data[0].status === 200) {
           const poolData = response.data[0].data;
-
+  
           if (poolData && poolData.length > 0) {
             // Transform data into testName: [...] format
             const newData = poolData.reduce((acc, row) => {
@@ -256,14 +274,19 @@ const LibraryPrepration = () => {
               acc[testName].push(row);
               return acc;
             }, {});
-
-            // Merge with existing data in localStorage
-            const mergedData = { ...storedData, ...newData };
-
-            setTableRows(newData[testName] || []);
-            setGetTheTestNames(Object.keys(mergedData));
-            setTestName(Object.keys(newData)[0]); // Set the first testName as default
-            localStorage.setItem('libraryPreparationData', JSON.stringify(mergedData));
+  
+            // Only update localStorage if there was no local data for this testName
+            if (!storedData[testName] || storedData[testName].length === 0) {
+              const mergedData = { ...storedData, ...newData };
+              setTableRows(newData[testName] || []);
+              setGetTheTestNames(Object.keys(mergedData));
+              setTestName(Object.keys(newData)[0]); // Set the first testName as default
+              localStorage.setItem('libraryPreparationData', JSON.stringify(mergedData));
+            } else {
+              setTableRows(storedData[testName]);
+              setGetTheTestNames(Object.keys(storedData));
+              setTestName(testName);
+            }
           } else {
             setMessage(1);
           }
@@ -273,7 +296,7 @@ const LibraryPrepration = () => {
         toast.error("An error occurred while fetching pool info.");
       }
     };
-
+  
     fetchPoolInfo();
   }, []);
 
@@ -397,7 +420,6 @@ const LibraryPrepration = () => {
         "i5_index_reverse",
         "i7_index",
         "qubit_lib_qc_ng_ul",
-        "stock_ng_ul",
         "lib_vol_for_hyb",
         "pool_conc",
         "size",
@@ -479,16 +501,15 @@ const LibraryPrepration = () => {
             const updatedRow = { ...row, [columnId]: value };
 
             // Apply formulas dynamically
-            const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
             const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
             const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
             const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
-            const qubit_dna_hs = parseFloat(updatedRow.qubit_dna_hs) || 0;
             const volume = parseFloat(updatedRow.volume) || 0;
             const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
             const one_tenth_of_nm_conc = parseFloat(updatedRow.one_tenth_of_nm_conc) || 0;
             const size = parseFloat(updatedRow.size) || 0;
             const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
+            const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
 
             if (columnId === "lib_qubit" || columnId === "total_vol_for_2nm") {
               const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
@@ -519,13 +540,21 @@ const LibraryPrepration = () => {
               updatedRow.nm_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
             }
 
+            if (qubit_lib_qc_ng_ul) {
+              updatedRow.lib_vol_for_hyb = parseFloat(200 / qubit_lib_qc_ng_ul).toFixed(2)
+            }
+            // if (qubit_dna || per_rxn_gdna) {
+            //   updatedRow.gdna_volume_3x = parseFloat(Math.floor(per_rxn_gdna / qubit_dna));
+            //   console.log('updatedRow.gdna_volume_3x:', updatedRow.gdna_volume_3x);
+            // }
+
             if (columnId === "size") {
               // console.log('nm_conc:', updatedRow.nm_conc);
               updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
               // console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
             }
-            if (columnId === "per_rxn_gdna" || columnId === "qubit_dna_hs") {
-              updatedRow.gdna_volume_3x = qubit_dna_hs > 0 ? Math.ceil((per_rxn_gdna / qubit_dna_hs) * 3) : "";
+            if (qubit_dna || per_rxn_gdna) {
+              updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.ceil((per_rxn_gdna / qubit_dna) * 3) : "";
             }
 
             if (columnId === "volume" || columnId === "gdna_volume_3x") {
@@ -535,12 +564,14 @@ const LibraryPrepration = () => {
 
             if (columnId === "qubit_lib_qc_ng_ul") {
               updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
+              updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
+              console.log('updatedRow.lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
+
             }
             if (columnId === "stock_ng_ul") {
               const stock = parseFloat(value) || 0;
               updatedRow.stock_ng_ul = stock;
               // console.log('Parsed stock_ng_ul:', stock);
-              updatedRow.lib_vol_for_hyb = stock > 0 ? (200 / stock).toFixed(2) : "";
               // console.log('lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
             }
 
@@ -564,9 +595,15 @@ const LibraryPrepration = () => {
             return updatedRow;
 
           })
+
+          console.log('Saving to localStorage:', { testName, updatedRows });
+          // Save to localStorage
           const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-          storedData[testName] = updatedRows; // Update only the current testName's data
-          localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+          const currentTestName = testNameRef.current;
+          if (currentTestName) {
+            storedData[currentTestName] = updatedRows;
+            localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+          }
           return updatedRows;
         });
       },
@@ -640,14 +677,52 @@ const LibraryPrepration = () => {
     }
   }, []);
 
-  const handleTestNameSelection = (selectedTestName) => {
-    setTestName(selectedTestName); // Update the testName state
-    setSelectedSampleIndicator(selectedTestName); // Update the selectedSampleIndicator state
-    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData'));
-    if (storedData && storedData[selectedTestName]) {
-      setTableRows(storedData[selectedTestName]); // Update tableRows with the selected test's data
-    } else {
-      setTableRows([]); // Clear tableRows if no data is found for the selected test
+  const handleTestNameSelection = async (selectedTestName) => {
+    setTestName(selectedTestName);
+    setSelectedSampleIndicator(selectedTestName);
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+  
+    // Always show local data if it exists
+    if (storedData && storedData[selectedTestName] && storedData[selectedTestName].length > 0) {
+      setTableRows(storedData[selectedTestName]);
+      return; // Do not fetch or overwrite with API data
+    }
+  
+    // If no local data, fetch from API
+    try {
+      const allSampleIds = Object.values(storedData)
+        .flatMap(arr => arr.map(row => row.sample_id))
+        .filter(Boolean);
+      const response = await axios.get(`/api/pool-data`, {
+        params: {
+          hospital_name: user.hospital_name,
+          application: selectedTestName,
+          sample_id: allSampleIds.join(','),
+        },
+      });
+      if (response.data[0].status === 200) {
+        const poolData = response.data[0].data;
+        if (poolData && poolData.length > 0) {
+          const newData = poolData.reduce((acc, row) => {
+            const testName = row.test_name;
+            if (!acc[testName]) acc[testName] = [];
+            acc[testName].push(row);
+            return acc;
+          }, {});
+          setTableRows(newData[selectedTestName] || []);
+          // Only update localStorage if there was no local data
+          if (!storedData[selectedTestName] || storedData[selectedTestName].length === 0) {
+            const mergedData = { ...storedData, ...newData };
+            localStorage.setItem('libraryPreparationData', JSON.stringify(mergedData));
+          }
+        } else {
+          setTableRows([]);
+          setMessage(1);
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleTestNameSelection:", error);
+      toast.error("An error occurred while selecting the test name.");
     }
   };
 
@@ -688,9 +763,9 @@ const LibraryPrepration = () => {
       if (allSuccess) {
         toast.success("All data saved successfully!");
         // localStorage.removeItem('libraryPreparationData');
-        message(1); // Set message to indicate no data available
-        setTableRows([]);
-        setGetTheTestNames([]);
+        // setMessage(1); // Set message to indicate no data available
+        // setTableRows([]);
+        // setGetTheTestNames([]);
       } else {
         toast.error("Some data could not be saved. Please check and try again.");
       }
@@ -804,16 +879,18 @@ const LibraryPrepration = () => {
 
 
       {/* Column Selector Dropdown */}
-      <DialogBox isOpen={DialogOpen} onClose={() => setDialogOpen(false)} />
-      <ToastContainer />
+      <DialogBox isOpen={DialogOpen} onClose={() => setDialogOpen(false)} selectedTestName={testName} />      <ToastContainer />
     </div>
   )
 }
 
 export default LibraryPrepration
 
-const DialogBox = ({ isOpen, onClose }) => {
+const DialogBox = ({ isOpen, onClose, selectedTestName }) => {
   const dispatch = useDispatch();
+  // Get the selected test name from localStorage or via props/context if needed
+  // const selectedTestName = localStorage.getItem('selectedTestName'); // Or pass as prop
+
   return (
     <Dialog
       open={isOpen}
@@ -827,7 +904,7 @@ const DialogBox = ({ isOpen, onClose }) => {
         </DialogHeader>
         <DialogDescription>
           <span className="text-normal text-black dark:text-white">
-            Do you want to remove the data from Library Preparation? This action cannot be undone.
+            Do you want to remove the data of <span className="font-bold text-lg">{selectedTestName}</span> from Library Preparation? This action cannot be undone.
           </span>
         </DialogDescription>
         <DialogFooter>
@@ -841,8 +918,13 @@ const DialogBox = ({ isOpen, onClose }) => {
           <Button
             variant="destructive"
             onClick={() => {
+              // Remove only the selected test name from localStorage
+              const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+              if (storedData && selectedTestName && storedData[selectedTestName]) {
+                delete storedData[selectedTestName];
+                localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+              }
               dispatch(setActiveTab("processing"));
-              localStorage.removeItem('libraryPreparationData');
               onClose();
             }}
             className="ml-2 bg-red-600 hover:bg-red-700 text-white"
