@@ -78,7 +78,7 @@
 
 import { NextResponse } from 'next/server';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import  s3  from '../../../../S3clientConfig';
+import  {s3}  from '../../../../S3clientConfig';
 
 export async function POST(request){
     const body = await request.formData();
