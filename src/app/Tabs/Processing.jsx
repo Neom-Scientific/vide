@@ -407,6 +407,12 @@ const Processing = () => {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
+    console.log('checkedRows:', checkedRows); // Debugging checked rows
+
+    if(checkedRows.run_id !== null && checkedRows.run_id !== undefined) {
+      toast.error("Run Id is already provided to the selected samples.");
+      return
+    }
 
     //I want to send only those rows whose total_vol_for_2nm is empty or null
     // const filteredRows = checkedRows.filter(row => !row.total_vol_for_2nm || row.total_vol_for_2nm === "");

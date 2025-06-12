@@ -24,13 +24,11 @@ const Header = ({ activeTab, setActiveTab }) => {
         if (cookieUser) {
           setUser(JSON.parse(cookieUser));
         }
+        else{
+          router.push('/login'); // Redirect to login if no user cookie found
+        }
   },[]);
-  // const user = JSON.parse(Cookies.get('user') || '{}');
-  useEffect(() => {
-    if (user && Object.keys(user).length === 0) { // Check if user object is empty
-      router.push('/login'); // Redirect to login if user is not logged in
-    }
-  }, [user]);
+
 
   const [darkMode, setDarkMode] = useState(
     typeof window !== "undefined"

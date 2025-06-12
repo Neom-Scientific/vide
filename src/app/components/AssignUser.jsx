@@ -84,7 +84,7 @@ const AssignUser = () => {
           <TableHeader>
             <TableRow>
 
-              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</TableHead>
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">S. No.</TableHead>
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</TableHead>
 
@@ -110,11 +110,11 @@ const AssignUser = () => {
             {users && users.filter(user => user.role !== 'SuperAdmin').length > 0 ? (
               users
                 .filter(user => user.role !== 'SuperAdmin') // Exclude users with the role 'SuperAdmin'
-                .map((user) => (
+                .map((user,index) => (
                   <TableRow key={user.id} className="hover:bg-gray-100">
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.id}
+                      {index + 1}
                     </TableCell>
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

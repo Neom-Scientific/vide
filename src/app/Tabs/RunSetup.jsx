@@ -92,7 +92,7 @@ const RunSetup = () => {
     const fetchTestNames = async () => {
       try {
         if (!user.hospital_name) {
-          console.error("Organization Name is missing");
+          toast.error("Organization Name is missing");
           return;
         }
 
