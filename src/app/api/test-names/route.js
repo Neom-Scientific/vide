@@ -20,10 +20,7 @@ export async function GET(request) {
              ORDER BY test_name;`,
             [hospital_name]
         );
-        // const {rows} = await pool.query(
-        //     `SELECT DISTINCT test_name FROM pool_info WHERE hospital_name = $1 ORDER BY test_name;`,
-        //     [hospital_name]
-        // );
+        
         if (rows.length === 0) {
             response.push({
                 status: 404,

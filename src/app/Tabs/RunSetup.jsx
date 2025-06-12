@@ -97,7 +97,9 @@ const RunSetup = () => {
         }
 
         const response = await axios.get(`/api/test-names?hospital_name=${user.hospital_name}`);
+        console.log('response', response.data);
         if (response.data[0].status === 200) {
+          console.log('response.data[0].data.test_name', response.data[0].data);
           setTestNames(response.data[0].data);
         } else if (response.data[0].status === 404) {
           setTestNames([]);
@@ -112,46 +114,53 @@ const RunSetup = () => {
   }, []);
 
 
-  const handleTestNameChange = async (selectedTestName) => {
-    try {
-      if (!user.hospital_name || !selectedTestName) {
-        console.log("Organization Name or test name is missing");
-        return;
-      }
-
-      // Prevent duplicates in the selectedTestName list
-      if (selectedTestNames.includes(selectedTestName)) {
-        console.log("Test name already selected");
-        return;
-      }
-
-      // Remove the selected test name from the dropdown
-      setTestNames((prev) => prev.filter((test) => test.test_name !== selectedTestName));
-
-      // Add the selected test name to the selected list
-      const updatedSelectedTestNames = [...selectedTestNames, selectedTestName];
-      setSelectedTestNames(updatedSelectedTestNames);
-
-      // Update the selected_application field in the form state
-      form.setValue("selected_application", updatedSelectedTestNames.join(", "));
-
-      // Fetch pool data for the selected test name
-      const response = await axios.get(`/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}`);
-      if (response.data[0].status === 200) {
-        const poolDataForTest = response.data[0].data;
-
-        // Update poolData state
-        setPoolData((prev) => [...prev, ...poolDataForTest]);
-      } else if (response.data[0].status === 404) {
-        console.log("No pool data found for the provided Organization Name and test name");
-      }
-
-      // Reset the application field in the form
-      form.setValue("application", ""); // Reset the select value
-    } catch (error) {
-      console.log("Error fetching pool data:", error);
+ const handleTestNameChange = async (selectedTestName) => {
+  try {
+    if (!user.hospital_name || !selectedTestName) {
+      console.log("Organization Name or test name is missing");
+      return;
     }
-  };
+
+    // Prevent duplicates in the selectedTestName list
+    if (selectedTestNames.includes(selectedTestName)) {
+      console.log("Test name already selected");
+      return;
+    }
+
+    // Remove the selected test name from the dropdown
+    setTestNames((prev) => prev.filter((test) => test.test_name !== selectedTestName));
+
+    // Add the selected test name to the selected list
+    const updatedSelectedTestNames = [...selectedTestNames, selectedTestName];
+    setSelectedTestNames(updatedSelectedTestNames);
+
+    // Update the selected_application field in the form state
+    form.setValue("selected_application", updatedSelectedTestNames.join(", "));
+
+    // --- NEW: Get sample_ids for this test_name ---
+    const testObj = testNames.find(t => t.test_name === selectedTestName);
+    const sampleIdsParam = testObj && testObj.sample_ids && testObj.sample_ids.length > 0
+      ? testObj.sample_ids.join(',')
+      : '';
+
+    // Fetch pool data for the selected test name and sample_ids
+    const response = await axios.get(
+      `/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}${sampleIdsParam ? `&sample_id=${sampleIdsParam}` : ''}`
+    );
+    console.log('response', response.data);
+    if (response.data[0].status === 200) {
+      const poolDataForTest = response.data[0].data;
+      setPoolData((prev) => [...prev, ...poolDataForTest]);
+    } else if (response.data[0].status === 404) {
+      console.log("No pool data found for the provided Organization Name and test name");
+    }
+
+    // Reset the application field in the form
+    form.setValue("application", ""); // Reset the select value
+  } catch (error) {
+    console.log("Error fetching pool data:", error);
+  }
+};
 
   const handleSubmit = async (data) => {
     try {

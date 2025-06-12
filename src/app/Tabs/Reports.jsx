@@ -240,7 +240,7 @@ const Reports = () => {
     }
   };
 
-  const isPrivilegedUser = user?.role === "SuperAdmin";
+  const isPrivilegedUser = user?.role === "SuperAdmin" || user?.role === "AdminUser";
 
   const columns = [
     {
@@ -365,6 +365,7 @@ const Reports = () => {
     'report_status',
     'report_link',
     ...(isPrivilegedUser ? ["upload_report"] : []), // Only show actions for privileged users
+    ...(isPrivilegedUser? ["hospital_name"]:[]),
     'hpo_status',
     'annotation',
     'doctor_name',
@@ -394,7 +395,7 @@ const Reports = () => {
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    // getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex, columnId, value) => {
@@ -673,50 +674,56 @@ const Reports = () => {
           {/* Table */}
           <div className="">
             <div
-              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
-              style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
+              className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 w-full"
+              style={{ maxWidth: 'calc(100vw - 50px)' }}
             >
-              <Table className="min-w-full">
-                <TableHeader className="bg-orange-100 dark:bg-gray-800">
-                  {table.getHeaderGroups().map(headerGroup => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map(header => (
-                        <TableHead
-                          key={header.id}
-                          className="cursor-pointer"
-                          onClick={header.column.getToggleSortingHandler()} // Add sorting handler
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                          {/* Show sorting indicator */}
-                          {header.column.getIsSorted() === "asc"}
-                          {header.column.getIsSorted() === "desc"}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map(row => (
-                      <TableRow key={row.id ?? row.index}>
-                        {row.getVisibleCells().map(cell => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
+              <div className="overflow-y-auto" style={{ maxHeight: 500 }}>
+                <Table className="min-w-full">
+                  <TableHeader>
+                    {table.getHeaderGroups().map(headerGroup => (
+                      <TableRow key={headerGroup.id}>
+                        {headerGroup.headers.map(header => (
+                          <TableHead
+                            key={header.id}
+                            className="sticky top-0 z-30 bg-orange-100 dark:bg-gray-800"
+                            style={{
+                              position: 'sticky',
+                              top: 0,
+                              zIndex: 30,
+                              background: 'rgb(255 237 213)', // fallback for orange-100
+                            }}
+                            onClick={header.column.getToggleSortingHandler()}
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                            {/* Sorting indicator here if needed */}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
-                        No data
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                    ))}
+                  </TableHeader>
+                  <TableBody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map(row => (
+                        <TableRow key={row.id ?? row.index}>
+                          {row.getVisibleCells().map(cell => (
+                            <TableCell key={cell.id}>
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
+                          No data
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           </div>
 
