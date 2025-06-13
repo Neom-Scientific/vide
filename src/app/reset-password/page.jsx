@@ -34,9 +34,9 @@ const page = () => {
         if (cookieData) {
             const parsedData = JSON.parse(cookieData);
             setUser(parsedData);
-            if(parsedData.role !== 'SuperAdmin') {
-                router.push('/');
-            }
+            // if(parsedData.role !== 'SuperAdmin') {
+            //     router.push('/');
+            // }
             
             const fetchUser = async () => {
                 try {
@@ -49,6 +49,9 @@ const page = () => {
                         const response = await axios.get(`/api/request-insert?role=${parsedData.role}&username=${parsedData.username}`);
                         if (response.data[0]?.status === 200) {
                             console.log("User data fetched successfully:", response.data[0].data);
+                            // if(response.data[0].data.user_login !== 0) {
+                            //     router.push('/');
+                            // }
                         } 
                         else if (response.data[0]?.status === 404) {
                             console.error(response.data[0]?.message);

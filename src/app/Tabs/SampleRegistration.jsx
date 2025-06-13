@@ -552,11 +552,11 @@ export const SampleRegistration = () => {
                 name='sex'
                 render={({ field }) => (
                   <FormItem className='my-2'>
-                    <FormLabel>Sex</FormLabel>
+                    <FormLabel>Gender</FormLabel>
                     <select
                       className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
                       {...field}>
-                      <option className='dark:text-white' value=''>Select Sex</option>
+                      <option className='dark:text-white' value=''>Select Gender</option>
                       <option className='dark:text-white' value='male'>Male</option>
                       <option className='dark:text-white' value='female'>Female</option>
                       <option className='dark:text-white' value='other'>Other</option>
