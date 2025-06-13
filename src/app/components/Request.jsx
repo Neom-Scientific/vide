@@ -97,7 +97,7 @@ const Request = () => {
                         name="hospital_id"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Hospital ID</FormLabel>
+                                <FormLabel>Organization ID</FormLabel>
                                 <FormControl>
                                     <Input
                                         className="focus-within:ring-orange-500"
