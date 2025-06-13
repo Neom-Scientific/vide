@@ -13,8 +13,11 @@ const formSchema = z.object({
     name: z.string().min(1, "Name is required"),
     hospital_name: z.string().min(1, "Organization Name is required"),
     email: z.string().min(1, "Email is required").email("Invalid email address"),
-    phone_no: z.string().min(1, "Phone number is required").regex(/^\d+$/, "Phone number must contain only digits").min(10, "Phone number must be at least 10 digits"),
-    hospital_id: z.string().min(1, "Hospital ID is required"),
+    phone_no: z.string()
+        .min(1, "Phone number is required")
+        .regex(/^\d+$/, "Phone number must contain only digits")
+        .min(10, "Phone number must be at least 10 digits"),
+    // hospital_id: z.string().min(1, "Hospital ID is required"),
 
 });
 
@@ -27,14 +30,14 @@ const Request = () => {
             email: '',
             phone_no: '',
             otp: '',
-            hospital_id: '',
+            // hospital_id: '',
             username: '',
             password: ''
         }
     });
 
     const handleUsernamePassword = async (data) => {
-       const userName = data.email.split('@')[0];
+        const userName = data.email.split('@')[0];
         const password = Math.random().toString(36).slice(-8); // Generate a random password
         data.username = userName;
         data.password = password;
@@ -92,7 +95,7 @@ const Request = () => {
                             </FormItem>
                         )}
                     />
-                    <FormField
+                    {/* <FormField
                         control={form.control}
                         name="hospital_id"
                         render={({ field }) => (
@@ -106,7 +109,7 @@ const Request = () => {
                                 </FormControl>
                             </FormItem>
                         )}
-                    />
+                    /> */}
                     <FormField
                         control={form.control}
                         name="email"

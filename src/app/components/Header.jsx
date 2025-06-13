@@ -6,7 +6,7 @@ import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
 
 const defaultAvatars = [
-  "https://media.licdn.com/dms/image/v2/D5603AQGxb0ot3mS5XA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1689817962657?e=2147483647&v=beta&t=GkAxlImaAVRUvt9oyqg5CRHlMvIXpEH1SdKB8Dpakeo",
+  // "https://media.licdn.com/dms/image/v2/D5603AQGxb0ot3mS5XA/profile-displayphoto-shrink_200_200/profile-displayphoto-shrink_200_200/0/1689817962657?e=2147483647&v=beta&t=GkAxlImaAVRUvt9oyqg5CRHlMvIXpEH1SdKB8Dpakeo",
   "https://randomuser.me/api/portraits/men/32.jpg",
   "https://randomuser.me/api/portraits/women/44.jpg",
   "https://randomuser.me/api/portraits/men/65.jpg",
@@ -21,13 +21,13 @@ const Header = ({ activeTab, setActiveTab }) => {
 
   useEffect(() => {
     const cookieUser = Cookies.get('user');
-        if (cookieUser) {
-          setUser(JSON.parse(cookieUser));
-        }
-        else{
-          router.push('/login'); // Redirect to login if no user cookie found
-        }
-  },[]);
+    if (cookieUser) {
+      setUser(JSON.parse(cookieUser));
+    }
+    else {
+      router.push('/login'); // Redirect to login if no user cookie found
+    }
+  }, []);
 
 
   const [darkMode, setDarkMode] = useState(
@@ -37,7 +37,7 @@ const Header = ({ activeTab, setActiveTab }) => {
   );
 
   const fileInputRef = useRef(null); // Define the file input reference
-  const [profilePhoto, setProfilePhoto] = useState(defaultAvatars[0]); // Default profile photo
+  const [profilePhoto, setProfilePhoto] = useState(); // Default profile photo
   const [showMenu, setShowMenu] = useState(false); // State for avatar menu
 
   const toggleDarkMode = () => {
@@ -131,17 +131,35 @@ const Header = ({ activeTab, setActiveTab }) => {
               <input
                 type="file"
                 accept="image/*"
-                ref={fileInputRef} // Attach the ref to the input
+                ref={fileInputRef}
                 className="hidden"
-                onChange={handlePhotoChange} // Handle file selection
+                onChange={handlePhotoChange}
               />
-              <img
-                src={profilePhoto}
-                alt="Profile"
-                className="w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-gray-300 dark:border-white"
-                onClick={handleAvatarClick}
-                title="Click to change profile photo"
-              />
+              {profilePhoto ? (
+                <img
+                  src={profilePhoto}
+                  alt="Profile"
+                  className="w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-gray-300 dark:border-white"
+                  onClick={handleAvatarClick}
+                  title="Click to change profile photo"
+                />
+              ) : user && user.username ? (
+                <div
+                  className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white"
+                  onClick={handleAvatarClick}
+                  title="Click to change profile photo"
+                >
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white"
+                  onClick={handleAvatarClick}
+                  title="Click to change profile photo"
+                >
+                  ?
+                </div>
+              )}
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 p-2">
                   <div className="grid grid-cols-3 gap-2">

@@ -28,18 +28,18 @@ export async function POST(request) {
                 email,
                 'Request Form Submission Confirmation',
                 `
-                Thank you for registering with us!
-
-                Your One - Time Password(OTP) for completing the registration is:
-
-                🔐 OTP: ${otp}
-
-                This OTP is valid for the next 10 minutes.Please do not share this code with anyone.
-
-                If you did not request this, please ignore this email or contact our support team immediately.
-
-                Best regards,
-                NEOM Scientific Solutions Team
+                <html>
+                    <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+                        <h2 style="color: #4CAF50;">Thank you for registering with us!</h2>
+                        <p>Your One-Time Password (OTP) for completing the registration is:</p>
+                        <p style="font-size: 1.5em; font-weight: bold; color: #FF5722;">🔐 OTP: ${otp}</p>
+                        <p>This OTP is valid for the next <strong>10 minutes</strong>. Please do not share this code with anyone.</p>
+                        <p>If you did not request this, please ignore this email or contact our support team immediately.</p>
+                        <br>
+                        <p>Best regards,</p>
+                        <p><strong>NEOM Scientific Solutions Team</strong></p>
+                    </body>
+                </html>
             `
             )
             response.push({

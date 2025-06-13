@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 
-export async function sendMail(email, subject, text) {
+export async function sendMail(email, subject, html) {
     
     const transporter = nodemailer.createTransport({
         service: 'gmail',
@@ -16,7 +16,7 @@ export async function sendMail(email, subject, text) {
         from: process.env.ADMIN_EMAIL,
         to: email || process.env.ADMIN_EMAIL, // Default to admin email if no email is provided
         subject: subject,
-        text: text,
+        html: html,
     };
     let info = {};
     try {

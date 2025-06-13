@@ -75,13 +75,14 @@ export const SampleRegistration = () => {
       sex: '',
       patient_mobile: '',
       ethnicity: '',
-      father_husband_name: '',
+      father_mother_name: '',
       address: '',
       city: '',
       state: '',
       country: '',
       client_id: '',
       client_name: '',
+      spouse_name: '',
 
       // sample details
       sample_name: '',
@@ -115,6 +116,7 @@ export const SampleRegistration = () => {
       trf_file: '',
     }
   })
+
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
@@ -145,7 +147,12 @@ export const SampleRegistration = () => {
   const repeatRequired = form.watch('repeat_required');
   const sample_name = form.watch('sample_name');
 
-
+  useEffect(() => {
+    if (repeatRequired === 'no') {
+      form.setValue('repeat_reason', '');
+      form.setValue('repeat_date', '');
+    }
+  }, [repeatRequired]);
 
   const get_state_and_country = async (city) => {
     try {
@@ -309,6 +316,7 @@ export const SampleRegistration = () => {
       selectedTests.length = 0; // Clear selected tests
       setTrfFile(null); // Reset TRF file
       setTrfUrl(''); // Reset TRF URL
+      localStorage.removeItem('sampleRegistrationForm'); // Clear localStorage
     }
     else if (res.data[0].status === 400) {
       toast.error(res.data[0].message);
@@ -325,6 +333,20 @@ export const SampleRegistration = () => {
     }
     const updated = selectedTests.filter(test => test !== testToRemove);
     setSelectedTests(updated);
+    if (testToRemove === 'Cardio Comprehensive (Screening Test)' ||
+      testToRemove === 'Cardio Metabolic Syndrome (Screening Test)' ||
+      testToRemove === 'Cardio Comprehensive Myopathy') {
+      form.setValue('ldl_cholesterol', '');
+      form.setValue('hdl_cholesterol', '');
+      form.setValue('total_cholesterol', '');
+      form.setValue('systolic_bp', '');
+      form.setValue('diastolic_bp', '');
+      form.setValue('diabetes', '');
+      form.setValue('smoker', '');
+      form.setValue('hypertension_treatment', '');
+      form.setValue('statin', '');
+      form.setValue('aspirin_therapy', '');
+    }
     form.setValue('selectedTestName', updated.join(', '));
     setShowRemoveModal(false);
     toast.warning(`${testToRemove} removed`);
@@ -380,13 +402,23 @@ export const SampleRegistration = () => {
     }
   };
 
+  // useEffect(() => {
+  //   // remove the searchData from localstorage
+  //   const searchData = localStorage.getItem('searchData');
+  //   if (searchData) {
+  //     localStorage.removeItem('searchData');
+  //   }
+  // }, []);
+
   useEffect(() => {
-    // remove the searchData from localstorage
-    const searchData = localStorage.getItem('searchData');
-    if (searchData) {
-      localStorage.removeItem('searchData');
-    }
-  }, []);
+    // Don't auto-save if editing from Processing tab
+    if (localStorage.getItem('editRowData')) return;
+
+    const subscription = form.watch((value) => {
+      localStorage.setItem('sampleRegistrationForm', JSON.stringify(value));
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   useEffect(() => {
     setEditButton(!!localStorage.getItem('editRowData'));
@@ -407,8 +439,29 @@ export const SampleRegistration = () => {
       form.setValue('sample_name', parsedData.patient_name || '');
       form.setValue('age', parsedData.age || '');
       form.setValue('trf_file', parsedData.trf || '');
-      form.setValue('father_husband_name', parsedData.father_husband_name || '');
+      form.setValue('father_mother_name', parsedData.father_mother_name || '');
+      form.setValue('spouse_name', parsedData.spouse_name || '');
       setSelectedTests(parsedData.test_name ? parsedData.test_name.split(', ') : []);
+    }
+    else {
+      const savedData = localStorage.getItem('sampleRegistrationForm');
+      if (savedData) {
+        const parsedData = JSON.parse(savedData);
+        Object.keys(parsedData).forEach(key => {
+          const dateFields = ['DOB', 'registration_date', 'sample_date', 'repeat_date'];
+          if (dateFields.includes(key) && parsedData[key] === '') {
+            form.setValue(key, null);
+          } else {
+            form.setValue(key, parsedData[key] || '');
+          }
+        });
+        form.setValue('sample_name', parsedData.patient_name || '');
+        form.setValue('age', parsedData.age || '');
+        form.setValue('trf_file', parsedData.trf || '');
+        form.setValue('father_mother_name', parsedData.father_mother_name || '');
+        form.setValue('spouse_name', parsedData.spouse_name || '');
+        setSelectedTests(parsedData.test_name ? parsedData.test_name.split(', ') : []);
+      }
     }
   }, [])
 
@@ -625,11 +678,19 @@ export const SampleRegistration = () => {
                         </p>
                       )}
                     </div>
-                    <Input
-                      placeholder='Sample Type'
-                      className='my-2 border-2 border-orange-300'
+                    <select
+                      className='dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
                       {...field}
-                    />
+                    >
+                      <option className='dark:text-white' value=''>Select Sample Type</option>
+                      <option className='dark:text-white' value='EDTA Blood'>EDTA Blood</option>
+                      <option className='dark:text-white' value='DNA'>DNA</option>
+                      <option className='dark:text-white' value='RNA'>RNA</option>
+                      <option className='dark:text-white' value='Plasma'>Plasma</option>
+                      <option className='dark:text-white' value='CF DNA'>CF DNA</option>
+                      <option className='dark:text-white' value='Tissue'>Tissue</option>
+                      <option className='dark:text-white' value='Buccal Swap'>Buccal Swap</option>
+                    </select>
                   </FormItem>
                 )}
               />
@@ -648,14 +709,14 @@ export const SampleRegistration = () => {
                         </p>
                       )}
                     </div>
-                    <div className="relative">
-                      <Input
-                        placeholder='Specimen Quality'
-                        className='my-2 border-2 border-orange-300'
+                      <select
+                        className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
                         {...field}
-                      />
-
-                    </div>
+                      >
+                        <option className='dark:text-white' value=''>Select Specimen Quality</option>
+                        <option className='dark:text-white' value='Accepted'>Accepted</option>
+                        <option className='dark:text-white' value='Not Accepted'>Not Accepted</option>
+                      </select>
                   </FormItem>
                 )}
               />
@@ -767,7 +828,9 @@ export const SampleRegistration = () => {
                         <Input
                           placeholder='Repeat Reason'
                           className='my-2 border-2 border-orange-300'
-                          {...field} />
+                          {...field}
+                          value={field.value ?? ''}
+                        />
                       </FormItem>
                     )}
                   />
@@ -780,7 +843,9 @@ export const SampleRegistration = () => {
                         <Input
                           type='date'
                           className='my-2 border-2 border-orange-300'
-                          {...field} />
+                          {...field}
+                          value={field.value ?? ''}
+                        />
                       </FormItem>
                     )}
                   />
@@ -835,14 +900,29 @@ export const SampleRegistration = () => {
                   {/* father husband name */}
                   <FormField
                     control={form.control}
-                    name='father_husband_name'
+                    name='father_mother_name'
                     render={({ field }) => (
                       <FormItem className='my-2'>
-                        <FormLabel>Father/Husband Name</FormLabel>
+                        <FormLabel>Father/Mother Name</FormLabel>
                         <Input
                           {...field}
                           className='my-2 border-2 border-orange-300'
-                          placeholder='Father/Husband Name' />
+                          placeholder='Father/Mother Name' />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* spouse name */}
+                  <FormField
+                    control={form.control}
+                    name='spouse_name'
+                    render={({ field }) => (
+                      <FormItem className='my-2'>
+                        <FormLabel>Spouse Name</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          placeholder='Spouse Name' />
                       </FormItem>
                     )}
                   />
@@ -1123,7 +1203,6 @@ export const SampleRegistration = () => {
                     )}
                   />
                   <div></div>
-                  <div></div>
 
                   <div className='w-1/2'>
                     <FormField
@@ -1273,6 +1352,7 @@ export const SampleRegistration = () => {
                               </FormLabel>
                               <Input
                                 {...field}
+                                value={field.value ?? ''}
                                 placeholder="90-200"
                                 type="number"
                                 className="my-2 border-2 border-orange-300"
@@ -1297,6 +1377,7 @@ export const SampleRegistration = () => {
                               </FormLabel>
                               <Input
                                 {...field}
+                                value={field.value ?? ''}
                                 className="my-2 border-2 border-orange-300"
                                 placeholder="60-130"
                                 type="number"
@@ -1323,6 +1404,7 @@ export const SampleRegistration = () => {
                               </FormLabel>
                               <Input
                                 {...field}
+                                value={field.value ?? ''}
                                 placeholder="130-320"
                                 className="my-2 border-2 border-orange-300"
                                 type="number"
@@ -1347,6 +1429,7 @@ export const SampleRegistration = () => {
                               </FormLabel>
                               <Input
                                 {...field}
+                                value={field.value ?? ''}
                                 className="my-2 border-2 border-orange-300"
                                 placeholder="20-100"
                                 type="number"
@@ -1371,6 +1454,7 @@ export const SampleRegistration = () => {
                               </FormLabel>
                               <Input
                                 {...field}
+                                value={field.value ?? ''}
                                 className="my-2 border-2 border-orange-300"
                                 placeholder="30-300"
                                 type="number"
@@ -1519,6 +1603,10 @@ export const SampleRegistration = () => {
               className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'
               onClick={() => {
                 form.reset();
+                setSelectedTests([]);
+                setTrfUrl('');
+                setHasSelectedFirstTest(false);
+                localStorage.removeItem('sampleRegistrationData');
               }}
             >
               Reset

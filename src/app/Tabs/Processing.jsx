@@ -61,7 +61,8 @@ const Processing = () => {
     { key: 'age', label: 'Age' },
     { key: 'sex', label: 'Sex' },
     { key: 'ethnicity', label: 'Ethnicity' },
-    { key: 'father_husband_name', label: 'Father/Husband Name' },
+    { key: 'father_mother_name', label: 'Father/Husband Name' },
+    { key: 'spouse_name', label: 'Spouse Name' },
     { key: 'address', label: 'Address' },
     { key: 'city', label: 'City' },
     { key: 'state', label: 'State' },
@@ -409,7 +410,7 @@ const Processing = () => {
     }
     console.log('checkedRows:', checkedRows); // Debugging checked rows
 
-    if(checkedRows.run_id !== null && checkedRows.run_id !== undefined) {
+    if (checkedRows.run_id !== null && checkedRows.run_id !== undefined) {
       toast.error("Run Id is already provided to the selected samples.");
       return
     }

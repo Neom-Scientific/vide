@@ -4,9 +4,10 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
     const body = await request.json();
-    const { name, hospital_name, email, username, password, phone_no, hospital_id } = body.data;
+    const { name, hospital_name, email, username, password, phone_no } = body.data;
     try {
         let response = [];
+        let hospital_id = '101';
         const { rows } = await pool.query('SELECT * FROM request_form WHERE email = $1', [email]);
 
         if (rows.length > 0) {
@@ -17,12 +18,17 @@ export async function POST(request) {
             return NextResponse.json(response);
         }
 
-        if (!name || !hospital_name || !email || !phone_no || !username || !hospital_id || !password) {
+        if (!name || !hospital_name || !email || !phone_no || !username || !password) {
             response.push({
                 status: 400,
                 message: 'All fields are required',
             });
             return NextResponse.json(response);
+        }
+
+        if (rows.length > 0) {
+            hospital_id = rows[0].hospital_id; // Use the existing hospital_id if it exists
+            hospital_id = (parseInt(hospital_id) + 1).toString(); // Increment the hospital_id
         }
 
         const result = await pool.query(
@@ -39,29 +45,41 @@ export async function POST(request) {
             await sendMail(
                 process.env.ADMIN_EMAIL, // Send to admin email
                 `Registration Request from ${hospital_name}`,
-                `A new registration request has been submitted, following are the details:
-                Name: ${name}
-                Organization Name: ${hospital_name}
-                Email: ${email}
-                
-                please review the request and take appropriate action.
-                
-                Best regards,
-                NEOM Scientific Solutions Team`,
+                `
+                <html>
+                    <body>
+                        <p>A new registration request has been submitted, following are the details:</p>
+                        <ul>
+                            <li><strong>Name:</strong> ${name}</li>
+                            <li><strong>Organization Name:</strong> ${hospital_name}</li>
+                            <li><strong>Email:</strong> ${email}</li>
+                        </ul>
+                        <p>Please review the request and take appropriate action.</p>
+                        <p>Best regards,</p>
+                        <p>NEOM Scientific Solutions Team</p>
+                    </body>
+                </html>
+                `,
             )
 
+
             await sendMail(
-                email, // Send to user's email
+                email,
                 'Registration Request Submitted',
-                `Dear ${name},
-
-                Your registration request has been submitted successfully. 
-                Your username is: ${username} and password is: ${password}.
-                Please keep this information safe and do not share it with anyone.
-                Please wait for the admin to review your request.
-
-                Thank you,
-                NEOM Scientific Solutions Team`
+                `
+                <html>
+                  <body>
+                    <p>Dear ${name},</p>
+                    <p>Your registration request has been submitted successfully.</p>
+                    <p><strong>Username:</strong> ${username}</p>
+                    <p><strong>Password:</strong> ${password}</p>
+                    <p>Please keep this information safe and do not share it with anyone.</p>
+                    <p>Please wait for the admin to review your request.</p>
+                    <p>Thank you,</p>
+                    <p>NEOM Scientific Solutions Team</p>
+                  </body>
+                </html>
+                `
             );
 
         } else {
@@ -86,7 +104,7 @@ export async function GET(request) {
     console.log('first', role, username);
     try {
         let response = [];
-        if ( role === 'SuperAdmin'){
+        if (role === 'SuperAdmin') {
             const data = await pool.query('SELECT * FROM request_form');
             if (data.rows.length === 0) {
                 response.push({

@@ -96,7 +96,8 @@ const Reports = () => {
     { key: 'age', label: 'Age' },
     { key: 'sex', label: 'Sex' },
     { key: 'ethnicity', label: 'Ethnicity' },
-    { key: 'father_husband_name', label: 'Father/Husband Name' },
+    { key: 'father_mother_name', label: 'Father/Husband Name' },
+    { key: 'spouse_name', label: 'Spouse Name' },
     { key: 'address', label: 'Address' },
     { key: 'city', label: 'City' },
     { key: 'state', label: 'State' },
@@ -365,7 +366,7 @@ const Reports = () => {
     'report_status',
     'report_link',
     ...(isPrivilegedUser ? ["upload_report"] : []), // Only show actions for privileged users
-    ...(isPrivilegedUser? ["hospital_name"]:[]),
+    ...(isPrivilegedUser ? ["hospital_name"] : []),
     'hpo_status',
     'annotation',
     'doctor_name',
