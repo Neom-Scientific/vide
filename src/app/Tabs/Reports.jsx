@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { set, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ChevronDown } from "lucide-react";
 import Cookies from 'js-cookie';
@@ -42,6 +42,7 @@ const Reports = () => {
   const [rowSelection, setRowSelection] = useState({});
   let rows = [];
   const [tableRows, setTableRows] = useState(rows);
+  const [processing, setProcessing] = useState(false);
   const [user, setUser] = useState(null);
   useEffect(() => {
     const CookieUser = Cookies.get('user');
@@ -440,18 +441,24 @@ const Reports = () => {
               report_realising_date: row.report_realising_date || '', // Ensure report_realising_date is set
             };
           });
-
+          setProcessing(false);
           setTableRows(updatedRows);
         } else {
           setTableRows([]);
           console.warn("No data found for the given filters.");
+          setProcessing(false);
+          toast.info("No data found for the given filters.");
         }
       } else {
         toast.error(response.data[0].message || "Failed to retrieve data");
+        setTableRows([]);
+        setProcessing(false);
       }
     }
     catch (error) {
-      console.error("Error in handleSubmit:", error);
+      console.log("Error in handleSubmit:", error);
+      setProcessing(false);
+      setTableRows([]);
     }
   }
 

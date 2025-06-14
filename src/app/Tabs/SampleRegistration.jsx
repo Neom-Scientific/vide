@@ -2,7 +2,7 @@
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import React, { use, useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { set, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
@@ -51,6 +51,7 @@ export const SampleRegistration = () => {
   const [testToRemove, setTestToRemove] = useState(null); // <-- Add this line
   const [user, setUser] = useState(null);
   const [editButton, setEditButton] = useState([]);
+  const [processing , setProcessing] = useState(false);
 
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
@@ -116,6 +117,8 @@ export const SampleRegistration = () => {
       trf_file: '',
     }
   })
+
+
 
   useEffect(() => {
     const cookieUser = Cookies.get('user');
@@ -313,6 +316,7 @@ export const SampleRegistration = () => {
     if (res.data[0].status === 200) {
       toast.success('Sample registered successfully');
       form.reset();
+      setProcessing(false);
       selectedTests.length = 0; // Clear selected tests
       setTrfFile(null); // Reset TRF file
       setTrfUrl(''); // Reset TRF URL
@@ -320,9 +324,11 @@ export const SampleRegistration = () => {
     }
     else if (res.data[0].status === 400) {
       toast.error(res.data[0].message);
+      setProcessing(false);
     }
     else {
       toast.error('Sample registration failed');
+      setProcessing(false);
     }
   }
 
@@ -358,6 +364,7 @@ export const SampleRegistration = () => {
   };
 
   const handleUpdate = async () => {
+    setProcessing(true);
     const allData = form.getValues();
     const sampleId = allData.sample_id;
 
@@ -391,6 +398,7 @@ export const SampleRegistration = () => {
       if (res.status === 200) {
         toast.success('Sample updated successfully');
         form.reset();
+        setProcessing(false);
         localStorage.removeItem('editRowData'); // Clear edit data from localStorage
         selectedTests.length = 0; // Clear selected tests
       } else {
@@ -766,7 +774,7 @@ export const SampleRegistration = () => {
                   <FormItem className='my-2'>
                     <FormLabel>Vial Received</FormLabel>
                     <Input
-                      placeholder='Vial Received'
+                      placeholder='Number of Vial Received'
                       className='border-2 border-orange-300 my-2'
                       {...field} />
                   </FormItem>
@@ -1581,6 +1589,8 @@ export const SampleRegistration = () => {
 
             <Button
               type='submit'
+              onClick={()=>setProcessing(true)}
+              disabled={processing}
               className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4'
             >
               Submit
@@ -1590,6 +1600,7 @@ export const SampleRegistration = () => {
               user && user.role !== 'NormalUser' && editButton && (
                 <Button
                   type='button'
+                  disabled={processing}
                   className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 ml-2'
                   onClick={handleUpdate}
                 >

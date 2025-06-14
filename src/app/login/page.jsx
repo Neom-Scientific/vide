@@ -8,22 +8,21 @@ import Login from '../components/Login'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@radix-ui/react-tabs'
 import AssignUser from '../components/AssignUser'
 import Cookies from 'js-cookie'
-import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
+import { set } from 'react-hook-form'
 
 const page = () => {
   const [user, setUser] = useState(null);
   const [isUserLoaded, setIsUserLoaded] = useState(false); // Track if user is loaded
   const router = useRouter();
-
-
+  const [activeTab, setActiveTab] = useState(user && user.role === 'SuperAdmin' ? 'Assign-User' : 'login');
 
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);
-      if(parsedUser.role !== 'SuperAdmin') {
+      if (parsedUser.role !== 'SuperAdmin') {
         router.push('/');
       }
     }
@@ -57,18 +56,28 @@ const page = () => {
         {/* Render Tabs only after user is loaded */}
         {isUserLoaded && (
           <Tabs
-            defaultValue={user && user.role === 'SuperAdmin' ? 'Assign-User' : 'login'}
+            value={activeTab}
+            onValueChange={setActiveTab}
             className="w-full max-w-sm"
           >
             <TabsList className="flex justify-center mb-4 border-none rounded-lg ">
-              <TabsTrigger value="login" className="p-2 bg-orange-500 cursor-pointer text-white font-bold border rounded-lg">
+              <TabsTrigger
+                value="login"
+                className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
+              >
                 Login
               </TabsTrigger>
-              <TabsTrigger value="request" className="p-2 bg-orange-500 text-white cursor-pointer font-bold border border-white rounded-lg">
+              <TabsTrigger
+                value="request"
+                className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
+              >
                 Request
               </TabsTrigger>
               {user && user.role === 'SuperAdmin' && (
-                <TabsTrigger value="Assign-User" className="p-2 bg-orange-500 text-white cursor-pointer font-bold border border-white rounded-lg">
+                <TabsTrigger
+                  value="Assign-User"
+                  className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
+                >
                   Assign User
                 </TabsTrigger>
               )}
@@ -86,6 +95,33 @@ const page = () => {
             )}
           </Tabs>
         )}
+
+        {activeTab && activeTab === 'login' && (
+          <p className='mt-2 text-sm'>
+            Don't have Username and password?{' '}
+            <span
+              className="text-blue-500 cursor-pointer underline"
+              onClick={() => {
+                setActiveTab('request');
+              }}
+            >
+              Request for Username and Password.
+            </span>
+          </p>
+        )}
+
+        {activeTab && activeTab === 'request' && (
+          <p className='mt-2 text-sm'>
+            Already have an account?{' '}
+            <span
+              className="text-blue-500 cursor-pointer underline"
+              onClick={() => setActiveTab('login')}
+            >
+              Login to your account.
+            </span>
+          </p>
+        )}
+
       </div>
     </div>
   );

@@ -556,7 +556,7 @@ const RunSetup = () => {
                     required
                     value={field.value ?? 0}
                     onBlur={() => validateTotalGbAvailable()} // Trigger validation on blur
-                    type="number"
+                    type="float"
                     placeholder="Enter total GB available"
                     className="mb-2 border-2 border-orange-300"
                   />
@@ -716,11 +716,11 @@ const RunSetup = () => {
                   name='final_pool_conc_vol_2nm_next_seq_550'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="mb-2">Volulme for Final Pool conc 2nM</FormLabel>
+                      <FormLabel className="mb-2">Volume for Final Pool conc 2nM</FormLabel>
                       <Input
                         {...field}
                         type="number"
-                        placeholder="Enter Volulme for Final Pool conc 2nM"
+                        placeholder="Enter Volume for Final Pool conc 2nM"
                         className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>
@@ -737,7 +737,7 @@ const RunSetup = () => {
                       <Input
                         {...field}
                         type="number"
-                        placeholder="Enter RS Between (2nM)"
+                        placeholder="Enter NFW (2nM)"
                         className="mb-2 border-2 border-orange-300"
                       />
                     </FormItem>

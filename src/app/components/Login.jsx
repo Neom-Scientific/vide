@@ -3,7 +3,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel } from '@/components/
 import { Input } from '@/components/ui/input'
 import { zodResolver } from '@hookform/resolvers/zod'
 import React, { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { set, useForm } from 'react-hook-form'
 import { toast, ToastContainer } from 'react-toastify'
 import { z } from "zod"
 import { FaEye, FaEyeSlash } from "react-icons/fa"
@@ -19,6 +19,7 @@ const formSchema = z.object({
 const Login = () => {
     const router = useRouter();
     const [passwordVisible, setPasswordVisible] = useState(false);
+    const [processing, setProcessing] = useState(false);
 
     const form = useForm({
         resolver: zodResolver(formSchema),
@@ -35,8 +36,9 @@ const Login = () => {
             if (response.data[0].status === 200) {
                 toast.success(response.data[0].message);
                 console.log(response.data[0].data);
-                Cookies.set('user', JSON.stringify(response.data[0].data), { expires: 7 }); 
-                if(response.data[0].data.user_login === 0) {
+                setProcessing(false);
+                Cookies.set('user', JSON.stringify(response.data[0].data), { expires: 7 });
+                if (response.data[0].data.user_login === 0) {
                     router.push('/reset-password');
                 }
                 else {
@@ -45,13 +47,16 @@ const Login = () => {
             }
             else if (response.data[0].status === 401) {
                 toast.error(response.data[0].message);
+                setProcessing(false);
             }
             else {
                 toast.error('Login failed, please try again');
+                setProcessing(false);
             }
         }
         catch (error) {
             console.error('Error during login:', error);
+            setProcessing(false);
         }
     }
 
@@ -112,7 +117,14 @@ const Login = () => {
                         )}
                     />
 
-                    <Button type="submit" className="w-full mt-4 cursor-pointer bg-orange-500 hover:bg-orange-600">Submit</Button>
+                    <Button
+                        type="submit"
+                        onClick={() => setProcessing(true)}
+                        disabled={processing}
+                        className="w-full mt-4 cursor-pointer bg-orange-500 hover:bg-orange-600"
+                    >
+                        Submit
+                    </Button>
                 </form>
             </Form>
             <ToastContainer />

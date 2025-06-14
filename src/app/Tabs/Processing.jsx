@@ -34,10 +34,12 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
+import { set } from "react-hook-form";
 
 
 const Processing = () => {
   const user = JSON.parse(Cookies.get("user") || "{}");
+  const [processing,setProcessing] = useState(false);
 
   const allColumns = [
     { key: 'hospital_name', label: 'Organization Name' },
@@ -354,6 +356,7 @@ const Processing = () => {
   }, []);
 
   const handlesubmit = async () => {
+    setProcessing(true);
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
@@ -383,16 +386,18 @@ const Processing = () => {
           under_seq: row.under_seq === "Yes" ? "Yes" : "No",
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
-        // console.log('mappedData:', mappedData); // Debugging mapped data
+        setProcessing(false);
         setTableRows(mappedData); // Update the tableRows state with the mapped data
         localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the given filters.");
+        setProcessing(false);
         setTableRows([]);
       }
     } catch (error) {
       if (error.response) {
         setTableRows([]);
+        setProcessing(false);
         toast.error(error.response.data.message || "An error occurred while fetching the data.");
       }
       console.error("Error fetching data:", error);
@@ -414,14 +419,6 @@ const Processing = () => {
       toast.error("Run Id is already provided to the selected samples.");
       return
     }
-
-    //I want to send only those rows whose total_vol_for_2nm is empty or null
-    // const filteredRows = checkedRows.filter(row => !row.total_vol_for_2nm || row.total_vol_for_2nm === "");
-    // if (filteredRows.length === 0) {
-    //   toast.warning("No rows selected for Library Preparation with empty total_vol_for_2nm.");
-    //   return;
-    // }
-    // console.log('filteredRows:', filteredRows); // Debugging filtered rows
 
     // Group new rows by test_name
     const newGroupedData = checkedRows.reduce((acc, row) => {

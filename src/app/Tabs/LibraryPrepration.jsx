@@ -10,16 +10,8 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown, CookingPot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -28,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
@@ -36,7 +27,7 @@ import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { set } from "react-hook-form";
+import { Checkbox } from "@/components/ui/checkbox";
 
 
 const LibraryPrepration = () => {
@@ -46,7 +37,13 @@ const LibraryPrepration = () => {
   const [sorting, setSorting] = useState([]);
   const [rowSelection, setRowSelection] = useState({});
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
+  const [showPooledFields, setShowPooledFields] = useState(false);
+  const [pooledValues, setPooledValues] = useState({});
+  const [showPooledRowIndex, setShowPooledRowIndex] = useState(null);
   const [getTheTestNames, setGetTheTestNames] = useState([]);
+  const [processing, setProcessing] = useState(false);
+  const [pooledRowData, setPooledRowData] = useState([]); // [{ sampleIndexes: [1, 2, 3], values: {} }]
+  const [currentSelection, setCurrentSelection] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
   const user = JSON.parse(Cookies.get('user') || '{}');
   const testNameRef = useRef(testName);
@@ -133,11 +130,34 @@ const LibraryPrepration = () => {
     { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'data_required', label: 'Data Required(GB)' },
+    // { key: 'select', label: 'Select' },
   ];
+
+
+  const pooledColumns = [
+    "pool_conc",
+    "size",
+    "nm_conc",
+    "one_tenth_of_nm_conc",
+    "total_vol_for_2nm",
+    "lib_vol_for_2nm",
+    "nfw_volu_for_2nm",
+  ];
+
+  const insertPooledColumns = (columns) => {
+    const result = [];
+    for (let col of columns) {
+      if (col === "data_required") {
+        result.push(...pooledColumns); // insert pooled columns before data_required
+      }
+      result.push(col);
+    }
+    return result;
+  };
 
   const getDefaultVisible = (testName) => {
     if (testName === "Myeloid") {
-      return [
+      return insertPooledColumns([
         "sno",
         "sample_id",
         "registration_date",
@@ -157,7 +177,7 @@ const LibraryPrepration = () => {
         "lib_vol_for_2nm",
         "nfw_volu_for_2nm",
         "data_required",
-      ];
+      ]);
     } else if (
       testName === "WES" ||
       testName === "CS" ||
@@ -166,7 +186,8 @@ const LibraryPrepration = () => {
       testName === "Cardio Metabolic Syndrome (Screening Test)" ||
       testName === "Cardio Comprehensive Myopathy"
     ) {
-      return [
+      return insertPooledColumns([
+        "select",
         "sno",
         "sample_id",
         "registration_date",
@@ -182,19 +203,12 @@ const LibraryPrepration = () => {
         "i5_index_reverse",
         "i7_index",
         "qubit_lib_qc_ng_ul",
-        "stock_ng_ul",
         "lib_vol_for_hyb",
-        "pool_conc",
-        "size",
-        "nm_conc",
-        "one_tenth_of_nm_conc",
-        "total_vol_for_2nm",
-        "lib_vol_for_2nm",
-        "nfw_volu_for_2nm",
         "data_required",
-      ];
+      ]);
     } else if (testName === "SGS" || testName === "HLA") {
-      return [
+      return insertPooledColumns([
+        "select",
         "sno",
         "sample_id",
         "registration_date",
@@ -206,24 +220,24 @@ const LibraryPrepration = () => {
         "i7_index",
         "qubit_lib_qc_ng_ul",
         "pooling_volume",
-        "pool_conc",
-        "size",
-        "nm_conc",
-        "one_tenth_of_nm_conc",
-        "total_vol_for_2nm",
-        "lib_vol_for_2nm",
-        "nfw_volu_for_2nm",
         "data_required",
-      ];
+      ]);
     }
     return [];
   };
+
+
   const [columnVisibility, setColumnVisibility] = useState(() => {
     const defaultVisible = getDefaultVisible(testName);
-    return allColumns.reduce((acc, col) => {
-      acc[col.key] = defaultVisible.includes(col.key); // Default visibility for columns in defaultVisible
+    const visibility = allColumns.reduce((acc, col) => {
+      acc[col.key] = defaultVisible.includes(col.key);
       return acc;
     }, {});
+    // Ensure select column visibility is set if needed
+    if (defaultVisible.includes("select")) {
+      visibility["select"] = true;
+    }
+    return visibility;
   });
 
   useEffect(() => {
@@ -243,7 +257,7 @@ const LibraryPrepration = () => {
           .flatMap(arr => arr.map(row => row.sample_id))
           .filter(Boolean); // removes undefined/null if any
         const testName = Object.keys(storedData)[0];
-  
+
         // If local data exists for this testName, use it and do not overwrite
         if (testName && storedData[testName] && storedData[testName].length > 0) {
           setTableRows(storedData[testName]);
@@ -251,7 +265,7 @@ const LibraryPrepration = () => {
           setTestName(testName);
           return; // Do not fetch or overwrite with API data
         }
-  
+
         // Otherwise, fetch from API
         const response = await axios.get(`/api/pool-data`, {
           params: {
@@ -260,10 +274,10 @@ const LibraryPrepration = () => {
             sample_id: allSampleIds.join(','), // Join sample IDs into a comma-separated string
           },
         });
-  
+
         if (response.data[0].status === 200) {
           const poolData = response.data[0].data;
-  
+
           if (poolData && poolData.length > 0) {
             // Transform data into testName: [...] format
             const newData = poolData.reduce((acc, row) => {
@@ -274,7 +288,7 @@ const LibraryPrepration = () => {
               acc[testName].push(row);
               return acc;
             }, {});
-  
+
             // Only update localStorage if there was no local data for this testName
             if (!storedData[testName] || storedData[testName].length === 0) {
               const mergedData = { ...storedData, ...newData };
@@ -296,81 +310,107 @@ const LibraryPrepration = () => {
         toast.error("An error occurred while fetching pool info.");
       }
     };
-  
+
     fetchPoolInfo();
   }, []);
 
+
   const columns = useMemo(() => {
-    // Dynamically derive defaultVisible based on testName
     const defaultVisible = getDefaultVisible(testName);
 
-    const reorderedColumns = defaultVisible.map((key) => {
-      const column = allColumns.find((col) => col.key === key);
-      if (column) {
-        return {
-          accessorKey: column.key,
-          header: column.label,
-          cell: (info) => {
-            if (column.key === "registration_date") {
-              // Format the registration_date
-              const value = info.getValue();
-              if (!value) return ""; // Handle empty value
-              const date = new Date(value);
-              if (isNaN(date)) return value;
-              // Format: YYYY-MM-DD HH:mm
-              const yyyy = date.getFullYear();
-              const mm = String(date.getMonth() + 1).padStart(2, '0');
-              const dd = String(date.getDate()).padStart(2, '0');
-              const hh = String(date.getHours()).padStart(2, '0');
-              const min = String(date.getMinutes()).padStart(2, '0');
-              return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
-            }
+    const columnsArr = [];
 
-            if (
-              column.key === "sno" ||
-              column.key === "sample_id" ||
-              column.key === "test_name" ||
-              column.key === "patient_name" ||
-              column.key === "sample_type"
-            ) {
-              return <span>{info.getValue()}</span> || "";
-            }
-
-            return (
-              <InputCell
-                value={info.getValue()}
-                rowIndex={info.row.index}
-                columnId={column.key}
-                updateData={table.options.meta.updateData}
-              />
-            );
-          },
-        };
-      }
-      return null;
-    }).filter(Boolean); // Remove null values for unmatched keys
-
-    // Add any remaining columns that are not in defaultVisible
-    const remainingColumns = allColumns
-      .filter((col) => !defaultVisible.includes(col.key))
-      .map((col) => ({
-        accessorKey: col.key,
-        header: col.label,
-        cell: (info) => info.getValue() || "",
-      }));
-
-    return [
-      {
-        accessorKey: "sno",
-        header: "S. No.",
-        cell: ({ row }) => row.index + 1,
+    // Add checkbox column
+    if (defaultVisible.includes("select")) {
+      columnsArr.push({
+        accessorKey: "select",
+        header: "",
+        cell: ({ row }) => (
+          <Checkbox
+            checked={rowSelection[row.id] || false}
+            onCheckedChange={(checked) => {
+              const newSelection = { ...rowSelection, [row.id]: checked };
+              if (!checked) delete newSelection[row.id];
+              setRowSelection(newSelection);
+            }}
+          />
+        ),
         enableSorting: false,
         enableHiding: false,
-      },
-      ...reorderedColumns,
-      ...remainingColumns,
-    ];
-  }, [testName, allColumns]);
+      });
+    }
+
+    // Add S. No. column
+    columnsArr.push({
+      accessorKey: "sno",
+      header: "S. No.",
+      cell: ({ row }) => row.index + 1,
+      enableSorting: false,
+      enableHiding: false,
+    });
+
+    // Map all defaultVisible (excluding already handled keys)
+    defaultVisible.forEach((key) => {
+      if (["select", "sno"].includes(key)) return;
+
+      const column = allColumns.find(col => col.key === key);
+      if (!column) {
+        console.warn(`Column with key "${key}" not found in allColumns.`);
+        return;
+      }
+
+      columnsArr.push({
+        accessorKey: column.key,
+        header: column.label,
+        cell: (info) => {
+          const value = typeof info.getValue === "function"
+            ? info.getValue()
+            : (info.row && info.row.original ? info.row.original[key] : "");
+          if (key === "registration_date") {
+            if (!value) return "";
+            const date = new Date(value);
+            if (isNaN(date)) return value;
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+          }
+
+          if (pooledColumns.includes(key)) {
+            return <span>{value}</span>;
+          }
+
+          if (
+            column.key === "sno" ||
+            column.key === "sample_id" ||
+            column.key === "test_name" ||
+            column.key === "patient_name" ||
+            column.key === "sample_type"
+          ) {
+            return <span>{value}</span> || "";
+          }
+
+          return (
+            <InputCell
+              value={value || ""}
+              rowIndex={info.row}
+              columnId={key}
+              updateData={table.options.meta.updateData}
+            />
+          );
+        },
+      });
+    });
+
+    return columnsArr;
+  }, [testName, rowSelection, allColumns, pooledColumns]);
+
+
+  useEffect(() => {
+    const defaultVisible = getDefaultVisible(testName);
+    const visibility = allColumns.reduce((acc, col) => {
+      acc[col.key] = defaultVisible.includes(col.key);
+      return acc;
+    }, {});
+    setColumnVisibility(visibility); // force update visibility
+  }, [testName]);
 
   useEffect(() => {
     let defaultVisible = [];
@@ -406,6 +446,7 @@ const LibraryPrepration = () => {
     ) {
       defaultVisible = [
         "sno",
+        "select",
         "sample_id",
         "registration_date",
         "test_name",
@@ -421,19 +462,13 @@ const LibraryPrepration = () => {
         "i7_index",
         "qubit_lib_qc_ng_ul",
         "lib_vol_for_hyb",
-        "pool_conc",
-        "size",
-        "nm_conc",
-        "one_tenth_of_nm_conc",
-        "total_vol_for_2nm",
-        "lib_vol_for_2nm",
-        "nfw_volu_for_2nm",
         "data_required",
       ];
     }
     else if (testName === "SGS" || testName === 'HLA') {
       defaultVisible = [
         "sno",
+        "select",
         "sample_id",
         "registration_date",
         "test_name",
@@ -444,13 +479,6 @@ const LibraryPrepration = () => {
         "sample_volume",
         "qubit_lib_qc_ng_ul",
         "pooling_volume",
-        "pool_conc",
-        "size",
-        "nm_conc",
-        "one_tenth_of_nm_conc",
-        "total_vol_for_2nm",
-        "lib_vol_for_2nm",
-        "nfw_volu_for_2nm",
         "data_required",
       ];
     }
@@ -460,12 +488,12 @@ const LibraryPrepration = () => {
       return acc;
     }, {});
 
-    // Ensure all columns are included in the visibility state
-    columns.forEach((col) => {
-      if (!visibleColumns.hasOwnProperty(col.accessorKey)) {
-        visibleColumns[col.accessorKey] = false;
-      }
-    });
+    // // Ensure all columns are included in the visibility state
+    // columns.forEach((col) => {
+    //   if (!visibleColumns.hasOwnProperty(col.accessorKey)) {
+    //     visibleColumns[col.accessorKey] = false;
+    //   }
+    // });
 
     // Only update state if it has changed
     setColumnVisibility(prev => {
@@ -536,22 +564,18 @@ const LibraryPrepration = () => {
               return updatedRow;
             }
 
-            if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
-              updatedRow.nm_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+
+            if (columnId === 'pool_conc' || columnId === 'size') {
+              const poolConc = parseFloat(updatedRow.pool_conc) || 0;
+              updatedRow.nm_conc = size > 0 ? ((poolConc / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
             }
 
             if (qubit_lib_qc_ng_ul) {
               updatedRow.lib_vol_for_hyb = parseFloat(200 / qubit_lib_qc_ng_ul).toFixed(2)
             }
-            // if (qubit_dna || per_rxn_gdna) {
-            //   updatedRow.gdna_volume_3x = parseFloat(Math.floor(per_rxn_gdna / qubit_dna));
-            //   console.log('updatedRow.gdna_volume_3x:', updatedRow.gdna_volume_3x);
-            // }
 
             if (columnId === "size") {
-              // console.log('nm_conc:', updatedRow.nm_conc);
               updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
-              // console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
             }
             if (qubit_dna || per_rxn_gdna) {
               updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.ceil((per_rxn_gdna / qubit_dna) * 3) : "";
@@ -565,7 +589,6 @@ const LibraryPrepration = () => {
             if (columnId === "qubit_lib_qc_ng_ul") {
               updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
               updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
-              console.log('updatedRow.lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
 
             }
             if (columnId === "stock_ng_ul") {
@@ -579,10 +602,10 @@ const LibraryPrepration = () => {
               updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
             }
 
-            if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
-              updatedRow.nm_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
-            }
-            if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
+            // if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
+            //   updatedRow.nm_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+            // }
+            if (columnId === 'pool_conc' || columnId === 'size') {
               updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
               // console.log('nm_conc:', updatedRow.nm_conc);
               // console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
@@ -596,7 +619,6 @@ const LibraryPrepration = () => {
 
           })
 
-          console.log('Saving to localStorage:', { testName, updatedRows });
           // Save to localStorage
           const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
           const currentTestName = testNameRef.current;
@@ -611,6 +633,7 @@ const LibraryPrepration = () => {
   });
 
   const handleSubmit = async () => {
+    setProcessing(true);
     try {
       const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
 
@@ -627,7 +650,7 @@ const LibraryPrepration = () => {
 
       if (response.data[0].status === 200) {
         toast.success("Sample indicator updated successfully!");
-
+        setProcessing(false);
         // Remove only the selected testName's data
         const updatedData = { ...storedData };
         // delete updatedData[testName];
@@ -637,14 +660,27 @@ const LibraryPrepration = () => {
         // setMessage(1); // Set message to indicate no data available
       } else if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
+        setProcessing(false);
       }
     } catch (error) {
-      console.error("Error updating values:", error);
+      console.log("Error updating values:", error);
+      setProcessing(false);
       toast.error("An error occurred while updating the values.");
     }
   };
 
-
+  const handleDone = () => {
+    if (currentSelection.length > 0) {
+      setPooledRowData(prev => [
+        ...prev,
+        { sampleIndexes: [...currentSelection], values: pooledValues }
+      ]);
+      setPooledValues({});
+      setCurrentSelection([]);
+      setShowPooledFields(false);
+      setRowSelection({});
+    }
+  };
 
   const InputCell = ({ value: initialValue, rowIndex, columnId, updateData }) => {
     const [value, setValue] = useState(initialValue || ""); // Ensure the initial value is not undefined
@@ -681,13 +717,13 @@ const LibraryPrepration = () => {
     setTestName(selectedTestName);
     setSelectedSampleIndicator(selectedTestName);
     const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-  
+
     // Always show local data if it exists
     if (storedData && storedData[selectedTestName] && storedData[selectedTestName].length > 0) {
       setTableRows(storedData[selectedTestName]);
       return; // Do not fetch or overwrite with API data
     }
-  
+
     // If no local data, fetch from API
     try {
       const allSampleIds = Object.values(storedData)
@@ -742,6 +778,7 @@ const LibraryPrepration = () => {
   }, []);
 
   const handleSaveAll = async () => {
+    setProcessing(true);
     try {
       const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
       const hospital_name = user.hospital_name;
@@ -762,18 +799,31 @@ const LibraryPrepration = () => {
 
       if (allSuccess) {
         toast.success("All data saved successfully!");
+        setProcessing(false);
         // localStorage.removeItem('libraryPreparationData');
         // setMessage(1); // Set message to indicate no data available
         // setTableRows([]);
         // setGetTheTestNames([]);
       } else {
+        setProcessing(false);
         toast.error("Some data could not be saved. Please check and try again.");
       }
     } catch (error) {
       console.error("Error saving all data:", error);
       toast.error("An error occurred while saving all data.");
+      setProcessing(false);
     }
   };
+
+  const selectedRows = table.getRowModel().rows.filter(r => rowSelection[r.id]);
+  const lastSelectedIndex = selectedRows.length > 0
+    ? selectedRows[selectedRows.length - 1].index
+    : null;
+  const currentSelectedIndexes = selectedRows.map(r => r.index);
+
+  useEffect(() => {
+    setCurrentSelection(currentSelectedIndexes);
+  }, [rowSelection]);
 
   return (
     <div className="p-4 ">
@@ -787,7 +837,7 @@ const LibraryPrepration = () => {
                     key={index}
                     value={testName}
                     onClick={() => handleTestNameSelection(testName)}
-                    className={`text-sm px-4 py-2 cursor-pointer font-bold rounded-lg ${testName === selectedSampleIndicator ? 'bg-orange-400' : ''
+                    className={`text-sm px-4 py-2 cursor-pointer font-bold rounded-lg data-[state=active]:bg-orange-400 data-[state=active]:text-white
                       }`}
                   >
                     {testName}
@@ -822,25 +872,206 @@ const LibraryPrepration = () => {
                     </TableRow>
                   ))}
                 </TableHeader>
+
+                {/* Inside your TableBody render logic: */}
                 <TableBody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map(row => (
-                      <TableRow key={row.id ?? row.index}>
-                        {row.getVisibleCells().map(cell => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
-                        No data
-                      </TableCell>
-                    </TableRow>
-                  )}
+                  {table.getRowModel().rows.map((row, rowIndex) => {
+                    // Check if this row is part of a previous pool
+                    const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(rowIndex));
+                    const isFirstOfPool = pool && rowIndex === Math.min(...pool.sampleIndexes);
+
+                    // Check if this row is part of the current selection
+                    const isSelected = currentSelection.includes(rowIndex);
+                    const isFirstSelected = isSelected && rowIndex === Math.min(...currentSelection);
+
+                    return (
+                      <React.Fragment key={row.id}>
+                        <TableRow>
+                          {columns.map((col, colIdx) => {
+                            // Show pooled columns for previous pools (editable, merged)
+                            if (pooledColumns.includes(col.accessorKey) && pool) {
+                              if (isFirstOfPool) {
+                                return (
+                                  <TableCell
+                                    key={col.accessorKey}
+                                    rowSpan={pool.sampleIndexes.length}
+                                    style={{ verticalAlign: "middle", background: "#f1f5f9" }}
+                                  >
+                                    <Input
+                                      className="border rounded p-1 text-xs w-[200px] bg-gray-100"
+                                      placeholder={col.header || col.accessorKey}
+                                      value={pool.values[col.accessorKey] || ""}
+                                      onChange={e => {
+                                        const value = e.target.value;
+                                        setPooledRowData(prev =>
+                                          prev.map(p => {
+                                            if (p !== pool) return p;
+                                            const updated = { ...p.values, [col.accessorKey]: value };
+
+                                            // --- Formula logic for pooled columns ---
+                                            if (
+                                              col.accessorKey === "pool_conc" ||
+                                              col.accessorKey === "size"
+                                            ) {
+                                              const poolConc = parseFloat(updated.pool_conc) || 0;
+                                              const size = parseFloat(updated.size) || 0;
+                                              updated.nm_conc =
+                                                size > 0 && poolConc > 0
+                                                  ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
+                                                  : "";
+                                            }
+                                            if (
+                                              col.accessorKey === "pool_conc" ||
+                                              col.accessorKey === "size" ||
+                                              col.accessorKey === "nm_conc"
+                                            ) {
+                                              const nmConc = parseFloat(updated.nm_conc) || 0;
+                                              updated.one_tenth_of_nm_conc =
+                                                nmConc > 0 ? (nmConc / 10).toFixed(2) : "";
+                                            }
+                                            if (
+                                              col.accessorKey === "total_vol_for_2nm" ||
+                                              col.accessorKey === "lib_vol_for_2nm" ||
+                                              col.accessorKey === "one_tenth_of_nm_conc"
+                                            ) {
+                                              const oneTenthOfNmConc =
+                                                parseFloat(updated.one_tenth_of_nm_conc) || 0;
+                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
+                                              updated.total_vol_for_2nm =
+                                                oneTenthOfNmConc > 0 && libVolFor2nm > 0
+                                                  ? (oneTenthOfNmConc * libVolFor2nm / 2).toFixed(2)
+                                                  : "";
+                                            }
+                                            if (
+                                              col.accessorKey === "total_vol_for_2nm" ||
+                                              col.accessorKey === "lib_vol_for_2nm"
+                                            ) {
+                                              const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
+                                              updated.nfw_volu_for_2nm =
+                                                totalVolFor2nm > 0 && updated.lib_vol_for_2nm > 0
+                                                  ? (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2)
+                                                  : "";
+                                            }
+                                            // --- End formula logic ---
+
+                                            return {
+                                              ...p,
+                                              values: updated,
+                                            };
+                                          })
+                                        );
+                                      }}
+                                    />
+                                  </TableCell>
+                                );
+                              }
+                              // For other rows in the pool, skip rendering this cell (covered by rowSpan)
+                              return null;
+                            }
+
+                            // Show pooled columns for current selection (editable, merged)
+                            if (
+                              pooledColumns.includes(col.accessorKey) &&
+                              showPooledFields &&
+                              isFirstSelected
+                            ) {
+                              return (
+                                <TableCell
+                                  key={col.accessorKey}
+                                  rowSpan={currentSelection.length}
+                                  style={{ verticalAlign: "middle", background: "#f8fafc" }}
+                                >
+                                  <Input
+                                    className="border rounded p-1 text-xs w-[200px] bg-gray-100"
+                                    placeholder={col.header || col.accessorKey}
+                                    value={pool.values[col.accessorKey] || ""}
+                                    onChange={e => {
+                                      const value = e.target.value;
+                                      setPooledRowData(prev =>
+                                        prev.map(p => {
+                                          if (p !== pool) return p;
+                                          const updated = { ...p.values, [col.accessorKey]: value };
+
+                                          // --- Formula logic for pooled columns ---
+                                          if (col.accessorKey === "pool_conc" || col.accessorKey === "size") {
+                                            const poolConc = parseFloat(updated.pool_conc) || 0;
+                                            const size = parseFloat(updated.size) || 0;
+                                            updated.nm_conc = (size > 0 && poolConc > 0)
+                                              ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
+                                              : "";
+                                          }
+                                          if (col.accessorKey === "pool_conc" || col.accessorKey === "size" || col.accessorKey === "nm_conc") {
+                                            const nmConc = parseFloat(updated.nm_conc) || 0;
+                                            updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
+                                          }
+                                          if (col.accessorKey === "total_vol_for_2nm" || col.accessorKey === "lib_vol_for_2nm" || col.accessorKey === "one_tenth_of_nm_conc") {
+                                            const oneTenthOfNmConc = parseFloat(updated.one_tenth_of_nm_conc) || 0;
+                                            const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
+                                            updated.total_vol_for_2nm = (oneTenthOfNmConc > 0 && libVolFor2nm > 0)
+                                              ? (oneTenthOfNmConc * libVolFor2nm / 2).toFixed(2)
+                                              : "";
+                                          }
+                                          if (col.accessorKey === "total_vol_for_2nm" || col.accessorKey === "lib_vol_for_2nm") {
+                                            const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
+                                            updated.nfw_volu_for_2nm = (totalVolFor2nm > 0 && updated.lib_vol_for_2nm > 0)
+                                              ? (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2)
+                                              : "";
+                                          }
+                                          // --- End formula logic ---
+
+                                          return {
+                                            ...p,
+                                            values: updated,
+                                          };
+                                        })
+                                      );
+                                    }}
+                                  />
+                                </TableCell>
+                              );
+                            }
+                            // For other selected rows, skip rendering this cell (covered by rowSpan)
+                            if (
+                              pooledColumns.includes(col.accessorKey) &&
+                              ((showPooledFields && isSelected) || pool)
+                            ) {
+                              return null;
+                            }
+
+                            // For non-pooled columns, render as usual
+                            return (
+                              <TableCell key={col.accessorKey}>
+                                {flexRender(
+                                  col.cell,
+                                  { ...row.getVisibleCells().find(c => c.column.id === col.accessorKey)?.getContext?.() }
+                                )}
+                              </TableCell>
+                            );
+                          })}
+                        </TableRow>
+
+                        {/* Show Done button after last selected row, only if pooled fields are not shown */}
+                        {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && !showPooledFields && (
+                          <TableRow>
+                            <TableCell colSpan={columns.length}>
+                              <Button onClick={handleDone}>Done</Button>
+                            </TableCell>
+                          </TableRow>
+                        )}
+
+                        {/* Show Create Pool button after pooled input row */}
+                        {/* {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && showPooledFields && (
+                          <TableRow>
+                            <TableCell colSpan={columns.length}>
+                              <Button onClick={handleDone} className="bg-blue-600 text-white">Create Pool</Button>
+                            </TableCell>
+                          </TableRow>
+                        )} */}
+                      </React.Fragment>
+                    );
+                  })}
                 </TableBody>
+
               </Table>
             </div>
           </div>

@@ -22,6 +22,7 @@ const formSchema = z.object({
 });
 
 const Request = () => {
+    const [processing, setProcessing] = useState(false);
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -48,12 +49,15 @@ const Request = () => {
             });
             if (response.data[0].status === 200) {
                 toast.success("Request submitted successfully. Please check your email for the username and password.");
+                setProcessing(false);
                 form.reset();
             } else {
                 toast.error(response.data[0].message || "Failed to submit request.");
+                setProcessing(false);
             }
         } catch (error) {
             toast.error("Failed to set username and password.");
+            setProcessing(false);
         }
     };
 
@@ -95,21 +99,7 @@ const Request = () => {
                             </FormItem>
                         )}
                     />
-                    {/* <FormField
-                        control={form.control}
-                        name="hospital_id"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Organization ID</FormLabel>
-                                <FormControl>
-                                    <Input
-                                        className="focus-within:ring-orange-500"
-                                        placeholder="Hostpital ID"
-                                        {...field} />
-                                </FormControl>
-                            </FormItem>
-                        )}
-                    /> */}
+                   
                     <FormField
                         control={form.control}
                         name="email"
@@ -147,6 +137,8 @@ const Request = () => {
 
                     <Button
                         type="submit"
+                        onClick={() => setProcessing(true)}
+                        disabled={processing}
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                     >
                         Submit Request
