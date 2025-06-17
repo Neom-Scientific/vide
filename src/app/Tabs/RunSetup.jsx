@@ -185,6 +185,7 @@ const RunSetup = () => {
         form.reset();
         setSelectedTestNames([]);
         setSelectedCheckboxes([]);
+        localStorage.removeItem('runSetupForm'); // <-- clear localStorage here
         setPoolData([]);
       } else if (response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the provided Organization Name and test name");
@@ -381,6 +382,41 @@ const RunSetup = () => {
 
     // form.setValue("total_required", totalRequired); // Update the total_required field in the form
   }, [selectedTestNames, poolData]); // Trigger the effect whenever selectedTestNames or poolData change
+
+  useEffect(() => {
+    const saved = localStorage.getItem('runSetupForm');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        Object.keys(parsed).forEach(key => {
+          if (form.getValues(key) !== undefined) {
+            form.setValue(key, parsed[key]);
+          }
+        });
+        if (parsed.selectedTestNames) setSelectedTestNames(parsed.selectedTestNames);
+        if (parsed.selectedCheckboxes) setSelectedCheckboxes(parsed.selectedCheckboxes);
+        if (parsed.poolData) setPoolData(parsed.poolData);
+      } catch (e) {
+        console.error('Failed to parse run setup from localStorage', e);
+      }
+    }
+    // eslint-disable-next-line
+  }, []);
+
+  useEffect(() => {
+    const subscription = form.watch((values) => {
+      localStorage.setItem(
+        'runSetupForm',
+        JSON.stringify({
+          ...values,
+          selectedTestNames,
+          selectedCheckboxes,
+          poolData,
+        })
+      );
+    });
+    return () => subscription.unsubscribe();
+  }, [form, selectedTestNames, selectedCheckboxes, poolData]);
 
 
   return (

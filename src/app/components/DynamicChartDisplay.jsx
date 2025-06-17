@@ -22,7 +22,7 @@ const tatMonthNames = [
 
 const DynamicChartDisplay = ({
     dropdowns = [],
-    chartTitle = "Sample Count by Test Name",
+    chartTitle = "Sample Count by Run Id",
     chartData,
     chartHeight = 340,
     dropdownStacked = false,

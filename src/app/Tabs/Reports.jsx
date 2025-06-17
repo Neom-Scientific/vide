@@ -57,6 +57,10 @@ const Reports = () => {
     'Myeloid',
     'HLA',
     'SGS',
+    'WES + Mito',
+    'HCP',
+    'HRR',
+    'CES + Mito',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -126,7 +130,7 @@ const Reports = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
-
+    { key: 'lib_prep_date', label: 'Library Prep Date' },
   ];
 
   const form = useForm({
@@ -658,6 +662,24 @@ const Reports = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
+                <DropdownMenuCheckboxItem
+                  checked={Object.values(table.getState().columnVisibility).every(Boolean)} // Check if all are visible
+                  onCheckedChange={(value) =>
+                    table.getAllLeafColumns().forEach((column) => column.toggleVisibility(!!value))
+                  }
+                >
+                  Select All
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  // Deselect All: show only defaultVisible columns
+                  onClick={() => {
+                    table.getAllLeafColumns().forEach((column) => {
+                      column.toggleVisibility(defaultVisible.includes(column.id));
+                    });
+                  }}
+                >
+                  Deselect All
+                </DropdownMenuCheckboxItem>
                 {table
                   .getAllLeafColumns()
                   .slice() // Create a copy of the array

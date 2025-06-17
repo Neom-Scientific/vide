@@ -4,11 +4,12 @@ import { NextResponse } from "next/server";
 
 export async function POST(request) {
     const body = await request.json();
-    const { name, hospital_name, email, username, password, phone_no } = body.data;
+    const { name, hospital_name, email, password, phone_no } = body.data;
     try {
         let response = [];
         let hospital_id = '101';
         const { rows } = await pool.query('SELECT * FROM request_form WHERE email = $1', [email]);
+        let username = getUsername(rows.length);
 
         if (rows.length > 0) {
             response.push({
@@ -18,7 +19,7 @@ export async function POST(request) {
             return NextResponse.json(response);
         }
 
-        if (!name || !hospital_name || !email || !phone_no || !username || !password) {
+        if (!name || !hospital_name || !email || !phone_no || !password) {
             response.push({
                 status: 400,
                 message: 'All fields are required',
@@ -27,8 +28,14 @@ export async function POST(request) {
         }
 
         if (rows.length > 0) {
-            hospital_id = rows[0].hospital_id; // Use the existing hospital_id if it exists
-            hospital_id = (parseInt(hospital_id) + 1).toString(); // Increment the hospital_id
+            const existingHospitalRows = await pool.query('SELECT hospital_name FROM request_form WHERE hospital_name = $1', [hospital_name]);
+            if (existingHospitalRows.rows.length > 0) {
+                hospital_id = existingHospitalRows.rows[0].hospital_id
+            }
+            else {
+                hospital_id = rows[0].hospital_id; // Use the existing hospital_id if it exists
+                hospital_id = (parseInt(hospital_id) + 1).toString(); // Increment the hospital_id}
+            }
         }
 
         const result = await pool.query(
@@ -192,4 +199,14 @@ export async function PUT(request) {
         console.error('Error updating status or role', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
+}
+
+function getUsername(count){
+    const date = new Date();
+    if(count === 0){
+        count = 1; // Start with 1 if no previous entries
+    }
+    const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, ''); // "20250616"
+    const countStr = count.toString().padStart(2, '0'); // "01", "02", etc.
+    return `${yyyymmdd}${countStr}`; // "2025061601"
 }

@@ -195,6 +195,9 @@ const Header = ({ activeTab, setActiveTab }) => {
                   Cookies.remove('user'); // Clear user cookie
                   localStorage.removeItem('searchData'); // Clear search data from local storage
                   localStorage.removeItem('libraryPreparationData')
+                  localStorage.removeItem('runSetupForm');
+                  localStorage.removeItem('sampleRegistrationForm');
+                  localStorage.removeItem('editRowData')
                   router.push('/login'); // Redirect to login page
                 }}
                 className="p-2 bg-red-500 text-white font-bold rounded-lg cursor-pointer transition-colors duration-300"

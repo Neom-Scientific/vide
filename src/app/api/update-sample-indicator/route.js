@@ -18,7 +18,7 @@ export async function POST(request) {
             pool_no = `P_${newNumber.toString().padStart(3, '0')}`; // Increment and format the pool number
         }
 
-        if(!hospital_name) {
+        if (!hospital_name) {
             response.push({
                 message: 'Hospital name is required',
                 status: 400
@@ -112,6 +112,10 @@ export async function POST(request) {
             testName === "Clinical Exome" ||
             testName === "Cardio Comprehensive (Screening Test)" ||
             testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+            testName === "WES + Mito" ||
+            testName === "CES + Mito" ||
+            testName === "HRR" ||
+            testName === "HCP" ||
             testName === "Cardio Comprehensive Myopathy") {
 
             for (let i = 0; i < rows.length; i++) {
@@ -147,7 +151,7 @@ export async function POST(request) {
                     });
                 }
                 //  error de do agr user upr me se koi bhi field ko nhi dega to agr ek bhi field me value hai to error nhi aayega
-                else if (!qubit_dna || !per_rxn_gdna || !volume || !gdna_volume_3x || !nfw || !plate_designation || !well || !i5_index_reverse || !i7_index || !qubit_lib_qc_ng_ul || !stock_ng_ul || !lib_vol_for_hyb ) {
+                else if (!qubit_dna || !per_rxn_gdna || !volume || !gdna_volume_3x || !nfw || !plate_designation || !well || !i5_index_reverse || !i7_index || !qubit_lib_qc_ng_ul || !stock_ng_ul || !lib_vol_for_hyb) {
                     response.push({
                         message: 'All fields are required',
                         status: 400
@@ -156,9 +160,9 @@ export async function POST(request) {
                 const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
                 const sampleExists = data.rows.length > 0;
                 if (sampleExists) {
-                   await pool.query(
+                    await pool.query(
                         `UPDATE pool_info SET qubit_dna = $2, data_required = $3, per_rxn_gdna = $4, volume = $5, gdna_volume_3x = $6, nfw = $7, plate_designation = $8, well = $9, i5_index_reverse = $10, i7_index = $11, qubit_lib_qc_ng_ul = $12, stock_ng_ul = $13, lib_vol_for_hyb = $14, gb_per_sample = $15, pool_no = $16, test_name = $17, hospital_name = $18, pool_conc = $19, size = $20, nm_conc = $21, one_tenth_of_nm_conc = $22, total_vol_for_2nm = $23, lib_vol_for_2nm = $24, nfw_volu_for_2nm = $25  WHERE sample_id = $1`,
-                        [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name,pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm]
+                        [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm]
                     );
                     response.push({
                         message: 'data updated successfully',
@@ -211,7 +215,7 @@ export async function POST(request) {
                 const data = await pool.query('SELECT sample_id FROM pool_info WHERE sample_id = $1', [sample_id]);
                 const sampleExists = data.rows.length > 0;
                 if (sampleExists) {
-                   await pool.query(
+                    await pool.query(
                         `UPDATE pool_info SET qubit_dna = $2, data_required = $3, well = $4, i7_index = $5, sample_volume = $6, qubit_lib_qc_ng_ul = $7, pooling_volume = $8, pool_conc = $9, size = $10, nm_conc = $11, one_tenth_of_nm_conc = $12, total_vol_for_2nm = $13, lib_vol_for_2nm = $14, nfw_volu_for_2nm = $15, pool_no = $16, test_name = $17, hospital_name = $18 WHERE sample_id = $1`,
                         [sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, testName, hospital_name]
                     );

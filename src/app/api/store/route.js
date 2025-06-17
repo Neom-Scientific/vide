@@ -56,6 +56,40 @@ export async function POST(request) {
             tantive_report_date
         } = body;
 
+        const today = new Date(registration_date || Date.now());
+        const todayStr = today.toISOString().slice(0, 10);
+
+        // Check if a project_id already exists for the hospital_name on the same day
+        const existingProjectIdQuery = `
+            SELECT project_id FROM master_sheet
+            WHERE registration_date::date = $1 AND hospital_name = $2
+            LIMIT 1
+        `;
+        const existingProjectIdResult = await pool.query(existingProjectIdQuery, [todayStr, hospital_name]);
+
+        let project_id;
+        if (existingProjectIdResult.rows.length > 0) {
+            // Use the existing project_id
+            project_id = existingProjectIdResult.rows[0].project_id;
+        } else {
+            // Generate a new project_id sequence
+            const seqQuery = `
+            SELECT project_id FROM master_sheet
+            WHERE registration_date::date = $1
+            ORDER BY project_id DESC
+            LIMIT 1
+            `;
+            const seqResult = await pool.query(seqQuery, [todayStr]);
+            let nextSeq = 1;
+            if (seqResult.rows.length > 0 && seqResult.rows[0].project_id) {
+                // Extract the numeric part and increment
+                const lastSeq = parseInt(seqResult.rows[0].project_id.replace("PI", ""), 10);
+                nextSeq = lastSeq + 1;
+            }
+            project_id = `PI${String(nextSeq).padStart(4, "0")}`;
+        }
+
+
         const data = await pool.query('SELECT sample_id FROM master_sheet WHERE sample_id = $1', [sample_id]);
         if (data.rows.length > 0) {
             response.push({
@@ -144,14 +178,15 @@ export async function POST(request) {
                 seq_completed,
                 tantive_report_date,
                 hpo_status,
-                annotation
+                annotation,
+                project_id
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
                 $11, $12, $13, $14, $15, $16, $17, $18,
                 $19, $20, $21, $22, $23, $24, $25,
                 $26, $27, $28, $29, $30,
-                $31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41, $42, $43, $44, $45, $46,$47, $48,$49,$50,$51,$52,$53,$54
+                $31,$32,$33,$34,$35,$36,$37,$38,$39,$40,$41, $42, $43, $44, $45, $46,$47, $48,$49,$50,$51,$52,$53,$54,$55
             )
             RETURNING *
         `;
@@ -209,7 +244,8 @@ export async function POST(request) {
             "No",
             new Date(new Date(registration_date).getTime() + 7 * 24 * 60 * 60 * 1000) || null, // tantive_report_date = registration_date + 7 days
             "No", // hpo_status
-            "No" // annotaion
+            "No", // annotaion
+            project_id,
         ];
         const result = await pool.query(query, values);
         const insertedData = result.rows[0];
@@ -234,9 +270,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
     const hospital_name = searchParams.get('hospital_name');
-    console.log('role', role);
-    console.log('hospital_name', hospital_name);
-
     try {
         let response = [];
 

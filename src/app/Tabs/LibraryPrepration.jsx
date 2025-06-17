@@ -130,7 +130,7 @@ const LibraryPrepration = () => {
     { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'data_required', label: 'Data Required(GB)' },
-    // { key: 'select', label: 'Select' },
+    { key: 'pool_no', label: 'Pool No.' },
   ];
 
 
@@ -184,11 +184,16 @@ const LibraryPrepration = () => {
       testName === "Clinical Exome" ||
       testName === "Cardio Comprehensive (Screening Test)" ||
       testName === "Cardio Metabolic Syndrome (Screening Test)" ||
-      testName === "Cardio Comprehensive Myopathy"
+      testName === "Cardio Comprehensive Myopathy" ||
+      testName === "WES + Mito" ||
+      testName === "CES + Mito" ||
+      testName === "HRR" ||
+      testName === "HCP" 
     ) {
       return insertPooledColumns([
         "select",
         "sno",
+        "pool_no",
         "sample_id",
         "registration_date",
         "test_name",
@@ -210,6 +215,7 @@ const LibraryPrepration = () => {
       return insertPooledColumns([
         "select",
         "sno",
+        "pool_no",
         "sample_id",
         "registration_date",
         "test_name",
@@ -253,19 +259,33 @@ const LibraryPrepration = () => {
     const fetchPoolInfo = async () => {
       try {
         const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+        // Fix: handle both array and object format for allSampleIds
         const allSampleIds = Object.values(storedData)
-          .flatMap(arr => arr.map(row => row.sample_id))
-          .filter(Boolean); // removes undefined/null if any
+          .flatMap(val => {
+            if (Array.isArray(val)) {
+              return val.map(row => row.sample_id);
+            } else if (val && Array.isArray(val.rows)) {
+              return val.rows.map(row => row.sample_id);
+            }
+            return [];
+          })
+          .filter(Boolean);
         const testName = Object.keys(storedData)[0];
-
+  
         // If local data exists for this testName, use it and do not overwrite
-        if (testName && storedData[testName] && storedData[testName].length > 0) {
-          setTableRows(storedData[testName]);
+        if (testName && storedData[testName]) {
+          if (Array.isArray(storedData[testName])) {
+            setTableRows(storedData[testName]);
+            setPooledRowData([]);
+          } else {
+            setTableRows(storedData[testName].rows || []);
+            setPooledRowData(storedData[testName].pools || []);
+          }
           setGetTheTestNames(Object.keys(storedData));
           setTestName(testName);
           return; // Do not fetch or overwrite with API data
         }
-
+  
         // Otherwise, fetch from API
         const response = await axios.get(`/api/pool-data`, {
           params: {
@@ -274,30 +294,33 @@ const LibraryPrepration = () => {
             sample_id: allSampleIds.join(','), // Join sample IDs into a comma-separated string
           },
         });
-
         if (response.data[0].status === 200) {
           const poolData = response.data[0].data;
-
           if (poolData && poolData.length > 0) {
             // Transform data into testName: [...] format
             const newData = poolData.reduce((acc, row) => {
-              const testName = row.test_name;
-              if (!acc[testName]) {
-                acc[testName] = [];
-              }
-              acc[testName].push(row);
+              const tn = row.test_name;
+              if (!acc[tn]) acc[tn] = [];
+              acc[tn].push(row);
               return acc;
             }, {});
-
+  
             // Only update localStorage if there was no local data for this testName
-            if (!storedData[testName] || storedData[testName].length === 0) {
+            if (!storedData[testName] || (Array.isArray(storedData[testName]) && storedData[testName].length === 0)) {
               const mergedData = { ...storedData, ...newData };
               setTableRows(newData[testName] || []);
+              setPooledRowData([]);
               setGetTheTestNames(Object.keys(mergedData));
-              setTestName(Object.keys(newData)[0]); // Set the first testName as default
+              setTestName(Object.keys(newData)[0]);
               localStorage.setItem('libraryPreparationData', JSON.stringify(mergedData));
             } else {
-              setTableRows(storedData[testName]);
+              if (Array.isArray(storedData[testName])) {
+                setTableRows(storedData[testName]);
+                setPooledRowData([]);
+              } else {
+                setTableRows(storedData[testName].rows || []);
+                setPooledRowData(storedData[testName].pools || []);
+              }
               setGetTheTestNames(Object.keys(storedData));
               setTestName(testName);
             }
@@ -310,10 +333,9 @@ const LibraryPrepration = () => {
         toast.error("An error occurred while fetching pool info.");
       }
     };
-
+  
     fetchPoolInfo();
   }, []);
-
 
   const columns = useMemo(() => {
     const defaultVisible = getDefaultVisible(testName);
@@ -382,7 +404,8 @@ const LibraryPrepration = () => {
             column.key === "sample_id" ||
             column.key === "test_name" ||
             column.key === "patient_name" ||
-            column.key === "sample_type"
+            column.key === "sample_type" ||
+            column.key === "pool_no"
           ) {
             return <span>{value}</span> || "";
           }
@@ -401,7 +424,6 @@ const LibraryPrepration = () => {
 
     return columnsArr;
   }, [testName, rowSelection, allColumns, pooledColumns]);
-
 
   useEffect(() => {
     const defaultVisible = getDefaultVisible(testName);
@@ -442,6 +464,10 @@ const LibraryPrepration = () => {
       testName === "Clinical Exome" ||
       testName === "Cardio Comprehensive (Screening Test)" ||
       testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+      testName === "WES + Mito" ||
+      testName === "CES + Mito" ||
+      testName === "HRR" ||
+      testName === "HCP" ||
       testName === "Cardio Comprehensive Myopathy"
     ) {
       defaultVisible = [
@@ -623,7 +649,15 @@ const LibraryPrepration = () => {
           const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
           const currentTestName = testNameRef.current;
           if (currentTestName) {
-            storedData[currentTestName] = updatedRows;
+            if (Array.isArray(storedData[currentTestName])) {
+              // Upgrade old format to new
+              storedData[currentTestName] = { rows: updatedRows, pools: pooledRowData };
+            } else {
+              storedData[currentTestName] = {
+                rows: updatedRows,
+                pools: pooledRowData,
+              };
+            }
             localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
           }
           return updatedRows;
@@ -636,11 +670,13 @@ const LibraryPrepration = () => {
     setProcessing(true);
     try {
       const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+      // const poolNos = [...new Set(tableRows.map(row => row.pool_no).filter(Boolean))];
 
       // Prepare the payload for the API call
       const payload = {
         hospital_name: user.hospital_name,
         testName: testName,
+        // pool_no: poolNos || "",
         rows: tableRows,
       };
 
@@ -669,38 +705,88 @@ const LibraryPrepration = () => {
     }
   };
 
-  const handleDone = () => {
-    if (currentSelection.length > 0) {
-      setPooledRowData(prev => [
-        ...prev,
-        { sampleIndexes: [...currentSelection], values: pooledValues }
-      ]);
-      setPooledValues({});
-      setCurrentSelection([]);
-      setShowPooledFields(false);
-      setRowSelection({});
+  const handleDone = async () => {
+    if (Array.isArray(currentSelection) && currentSelection.length > 0) {
+      try {
+        const response = await axios.get('/api/pool-no');
+        if (response.data[0].status === 200) {
+          const poolNo = response.data[0].pool_no;
+          setTableRows(prevRows =>
+            prevRows.map((row, idx) =>
+              currentSelection.includes(idx)
+                ? { ...row, pool_no: poolNo }
+                : row
+            )
+          );
+          setPooledRowData(prev => [
+            ...prev,
+            { sampleIndexes: [...currentSelection], values: pooledValues }
+          ]);
+          setPooledValues({});
+          setCurrentSelection([]);
+          setShowPooledFields(false);
+          setRowSelection({});
+        } else {
+          toast.error(response.data[0].message);
+        }
+      } catch (error) {
+        console.log('something went wrong:', error);
+      }
     }
   };
 
+  useEffect(() => {
+    // For each pool, update all rows in tableRows that belong to that pool
+    setTableRows(prevRows => {
+      // Ensure prevRows is always an array
+      const safeRows = Array.isArray(prevRows) ? prevRows : [];
+      let updatedRows = [...safeRows];
+      pooledRowData.forEach(pool => {
+        pool.sampleIndexes.forEach(idx => {
+          updatedRows[idx] = {
+            ...updatedRows[idx],
+            ...pooledColumns.reduce((acc, col) => {
+              acc[col] = pool.values[col] ?? "";
+              return acc;
+            }, {})
+          };
+        });
+      });
+      return updatedRows;
+    });
+  }, [pooledRowData]);
+
   const InputCell = ({ value: initialValue, rowIndex, columnId, updateData }) => {
-    const [value, setValue] = useState(initialValue || ""); // Ensure the initial value is not undefined
-
+    const [value, setValue] = useState(initialValue || "");
+    const inputRef = useRef(null);
+  
     const handleChange = (e) => {
-      setValue(e.target.value); // Update local state
+      setValue(e.target.value);
     };
-
+  
     const handleBlur = () => {
-      updateData(rowIndex, columnId, value); // Update table rows and localStorage on blur
+      updateData(rowIndex, columnId, value);
     };
-
+  
+    // This ensures Tab key works as expected
+    const handleKeyDown = (e) => {
+      if (e.key === "Tab") {
+        handleBlur();
+        // Let browser handle focus to next input
+      }
+    };
+  
     return (
       <Input
+        ref={inputRef}
         className="border rounded p-1 text-xs w-[200px]"
-        value={value} // Ensure value is always defined
+        value={value}
         type="text"
         placeholder={`Enter ${columnId}`}
         onChange={handleChange}
-        onBlur={handleBlur} // Update table rows when the input loses focus
+        onBlur={handleBlur}
+        onKeyDown={handleKeyDown}
+        tabIndex={0} // ensure it's tabbable
       />
     );
   };
@@ -710,6 +796,18 @@ const LibraryPrepration = () => {
     if (storedData) {
       const testNames = Object.keys(storedData); // Extract keys from the stored data
       setGetTheTestNames(testNames); // Update state with test names
+
+      if (testNames.length > 0) {
+        const defaultTestName = testNames[0];
+        setTestName(defaultTestName);
+        if (Array.isArray(storedData[defaultTestName])) {
+          setTableRows(storedData[defaultTestName]);
+          setPooledRowData([]);
+        } else {
+          setTableRows(storedData[defaultTestName].rows || []);
+          setPooledRowData(storedData[defaultTestName].pools || []);
+        }
+      }
     }
   }, []);
 
@@ -719,8 +817,14 @@ const LibraryPrepration = () => {
     const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
 
     // Always show local data if it exists
-    if (storedData && storedData[selectedTestName] && storedData[selectedTestName].length > 0) {
-      setTableRows(storedData[selectedTestName]);
+    if (storedData && storedData[selectedTestName]) {
+      if (Array.isArray(storedData[selectedTestName])) {
+        setTableRows(storedData[selectedTestName]);
+        setPooledRowData([]);
+      } else {
+        setTableRows(storedData[selectedTestName].rows || []);
+        setPooledRowData(storedData[selectedTestName].pools || []);
+      }
       return; // Do not fetch or overwrite with API data
     }
 
@@ -784,7 +888,13 @@ const LibraryPrepration = () => {
       const hospital_name = user.hospital_name;
 
       // Prepare an array of promises for all testNames
-      const savePromises = Object.entries(storedData).map(([testName, rows]) => {
+      const savePromises = Object.entries(storedData).map(([testName, data]) => {
+        let rows = [];
+        if (Array.isArray(data)) {
+          rows = data;
+        } else if (data && Array.isArray(data.rows)) {
+          rows = data.rows;
+        }
         return axios.post('/api/pool-data', {
           hospital_name,
           testName,
@@ -824,6 +934,31 @@ const LibraryPrepration = () => {
   useEffect(() => {
     setCurrentSelection(currentSelectedIndexes);
   }, [rowSelection]);
+
+  useEffect(() => {
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+    if (storedData[testName]) {
+      if (Array.isArray(storedData[testName])) {
+        setTableRows(storedData[testName]);
+        setPooledRowData([]);
+      } else {
+        setTableRows(storedData[testName].rows || []);
+        setPooledRowData(storedData[testName].pools || []);
+      }
+    }
+  }, [testName]);
+
+  useEffect(() => {
+    // Save pooledColumns for each pool in localStorage under the current testName
+    if (!testName) return;
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+    // Save both tableRows and pooledRowData under the same testName key
+    storedData[testName] = {
+      rows: tableRows,
+      pools: pooledRowData,
+    };
+    localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+  }, [pooledRowData, tableRows, testName]);
 
   return (
     <div className="p-4 ">
@@ -1119,9 +1254,6 @@ export default LibraryPrepration
 
 const DialogBox = ({ isOpen, onClose, selectedTestName }) => {
   const dispatch = useDispatch();
-  // Get the selected test name from localStorage or via props/context if needed
-  // const selectedTestName = localStorage.getItem('selectedTestName'); // Or pass as prop
-
   return (
     <Dialog
       open={isOpen}
@@ -1149,7 +1281,6 @@ const DialogBox = ({ isOpen, onClose, selectedTestName }) => {
           <Button
             variant="destructive"
             onClick={() => {
-              // Remove only the selected test name from localStorage
               const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
               if (storedData && selectedTestName && storedData[selectedTestName]) {
                 delete storedData[selectedTestName];

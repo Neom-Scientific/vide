@@ -140,6 +140,10 @@ export const SampleRegistration = () => {
     'Myeloid',
     'HLA',
     'SGS',
+    'WES + Mito',
+    'HCP',
+    'HRR',
+    'CES + Mito',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -300,6 +304,7 @@ export const SampleRegistration = () => {
   }, [trfUrl]);
 
   const onFormSubmit = async () => {
+    setProcessing(true);
     // Set registration_date to current date-time string
     const now = new Date();
     const pad = n => n.toString().padStart(2, '0');
@@ -1589,8 +1594,6 @@ export const SampleRegistration = () => {
 
             <Button
               type='submit'
-              onClick={()=>setProcessing(true)}
-              disabled={processing}
               className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4'
             >
               Submit
@@ -1600,7 +1603,6 @@ export const SampleRegistration = () => {
               user && user.role !== 'NormalUser' && editButton && (
                 <Button
                   type='button'
-                  disabled={processing}
                   className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 ml-2'
                   onClick={handleUpdate}
                 >

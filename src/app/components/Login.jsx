@@ -30,19 +30,22 @@ const Login = () => {
     });
 
     const onSubmit = async (data) => {
+        setProcessing(true);
         console.log(data)
         try {
             const response = await axios.post('/api/login-insert', data);
             if (response.data[0].status === 200) {
                 toast.success(response.data[0].message);
                 console.log(response.data[0].data);
-                setProcessing(false);
                 Cookies.set('user', JSON.stringify(response.data[0].data), { expires: 7 });
                 if (response.data[0].data.user_login === 0) {
                     router.push('/reset-password');
+                    setProcessing(false);
                 }
                 else {
                     router.push('/');
+                    setProcessing(false);
+
                 }
             }
             else if (response.data[0].status === 401) {
@@ -119,8 +122,8 @@ const Login = () => {
 
                     <Button
                         type="submit"
-                        onClick={() => setProcessing(true)}
                         disabled={processing}
+                        // onClick={() => setProcessing(true)}
                         className="w-full mt-4 cursor-pointer bg-orange-500 hover:bg-orange-600"
                     >
                         Submit

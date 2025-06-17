@@ -38,7 +38,8 @@ const Request = () => {
     });
 
     const handleUsernamePassword = async (data) => {
-        const userName = data.email.split('@')[0];
+        setProcessing(true);
+
         const password = Math.random().toString(36).slice(-8); // Generate a random password
         data.username = userName;
         data.password = password;
@@ -137,8 +138,6 @@ const Request = () => {
 
                     <Button
                         type="submit"
-                        onClick={() => setProcessing(true)}
-                        disabled={processing}
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                     >
                         Submit Request

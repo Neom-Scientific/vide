@@ -10,7 +10,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,12 +34,11 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
-import { set } from "react-hook-form";
 
 
 const Processing = () => {
   const user = JSON.parse(Cookies.get("user") || "{}");
-  const [processing,setProcessing] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   const allColumns = [
     { key: 'hospital_name', label: 'Organization Name' },
@@ -152,6 +151,7 @@ const Processing = () => {
     { key: 'nfw_vol_2nm_next_seq_550', label: 'NFW Vol 2nm Next Seq 550' },
     { key: 'final_pool_vol_ul', label: 'Final Pool Vol (ul)' },
     { key: 'ht_buffer_next_seq_1000_2000', label: 'HT Buffer Next Seq 1000-2000' },
+    { key: 'lib_prep_date', label: 'Library Prep Date' },
   ];
 
   const allTests = [
@@ -161,6 +161,10 @@ const Processing = () => {
     'Myeloid',
     'HLA',
     'SGS',
+    'WES + Mito',
+    'HCP',
+    'HRR',
+    'CES + Mito',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -387,6 +391,7 @@ const Processing = () => {
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
         setProcessing(false);
+        console.log('mappedData:', mappedData); // Debugging mapped data
         setTableRows(mappedData); // Update the tableRows state with the mapped data
         localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
@@ -407,25 +412,33 @@ const Processing = () => {
 
   const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
 
+  const pooledColumns = [
+    "pool_conc",
+    "size",
+    "nm_conc",
+    "one_tenth_of_nm_conc",
+    "total_vol_for_2nm",
+    "lib_vol_for_2nm",
+    "nfw_volu_for_2nm",
+  ];
+
   const handleSendForLibraryPreparation = () => {
     const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
     if (checkedRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
-    console.log('checkedRows:', checkedRows); // Debugging checked rows
 
-    if (checkedRows.run_id !== null && checkedRows.run_id !== undefined) {
+    // Prevent sending if any checked row already has a run_id
+    if (checkedRows.some(row => row.run_id !== null && row.run_id !== undefined && row.run_id !== "")) {
       toast.error("Run Id is already provided to the selected samples.");
-      return
+      return;
     }
 
     // Group new rows by test_name
     const newGroupedData = checkedRows.reduce((acc, row) => {
       const testName = row.test_name;
-      if (!acc[testName]) {
-        acc[testName] = [];
-      }
+      if (!acc[testName]) acc[testName] = [];
       acc[testName].push(row);
       return acc;
     }, {});
@@ -433,21 +446,54 @@ const Processing = () => {
     // Fetch existing data from localStorage and merge
     const existingData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
     const mergedData = { ...existingData };
-    console.log('mergedData:', mergedData); // Debugging merged data
-
 
     Object.keys(newGroupedData).forEach(testName => {
+      // If already in new format, merge into .rows, else upgrade old array to new format
       if (!mergedData[testName]) {
-        mergedData[testName] = [];
+        mergedData[testName] = { rows: [], pools: [] };
+      } else if (Array.isArray(mergedData[testName])) {
+        mergedData[testName] = { rows: mergedData[testName], pools: [] };
       }
-
-      // Prevent duplicate sample_ids if necessary
-      const existingIds = new Set(mergedData[testName].map(r => r.sample_id));
+      // Prevent duplicate sample_ids
+      const existingIds = new Set((mergedData[testName].rows || []).map(r => r.sample_id));
       newGroupedData[testName].forEach(row => {
         if (!existingIds.has(row.sample_id)) {
-          mergedData[testName].push(row);
+          mergedData[testName].rows.push(row);
         }
       });
+
+      // --- NEW LOGIC: Group pooled data by pool_no ---
+      const rows = mergedData[testName].rows || [];
+      const poolsMap = {};
+
+      rows.forEach((row, idx) => {
+        const poolNo = row.pool_no;
+        if (!poolNo) return; // Only group rows with a pool_no
+
+        if (!poolsMap[poolNo]) {
+          poolsMap[poolNo] = {
+            sampleIndexes: [],
+            values: {},
+          };
+        }
+        poolsMap[poolNo].sampleIndexes.push(idx);
+
+        // Collect pooled columns (last non-empty value wins)
+        pooledColumns.forEach(col => {
+          if (row[col] !== undefined && row[col] !== null && row[col] !== "") {
+            poolsMap[poolNo].values[col] = row[col];
+          }
+        });
+      });
+
+      // Convert poolsMap to array
+      const poolRows = Object.values(poolsMap);
+
+      // Only add if there is pooled data
+      if (poolRows.length > 0) {
+        mergedData[testName].pools = poolRows;
+      }
+      // --- END NEW LOGIC ---
     });
 
     // Save back to localStorage

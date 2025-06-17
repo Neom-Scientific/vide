@@ -87,245 +87,6 @@ export async function GET(request) {
     }
 }
 
-export async function POST(request) {
-    const body = await request.json();
-    const { rows, testName, hospital_name } = body;
-    const response = [];
-    let pool_no = 'P_001';
-
-    try {
-        // Start transaction
-        await pool.query('BEGIN');
-
-        // Pool number logic
-        const poolData = await pool.query('SELECT pool_no FROM pool_info ORDER BY pool_no DESC LIMIT 1');
-        if (poolData.rows.length > 0) {
-            const lastPoolNo = poolData.rows[0].pool_no;
-            const lastNumber = parseInt(lastPoolNo.split('_')[1], 10);
-            const newNumber = lastNumber + 1;
-            pool_no = `P_${newNumber.toString().padStart(3, '0')}`;
-        }
-
-        if (!hospital_name) {
-            await pool.query('ROLLBACK');
-            return NextResponse.json([{ message: 'Organization Name is required', status: 400 }]);
-        }
-
-        for (let i = 0; i < rows.length; i++) {
-            const sample = rows[i];
-            const sample_id = sample.sample_id;
-
-            if (!sample_id) {
-                response.push({ message: 'Sample Id is required', status: 400 });
-                continue;
-            }
-
-            // --- Myeloid ---
-            if (testName === "Myeloid") {
-                const {
-                    qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index,
-                    lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size
-                } = sample;
-
-                // Upsert pool_info
-                await pool.query(
-                    `INSERT INTO pool_info (sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, test_name, hospital_name)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                     ON CONFLICT (sample_id) DO UPDATE SET
-                        qubit_dna = EXCLUDED.qubit_dna,
-                        data_required = EXCLUDED.data_required,
-                        conc_rxn = EXCLUDED.conc_rxn,
-                        barcode = EXCLUDED.barcode,
-                        i5_index_reverse = EXCLUDED.i5_index_reverse,
-                        i7_index = EXCLUDED.i7_index,
-                        lib_qubit = EXCLUDED.lib_qubit,
-                        nm_conc = EXCLUDED.nm_conc,
-                        lib_vol_for_2nm = EXCLUDED.lib_vol_for_2nm,
-                        nfw_volu_for_2nm = EXCLUDED.nfw_volu_for_2nm,
-                        total_vol_for_2nm = EXCLUDED.total_vol_for_2nm,
-                        pool_no = EXCLUDED.pool_no,
-                        size = EXCLUDED.size,
-                        test_name = EXCLUDED.test_name,
-                        hospital_name = EXCLUDED.hospital_name
-                    `,
-                    [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
-                );
-
-                // Upsert master_sheet
-                await pool.query(
-                    `INSERT INTO master_sheet (sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, test_name, hospital_name)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-                     ON CONFLICT (sample_id) DO UPDATE SET
-                        qubit_dna = EXCLUDED.qubit_dna,
-                        data_required = EXCLUDED.data_required,
-                        conc_rxn = EXCLUDED.conc_rxn,
-                        barcode = EXCLUDED.barcode,
-                        i5_index_reverse = EXCLUDED.i5_index_reverse,
-                        i7_index = EXCLUDED.i7_index,
-                        lib_qubit = EXCLUDED.lib_qubit,
-                        nm_conc = EXCLUDED.nm_conc,
-                        lib_vol_for_2nm = EXCLUDED.lib_vol_for_2nm,
-                        nfw_volu_for_2nm = EXCLUDED.nfw_volu_for_2nm,
-                        total_vol_for_2nm = EXCLUDED.total_vol_for_2nm,
-                        pool_no = EXCLUDED.pool_no,
-                        size = EXCLUDED.size,
-                        test_name = EXCLUDED.test_name,
-                        hospital_name = EXCLUDED.hospital_name
-                    `,
-                    [sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, pool_no, size, testName, hospital_name]
-                );
-            }
-
-            // --- WES, CS, Clinical Exome, Cardio Comprehensive, etc. ---
-            else if (
-                testName === "WES" ||
-                testName === "CS" ||
-                testName === "Clinical Exome" ||
-                testName === "Cardio Comprehensive (Screening Test)" ||
-                testName === "Cardio Metabolic Syndrome (Screening Test)" ||
-                testName === "Cardio Comprehensive Myopathy"
-            ) {
-                const {
-                    qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well,
-                    i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample,
-                    pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm
-                } = sample;
-
-                await pool.query(
-                    `INSERT INTO pool_info (sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, test_name, pool_no, hospital_name, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
-                     ON CONFLICT (sample_id) DO UPDATE SET
-                        qubit_dna = EXCLUDED.qubit_dna,
-                        data_required = EXCLUDED.data_required,
-                        per_rxn_gdna = EXCLUDED.per_rxn_gdna,
-                        volume = EXCLUDED.volume,
-                        gdna_volume_3x = EXCLUDED.gdna_volume_3x,
-                        nfw = EXCLUDED.nfw,
-                        plate_designation = EXCLUDED.plate_designation,
-                        well = EXCLUDED.well,
-                        i5_index_reverse = EXCLUDED.i5_index_reverse,
-                        i7_index = EXCLUDED.i7_index,
-                        qubit_lib_qc_ng_ul = EXCLUDED.qubit_lib_qc_ng_ul,
-                        stock_ng_ul = EXCLUDED.stock_ng_ul,
-                        lib_vol_for_hyb = EXCLUDED.lib_vol_for_hyb,
-                        gb_per_sample = EXCLUDED.gb_per_sample,
-                        test_name = EXCLUDED.test_name,
-                        pool_no = EXCLUDED.pool_no,
-                        hospital_name = EXCLUDED.hospital_name,
-                        pool_conc = EXCLUDED.pool_conc,
-                        size = EXCLUDED.size,
-                        nm_conc = EXCLUDED.nm_conc,
-                        one_tenth_of_nm_conc = EXCLUDED.one_tenth_of_nm_conc,
-                        total_vol_for_2nm = EXCLUDED.total_vol_for_2nm,
-                        lib_vol_for_2nm = EXCLUDED.lib_vol_for_2nm,
-                        nfw_volu_for_2nm = EXCLUDED.nfw_volu_for_2nm
-                    `,
-                    [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, testName, pool_no, hospital_name, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm]
-                );
-
-                await pool.query(
-                    `INSERT INTO master_sheet (sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, test_name, hospital_name, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)
-                     ON CONFLICT (sample_id) DO UPDATE SET
-                        qubit_dna = EXCLUDED.qubit_dna,
-                        data_required = EXCLUDED.data_required,
-                        per_rxn_gdna = EXCLUDED.per_rxn_gdna,
-                        volume = EXCLUDED.volume,
-                        gdna_volume_3x = EXCLUDED.gdna_volume_3x,
-                        nfw = EXCLUDED.nfw,
-                        plate_designation = EXCLUDED.plate_designation,
-                        well = EXCLUDED.well,
-                        i5_index_reverse = EXCLUDED.i5_index_reverse,
-                        i7_index = EXCLUDED.i7_index,
-                        qubit_lib_qc_ng_ul = EXCLUDED.qubit_lib_qc_ng_ul,
-                        stock_ng_ul = EXCLUDED.stock_ng_ul,
-                        lib_vol_for_hyb = EXCLUDED.lib_vol_for_hyb,
-                        gb_per_sample = EXCLUDED.gb_per_sample,
-                        pool_no = EXCLUDED.pool_no,
-                        test_name = EXCLUDED.test_name,
-                        hospital_name = EXCLUDED.hospital_name,
-                        pool_conc = EXCLUDED.pool_conc,
-                        size = EXCLUDED.size,
-                        nm_conc = EXCLUDED.nm_conc,
-                        one_tenth_of_nm_conc = EXCLUDED.one_tenth_of_nm_conc,
-                        total_vol_for_2nm = EXCLUDED.total_vol_for_2nm,
-                        lib_vol_for_2nm = EXCLUDED.lib_vol_for_2nm,
-                        nfw_volu_for_2nm = EXCLUDED.nfw_volu_for_2nm
-                    `,
-                    [sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_no, testName, hospital_name, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm]
-                );
-            }
-
-            // --- SGS, HLA ---
-            else if (testName === "SGS" || testName === "HLA") {
-                const {
-                    qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume,
-                    pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm
-                } = sample;
-
-                await pool.query(
-                    `INSERT INTO pool_info (sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, test_name, pool_no, hospital_name)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-                     ON CONFLICT (sample_id) DO UPDATE SET
-                        qubit_dna = EXCLUDED.qubit_dna,
-                        data_required = EXCLUDED.data_required,
-                        well = EXCLUDED.well,
-                        i7_index = EXCLUDED.i7_index,
-                        sample_volume = EXCLUDED.sample_volume,
-                        qubit_lib_qc_ng_ul = EXCLUDED.qubit_lib_qc_ng_ul,
-                        pooling_volume = EXCLUDED.pooling_volume,
-                        pool_conc = EXCLUDED.pool_conc,
-                        size = EXCLUDED.size,
-                        nm_conc = EXCLUDED.nm_conc,
-                        one_tenth_of_nm_conc = EXCLUDED.one_tenth_of_nm_conc,
-                        total_vol_for_2nm = EXCLUDED.total_vol_for_2nm,
-                        lib_vol_for_2nm = EXCLUDED.lib_vol_for_2nm,
-                        nfw_volu_for_2nm = EXCLUDED.nfw_volu_for_2nm,
-                        test_name = EXCLUDED.test_name,
-                        pool_no = EXCLUDED.pool_no,
-                        hospital_name = EXCLUDED.hospital_name
-                    `,
-                    [sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, testName, pool_no, hospital_name]
-                );
-
-                await pool.query(
-                    `INSERT INTO master_sheet (sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, test_name, hospital_name)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
-                     ON CONFLICT (sample_id) DO UPDATE SET
-                        qubit_dna = EXCLUDED.qubit_dna,
-                        data_required = EXCLUDED.data_required,
-                        well = EXCLUDED.well,
-                        i7_index = EXCLUDED.i7_index,
-                        sample_volume = EXCLUDED.sample_volume,
-                        qubit_lib_qc_ng_ul = EXCLUDED.qubit_lib_qc_ng_ul,
-                        pooling_volume = EXCLUDED.pooling_volume,
-                        pool_conc = EXCLUDED.pool_conc,
-                        size = EXCLUDED.size,
-                        nm_conc = EXCLUDED.nm_conc,
-                        one_tenth_of_nm_conc = EXCLUDED.one_tenth_of_nm_conc,
-                        total_vol_for_2nm = EXCLUDED.total_vol_for_2nm,
-                        lib_vol_for_2nm = EXCLUDED.lib_vol_for_2nm,
-                        nfw_volu_for_2nm = EXCLUDED.nfw_volu_for_2nm,
-                        pool_no = EXCLUDED.pool_no,
-                        test_name = EXCLUDED.test_name,
-                        hospital_name = EXCLUDED.hospital_name
-                    `,
-                    [sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, testName, hospital_name]
-                );
-            }
-
-            response.push({ message: 'Data upserted successfully', status: 200 });
-        }
-
-        await pool.query('COMMIT');
-        return NextResponse.json(response);
-    } catch (e) {
-        await pool.query('ROLLBACK');
-        console.error("Error updating sample indicator:", e);
-        return NextResponse.json({ error: "Failed to update sample indicator" }, { status: 500 });
-    }
-}
-
 export async function PUT(request) {
     const body = await request.json();
     const { sample_id, sample_indicator, indicator_status } = body.data;
@@ -375,4 +136,225 @@ export async function PUT(request) {
         console.error("Error updating sample indicator:", error);
         return NextResponse.json({ error: "Failed to update sample indicator" }, { status: 500 });
     }
+}
+
+export async function POST(request) {
+    const body = await request.json();
+    const { rows, testName, hospital_name } = body;
+    try {
+        const response = [];
+        if (!hospital_name) {
+            response.push({
+                message: 'Organization Name is required',
+                status: 400
+            });
+        }
+        if (!testName) {
+            response.push({
+                message: 'Test name is required',
+                status: 400
+            });
+        }
+        if (!rows || !Array.isArray(rows) || rows.length === 0) {
+            response.push({
+                message: 'Rows data is required',
+                status: 400
+            });
+        }
+        if (testName === "Myeloid") {
+            for (const sample of rows) {
+                const { sample_id, qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size, pool_no } = sample;
+
+                if (!sample_id) {
+                    response.push({ message: 'Sample Id is required', status: 400 });
+                    continue;
+                }
+
+                const sanitized = {
+                    qubit_dna: toNumberOrNull(qubit_dna),
+                    data_required: toNumberOrNull(data_required),
+                    conc_rxn: toNumberOrNull(conc_rxn),
+                    barcode,
+                    i5_index_reverse,
+                    i7_index,
+                    lib_qubit: toNumberOrNull(lib_qubit),
+                    nm_conc: toNumberOrNull(nm_conc),
+                    lib_vol_for_2nm: toNumberOrNull(lib_vol_for_2nm),
+                    nfw_volu_for_2nm: toNumberOrNull(nfw_volu_for_2nm),
+                    total_vol_for_2nm: toNumberOrNull(total_vol_for_2nm),
+                    size: toNumberOrNull(size),
+                    lib_prep_date: new Date().toISOString(),
+                };
+
+                await pool.query(
+                    `INSERT INTO pool_info (qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size, test_name, hospital_name, lib_prep_date)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+                    [sanitized.qubit_dna, sanitized.data_required, sanitized.conc_rxn, sanitized.barcode, sanitized.i5_index_reverse, sanitized.i7_index,
+                    sanitized.lib_qubit, sanitized.nm_conc, sanitized.lib_vol_for_2nm, sanitized.nfw_volu_for_2nm, sanitized.total_vol_for_2nm,
+                    sanitized.size, testName, hospital_name, lib_prep_date]
+                );
+
+                await pool.query(
+                    `UPDATE master_sheet SET qubit_dna = $1, data_required = $2, conc_rxn = $3, barcode = $4,
+                     i5_index_reverse = $5, i7_index = $6, lib_qubit = $7, nm_conc = $8,
+                     lib_vol_for_2nm = $9, nfw_volu_for_2nm = $10, total_vol_for_2nm = $11,
+                     size = $12, pool_no = $16, lib_prep_date = $17 WHERE sample_id = $13 AND test_name = $14 AND hospital_name = $15`,
+                    [sanitized.qubit_dna, sanitized.data_required, sanitized.conc_rxn, sanitized.barcode, sanitized.i5_index_reverse, sanitized.i7_index,
+                    sanitized.lib_qubit, sanitized.nm_conc, sanitized.lib_vol_for_2nm, sanitized.nfw_volu_for_2nm, sanitized.total_vol_for_2nm,
+                    sanitized.size, sample_id, testName, hospital_name, sanitized.pool_no, lib_prep_date]
+                );
+                response.push({ message: 'Data updated successfully', status: 200 });
+            }
+        }
+        if (testName === "WES" ||
+            testName === "CS" ||
+            testName === "Clinical Exome" ||
+            testName === "Cardio Comprehensive (Screening Test)" ||
+            testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+            testName === "WES + Mito" ||
+            testName === "CES + Mito" ||
+            testName === "HRR" ||
+            testName === "HCP" ||
+            testName === "Cardio Comprehensive Myopathy") {
+            for (const sample of rows) {
+                const { sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no } = sample;
+
+                if (!sample_id) {
+                    response.push({ message: 'Sample Id is required', status: 400 });
+                    continue;
+                }
+
+                const sanitized = {
+                    qubit_dna: toNumberOrNull(qubit_dna),
+                    data_required: toNumberOrNull(data_required),
+                    per_rxn_gdna: toNumberOrNull(per_rxn_gdna),
+                    volume: toNumberOrNull(volume),
+                    gdna_volume_3x: toNumberOrNull(gdna_volume_3x),
+                    nfw: toNumberOrNull(nfw),
+                    plate_designation,
+                    well,
+                    i5_index_reverse,
+                    i7_index,
+                    qubit_lib_qc_ng_ul: toNumberOrNull(qubit_lib_qc_ng_ul),
+                    stock_ng_ul: toNumberOrNull(stock_ng_ul),
+                    lib_vol_for_hyb: toNumberOrNull(lib_vol_for_hyb),
+                    gb_per_sample: toNumberOrNull(gb_per_sample),
+                    pool_conc: toNumberOrNull(pool_conc),
+                    size: toNumberOrNull(size),
+                    nm_conc: toNumberOrNull(nm_conc),
+                    one_tenth_of_nm_conc: toNumberOrNull(one_tenth_of_nm_conc),
+                    total_vol_for_2nm: toNumberOrNull(total_vol_for_2nm),
+                    lib_vol_for_2nm: toNumberOrNull(lib_vol_for_2nm),
+                    nfw_volu_for_2nm: toNumberOrNull(nfw_volu_for_2nm),
+                    pool_no,
+                };
+
+                await pool.query(
+                    `INSERT INTO pool_info (qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation,
+                     well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample,
+                     pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm,
+                     pool_no, sample_id, hospital_name, test_name)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25)`,
+                    [
+                        sanitized.qubit_dna, sanitized.data_required, sanitized.per_rxn_gdna, sanitized.volume,
+                        sanitized.gdna_volume_3x, sanitized.nfw, sanitized.plate_designation,
+                        sanitized.well, sanitized.i5_index_reverse, sanitized.i7_index,
+                        sanitized.qubit_lib_qc_ng_ul, sanitized.stock_ng_ul,
+                        sanitized.lib_vol_for_hyb, sanitized.gb_per_sample,
+                        sanitized.pool_conc, sanitized.size, sanitized.nm_conc, sanitized.one_tenth_of_nm_conc,
+                        sanitized.total_vol_for_2nm, sanitized.lib_vol_for_2nm,
+                        sanitized.nfw_volu_for_2nm, sanitized.pool_no, sample_id, hospital_name, testName]
+                );
+                await pool.query(
+                    `UPDATE master_sheet SET qubit_dna = $1, data_required = $2, per_rxn_gdna = $3,
+                     volume = $4, gdna_volume_3x = $5, nfw = $6, plate_designation = $7,
+                     well = $8, i5_index_reverse = $9, i7_index = $10,
+                     qubit_lib_qc_ng_ul = $11, stock_ng_ul = $12,
+                     lib_vol_for_hyb = $13, gb_per_sample = $14,
+                     pool_conc = $15, size = $16,
+                     nm_conc = $17, one_tenth_of_nm_conc = $18,
+                     total_vol_for_2nm = $19,
+                     lib_vol_for_2nm = $20,
+                     nfw_volu_for_2nm = $21, pool_no = $22
+                     WHERE sample_id = $23 AND test_name = $24 AND hospital_name = $25`,
+                    [sanitized.qubit_dna, sanitized.data_required, sanitized.per_rxn_gdna, sanitized.volume,
+                    sanitized.gdna_volume_3x, sanitized.nfw, sanitized.plate_designation,
+                    sanitized.well, sanitized.i5_index_reverse, sanitized.i7_index,
+                    sanitized.qubit_lib_qc_ng_ul, sanitized.stock_ng_ul,
+                    sanitized.lib_vol_for_hyb, sanitized.gb_per_sample,
+                    sanitized.pool_conc, sanitized.size, sanitized.nm_conc, sanitized.one_tenth_of_nm_conc,
+                    sanitized.total_vol_for_2nm, sanitized.lib_vol_for_2nm,
+                    sanitized.nfw_volu_for_2nm, sanitized.pool_no, sample_id, testName, hospital_name]
+                );
+                response.push({ message: 'Data updated successfully', status: 200 });
+            }
+        }
+        if (testName === 'SGS' || testName === 'HLA') {
+            for (const sample of rows) {
+                const { sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no } = sample;
+
+                if (!sample_id) {
+                    response.push({ message: 'Sample Id is required', status: 400 });
+                    continue;
+                }
+
+                const sanitized = {
+                    qubit_dna: toNumberOrNull(qubit_dna),
+                    data_required: toNumberOrNull(data_required),
+                    well,
+                    i7_index,
+                    sample_volume: toNumberOrNull(sample_volume),
+                    qubit_lib_qc_ng_ul: toNumberOrNull(qubit_lib_qc_ng_ul),
+                    pooling_volume: toNumberOrNull(pooling_volume),
+                    pool_conc: toNumberOrNull(pool_conc),
+                    size: toNumberOrNull(size),
+                    nm_conc: toNumberOrNull(nm_conc),
+                    one_tenth_of_nm_conc: toNumberOrNull(one_tenth_of_nm_conc),
+                    total_vol_for_2nm: toNumberOrNull(total_vol_for_2nm),
+                    lib_vol_for_2nm: toNumberOrNull(lib_vol_for_2nm),
+                    nfw_volu_for_2nm: toNumberOrNull(nfw_volu_for_2nm),
+                    pool_no,
+                    lib_prep_date: new Date().toISOString(),
+                };
+
+                await pool.query(
+                    `INSERT INTO pool_info (qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, test_name, hospital_name, lib_prep_date)
+                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+                    [sanitized.qubit_dna, sanitized.data_required, sanitized.well, sanitized.i7_index, sanitized.sample_volume, sanitized.qubit_lib_qc_ng_ul, sanitized.pooling_volume, sanitized.pool_conc, sanitized.size, sanitized.nm_conc, sanitized.one_tenth_of_nm_conc, sanitized.total_vol_for_2nm, sanitized.lib_vol_for_2nm, sanitized.nfw_volu_for_2nm, sanitized.pool_no, testName, hospital_name, lib_prep_date]
+                );
+                await pool.query(
+                    `UPDATE master_sheet SET qubit_dna = $1, data_required = $2,
+                     well = $3, i7_index = $4, sample_volume = $5,
+                     qubit_lib_qc_ng_ul = $6, pooling_volume = $7,
+                     pool_conc = $8, size = $9,
+                     nm_conc = $10, one_tenth_of_nm_conc = $11,
+                     total_vol_for_2nm = $12,
+                     lib_vol_for_2nm = $13,
+                     nfw_volu_for_2nm = $14,
+                     pool_no = $15 ,
+                     lib_prep_date = $16
+                     WHERE sample_id = $16 AND test_name = $17 AND hospital_name = $18`,
+                    [sanitized.qubit_dna, sanitized.data_required, sanitized.well, sanitized.i7_index,
+                    sanitized.sample_volume, sanitized.qubit_lib_qc_ng_ul,
+                    sanitized.pooling_volume, sanitized.pool_conc, sanitized.size,
+                    sanitized.nm_conc, sanitized.one_tenth_of_nm_conc,
+                    sanitized.total_vol_for_2nm, sanitized.lib_vol_for_2nm,
+                    sanitized.nfw_volu_for_2nm, sanitized.pool_no, sample_id, testName, hospital_name, lib_prep_date]
+                );
+                response.push({ message: 'Data updated successfully', status: 200 });
+            }
+        }
+        return NextResponse.json(response);
+    }
+    catch (error) {
+        console.error("Error in UPDATE /api/pool-data:", error);
+        return NextResponse.json({
+            message: 'An error occurred while processing your request.',
+            status: 500
+        });
+    }
+}
+
+export function toNumberOrNull(value) {
+    return value === "" || value === undefined ? null : Number(value);
 }
