@@ -543,7 +543,7 @@ const LibraryPrepration = () => {
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+   // getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex, columnId, value) => {
@@ -989,9 +989,9 @@ const LibraryPrepration = () => {
 
           <div className="">
             {/* Table */}
-            <div
-              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4"
-              style={{ maxWidth: 'calc(100vw - 50px)', overflowY: 'auto' }}
+             <div
+              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4 h-[400px] overflow-y-auto"
+              style={{ maxWidth: 'calc(100vw - 50px)' }}
             >
               <Table className="min-w-full">
                 <TableHeader className="bg-orange-100 dark:bg-gray-800">
