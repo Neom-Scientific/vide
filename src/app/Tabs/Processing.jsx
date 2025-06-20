@@ -45,6 +45,7 @@ const Processing = () => {
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
+    { key: 'internal_id' , label: 'Internal ID' },
     { key: 'dept_name', label: 'Department Name' },
     { key: 'run_id', label: 'Run ID' },
     { key: 'sample_date', label: 'Sample Date' },
@@ -157,7 +158,7 @@ const Processing = () => {
   const allTests = [
     'WES',
     'CS',
-    'Clinical Exome',
+    'CES',
     'Myeloid',
     'HLA',
     'SGS',
@@ -228,6 +229,7 @@ const Processing = () => {
             return (
               <Checkbox
                 checked={isChecked}
+                className="border border-orange-400"
                 onCheckedChange={async (checked) => {
                   const updatedRow = {
                     ...info.row.original,
@@ -293,6 +295,7 @@ const Processing = () => {
   const defaultVisible = [
     "sno",
     "sample_id",
+    "internal_id",
     "registration_date",
     "test_name",
     "patient_name",
@@ -380,6 +383,7 @@ const Processing = () => {
 
     try {
       const response = await axios.get(`/api/search`, { params: data });
+      console.log('response.data:', response.data[0].data); // Debugging response data
 
       if (response.data[0].status === 200) {
         // Map the data to ensure checkbox fields are "Yes"/"No"

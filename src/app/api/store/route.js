@@ -75,7 +75,6 @@ export async function POST(request) {
             // Generate a new project_id sequence
             const seqQuery = `
             SELECT project_id FROM master_sheet
-            WHERE registration_date::date = $1
             ORDER BY project_id DESC
             LIMIT 1
             `;

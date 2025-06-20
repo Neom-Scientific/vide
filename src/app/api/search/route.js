@@ -87,7 +87,7 @@ export async function GET(request) {
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const query = `SELECT * FROM master_sheet ${whereClause}`;
+    const query = `SELECT * FROM master_sheet ${whereClause} order by registration_date DESC`;
 
     const data = await pool.query(query, values);
 

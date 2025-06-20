@@ -53,7 +53,7 @@ const Reports = () => {
   const allTests = [
     'WES',
     'CS',
-    'Clinical Exome',
+    'CES',
     'Myeloid',
     'HLA',
     'SGS',
@@ -74,6 +74,7 @@ const Reports = () => {
     { key: 'run_id', label: 'Run ID' },
     { key: 'sample_id', label: 'Sample ID' },
     { key: 'registration_date', label: 'Registration Date' },
+    { key: 'internal_id', label: 'Internal ID' },
     { key: 'sample_date', label: 'Sample Date' },
     { key: 'patient_name', label: 'Patient Name' },
     { key: 'client_name', label: 'Client Name' },
@@ -165,7 +166,7 @@ const Reports = () => {
 
       console.log('response:', response.data);
       if (response.data[0].status === 200) {
-        toast.success(`Updated ${columnKey} successfully!`);
+        // toast.success(`Updated ${columnKey} successfully!`);
         // Update the tableRows state to reflect the change
         setTableRows(prevRows =>
           prevRows.map(row =>
@@ -175,11 +176,11 @@ const Reports = () => {
           )
         );
       } else {
-        toast.error(`Failed to update ${columnKey}: ${response.data.message}`);
+        // toast.error(`Failed to update ${columnKey}: ${response.data.message}`);
       }
     } catch (error) {
       console.error("Error updating data:", error);
-      toast.error("An error occurred while updating the data.");
+      // toast.error("An error occurred while updating the data.");
     }
   };
 
@@ -314,6 +315,7 @@ const Reports = () => {
               return (
                 <input
                   type="checkbox"
+                  className='border border-orange-400'
                   checked={value === "Yes"}
                   onChange={e => handleChangeCheckbox(e, col.key, sampleId)}
                 />
@@ -358,6 +360,7 @@ const Reports = () => {
     'run_id',
     'sample_id',
     'registration_date',
+    'internal_id',
     'patient_name',
     'client_name',
     'seq_run_date',

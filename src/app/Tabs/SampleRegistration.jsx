@@ -51,7 +51,7 @@ export const SampleRegistration = () => {
   const [testToRemove, setTestToRemove] = useState(null); // <-- Add this line
   const [user, setUser] = useState(null);
   const [editButton, setEditButton] = useState([]);
-  const [processing , setProcessing] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
@@ -136,7 +136,7 @@ export const SampleRegistration = () => {
   const allTests = [
     'WES',
     'CS',
-    'Clinical Exome',
+    'CES',
     'Myeloid',
     'HLA',
     'SGS',
@@ -325,6 +325,7 @@ export const SampleRegistration = () => {
       selectedTests.length = 0; // Clear selected tests
       setTrfFile(null); // Reset TRF file
       setTrfUrl(''); // Reset TRF URL
+      form.setValue('trf-upload', null); // Reset TRF upload input
       localStorage.removeItem('sampleRegistrationForm'); // Clear localStorage
     }
     else if (res.data[0].status === 400) {
@@ -702,7 +703,7 @@ export const SampleRegistration = () => {
                       <option className='dark:text-white' value='Plasma'>Plasma</option>
                       <option className='dark:text-white' value='CF DNA'>CF DNA</option>
                       <option className='dark:text-white' value='Tissue'>Tissue</option>
-                      <option className='dark:text-white' value='Buccal Swap'>Buccal Swap</option>
+                      <option className='dark:text-white' value='Buccal Swab'>Buccal Swab</option>
                     </select>
                   </FormItem>
                 )}
@@ -722,14 +723,14 @@ export const SampleRegistration = () => {
                         </p>
                       )}
                     </div>
-                      <select
-                        className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
-                        {...field}
-                      >
-                        <option className='dark:text-white' value=''>Select Specimen Quality</option>
-                        <option className='dark:text-white' value='Accepted'>Accepted</option>
-                        <option className='dark:text-white' value='Not Accepted'>Not Accepted</option>
-                      </select>
+                    <select
+                      className=' dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
+                      {...field}
+                    >
+                      <option className='dark:text-white' value=''>Select Specimen Quality</option>
+                      <option className='dark:text-white' value='Accepted'>Accepted</option>
+                      <option className='dark:text-white' value='Not Accepted'>Not Accepted</option>
+                    </select>
                   </FormItem>
                 )}
               />
@@ -1098,7 +1099,9 @@ export const SampleRegistration = () => {
                             type="file"
                             accept=".pdf"
                             className="hidden"
-                            onChange={e => uploadTrf(e.target.files[0])}
+                            onChange={e => {
+                              uploadTrf(e.target.files[0]);
+                            }}
                           />
                           {trfUrl && (
                             <Button
@@ -1620,6 +1623,7 @@ export const SampleRegistration = () => {
                 setTrfUrl('');
                 setHasSelectedFirstTest(false);
                 localStorage.removeItem('sampleRegistrationData');
+                localStorage.removeItem('editRowData')
               }}
             >
               Reset

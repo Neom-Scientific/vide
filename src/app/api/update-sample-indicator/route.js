@@ -109,7 +109,7 @@ export async function POST(request) {
         }
         else if (testName === "WES" ||
             testName === "CS" ||
-            testName === "Clinical Exome" ||
+            testName === "CES" ||
             testName === "Cardio Comprehensive (Screening Test)" ||
             testName === "Cardio Metabolic Syndrome (Screening Test)" ||
             testName === "WES + Mito" ||

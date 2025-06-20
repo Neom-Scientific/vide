@@ -59,6 +59,7 @@ const LibraryPrepration = () => {
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
+    { key: 'internal_id' , label: 'Internal ID' },
     { key: 'sample_date', label: 'Sample Date' },
     { key: 'sample_type', label: 'Sample Type' },
     { key: 'trf', label: 'TRF' },
@@ -161,6 +162,7 @@ const LibraryPrepration = () => {
         "sno",
         "sample_id",
         "registration_date",
+        "internal_id",
         "test_name",
         "patient_name",
         "sample_type",
@@ -181,7 +183,7 @@ const LibraryPrepration = () => {
     } else if (
       testName === "WES" ||
       testName === "CS" ||
-      testName === "Clinical Exome" ||
+      testName === "CES" ||
       testName === "Cardio Comprehensive (Screening Test)" ||
       testName === "Cardio Metabolic Syndrome (Screening Test)" ||
       testName === "Cardio Comprehensive Myopathy" ||
@@ -196,6 +198,7 @@ const LibraryPrepration = () => {
         "pool_no",
         "sample_id",
         "registration_date",
+        "internal_id",
         "test_name",
         "patient_name",
         "qubit_dna",
@@ -218,6 +221,7 @@ const LibraryPrepration = () => {
         "pool_no",
         "sample_id",
         "registration_date",
+        "internal_id",
         "test_name",
         "patient_name",
         "qubit_dna",
@@ -405,7 +409,8 @@ const LibraryPrepration = () => {
             column.key === "test_name" ||
             column.key === "patient_name" ||
             column.key === "sample_type" ||
-            column.key === "pool_no"
+            column.key === "pool_no" ||
+            column.key === "internal_id" 
           ) {
             return <span>{value}</span> || "";
           }
@@ -441,6 +446,7 @@ const LibraryPrepration = () => {
         "sno",
         "sample_id",
         "registration_date",
+        "internal_id",
         "test_name",
         "patient_name",
         "sample_type",
@@ -461,7 +467,7 @@ const LibraryPrepration = () => {
     } else if (
       testName === "WES" ||
       testName === "CS" ||
-      testName === "Clinical Exome" ||
+      testName === "CES" ||
       testName === "Cardio Comprehensive (Screening Test)" ||
       testName === "Cardio Metabolic Syndrome (Screening Test)" ||
       testName === "WES + Mito" ||
@@ -475,6 +481,7 @@ const LibraryPrepration = () => {
         "select",
         "sample_id",
         "registration_date",
+        "internal_id",
         "test_name",
         "patient_name",
         "qubit_dna",
@@ -497,6 +504,7 @@ const LibraryPrepration = () => {
         "select",
         "sample_id",
         "registration_date",
+        "internal_id",
         "test_name",
         "patient_name",
         "qubit_dna",
@@ -779,7 +787,7 @@ const LibraryPrepration = () => {
     return (
       <Input
         ref={inputRef}
-        className="border rounded p-1 text-xs w-[200px]"
+        className="border border-orange-300 rounded p-1 text-xs w-[200px]"
         value={value}
         type="text"
         placeholder={`Enter ${columnId}`}
@@ -1033,7 +1041,7 @@ const LibraryPrepration = () => {
                                     style={{ verticalAlign: "middle", background: "#f1f5f9" }}
                                   >
                                     <Input
-                                      className="border rounded p-1 text-xs w-[200px] bg-gray-100"
+                                      className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
                                       placeholder={col.header || col.accessorKey}
                                       value={pool.values[col.accessorKey] || ""}
                                       onChange={e => {
@@ -1117,7 +1125,7 @@ const LibraryPrepration = () => {
                                   style={{ verticalAlign: "middle", background: "#f8fafc" }}
                                 >
                                   <Input
-                                    className="border rounded p-1 text-xs w-[200px] bg-gray-100"
+                                    className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
                                     placeholder={col.header || col.accessorKey}
                                     value={pool.values[col.accessorKey] || ""}
                                     onChange={e => {

@@ -34,7 +34,7 @@ export async function GET(request) {
         // Query by sample_ids if provided
         if (sample_ids.length > 0) {
             const { rows } = await pool.query(
-                `SELECT * FROM master_sheet WHERE sample_id = ANY($1::integer[]);`,
+                `SELECT * FROM master_sheet WHERE sample_id = ANY($1::integer[]) ORDER BY registration_date;`,
                 [sample_ids]
             );
 
@@ -52,7 +52,7 @@ export async function GET(request) {
         if (sample_ids.length === 0 && hospital_name && testNames.length > 0) {
             for (const testName of testNames) {
                 const { rows } = await pool.query(
-                    `SELECT * FROM pool_info WHERE hospital_name = $1 AND test_name = $2;`,
+                    `SELECT * FROM pool_info WHERE hospital_name = $1 AND test_name = $2 ORDER BY registration_date;`,
                     [hospital_name, testName]
                 );
 
@@ -208,7 +208,7 @@ export async function POST(request) {
         }
         if (testName === "WES" ||
             testName === "CS" ||
-            testName === "Clinical Exome" ||
+            testName === "CES" ||
             testName === "Cardio Comprehensive (Screening Test)" ||
             testName === "Cardio Metabolic Syndrome (Screening Test)" ||
             testName === "WES + Mito" ||

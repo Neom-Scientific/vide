@@ -158,6 +158,7 @@ export async function POST(request) {
             if (sampleIds.length > 0) {
                 for (const id of sampleIds) {
                     await pool.query(`UPDATE pool_info SET run_id = $1 WHERE sample_id = $2`, [run_id, id]);
+                    await pool.query(`UPDATE master_sheet SET under_seq = $1 WHERE sample_id = $2`, ['Yes', id]);
                 }
             }
         }
