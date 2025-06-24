@@ -1041,7 +1041,7 @@ const LibraryPrepration = () => {
                                       className="align-middle bg-slate-100 px-2 py-1 border border-gray-300"
                                     >
                                       <input
-                                        className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
+                                        className="border border-orange-300 rounded p-1 w-[200px] bg-gray-100"
                                         placeholder={col.header || col.accessorKey}
                                         value={pool.values[col.accessorKey] || ""}
                                         onChange={e => {
@@ -1095,7 +1095,7 @@ const LibraryPrepration = () => {
                                     className="align-middle bg-slate-50 px-2 py-1 border border-gray-300"
                                   >
                                     <input
-                                      className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
+                                      className="border border-orange-300 rounded p-1 w-[200px] bg-gray-100"
                                       placeholder={col.header || col.accessorKey}
                                       value={pool?.values[col.accessorKey] || ""}
                                       onChange={e => {
