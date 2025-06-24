@@ -418,7 +418,7 @@ const LibraryPrepration = () => {
           return (
             <InputCell
               value={value || ""}
-              rowIndex={info.row}
+              rowIndex={info.row.index}
               columnId={key}
               updateData={table.options.meta.updateData}
             />
@@ -767,6 +767,7 @@ const LibraryPrepration = () => {
   const InputCell = ({ value: initialValue, rowIndex, columnId, updateData }) => {
     const [value, setValue] = useState(initialValue || "");
     const inputRef = useRef(null);
+
   
     const handleChange = (e) => {
       setValue(e.target.value);
