@@ -90,38 +90,56 @@ export async function POST(request) {
 
 
         const data = await pool.query('SELECT sample_id FROM master_sheet WHERE sample_id = $1', [sample_id]);
-        if (data.rows.length > 0) {
-            response.push({
-                status: 400,
-                message: "Sample ID already exists"
-            });
-            return NextResponse.json(response);
-        }
+        // if (data.rows.length > 0) {
+        //     response.push({
+        //         status: 400,
+        //         message: "Sample ID already exists"
+        //     });
+        //     return NextResponse.json(response);
+        // }
 
-        const date = new Date();
-
+        let internal_id;
+        const date = new Date(registration_date || Date.now());
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0'); // Pad month to two digits
-        const maxInternalIdQuery = `
-          SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 7, 3) AS INTEGER)) AS max_id
-          FROM master_sheet
-          WHERE hospital_id = $1
-            AND EXTRACT(YEAR FROM registration_date) = $2
-            AND EXTRACT(MONTH FROM registration_date) = $3
-        `;
-        const maxInternalIdResult = await pool.query(maxInternalIdQuery, [hospital_id, year, month]);
-        const maxInternalId = maxInternalIdResult.rows[0]?.max_id || 0; // Default to 0 if no max_id exists
-        const internal_id = `${year}${month}${String(maxInternalId + 1).padStart(3, '0')}`;
-        console.log('internal_id', internal_id);
-        // Check if internal_id already exists
-        const data2 = await pool.query('SELECT internal_id FROM master_sheet');
-        const existingInternalIds = data2.rows.map(row => row.internal_id);
-        if (existingInternalIds.includes(internal_id)) {
-            response.push({
-                status: 400,
-                message: "Internal ID already exists"
-            });
+        
+        if (selectedTestName === "Myeloid") {
+            // Check if this sample_id already exists for Myeloid
+            const existing = await pool.query(
+                `SELECT internal_id FROM master_sheet WHERE sample_id = $1 AND test_name = $2`,
+                [sample_id, "Myeloid"]
+            );
+        
+            if (existing.rows.length > 0) {
+                // Use the same numeric part, but change the suffix to the new sample_type
+                const existingInternalId = existing.rows[0].internal_id;
+                const numericPart = existingInternalId.split('-')[0];
+                internal_id = `${numericPart}-${sample_type}`;
+            } else {
+                // Find the max numeric part for this year from the whole table
+                const maxInternalIdQuery = `
+                    SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+                    FROM master_sheet
+                    WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+                `;
+                const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
+                const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+                const nextSeq = maxSeq + 1;
+                const numericPart = `${year}${String(nextSeq).padStart(5, '0')}`;
+                internal_id = `${numericPart}-${sample_type}`;
+            }
+        } else {
+            // Default logic for other test_names
+            const maxInternalIdQuery = `
+                SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+                FROM master_sheet
+                WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+            `;
+            const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
+            const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+            const nextSeq = maxSeq + 1;
+            internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
         }
+
         const query = `
             INSERT INTO master_sheet (
                 hospital_name,
