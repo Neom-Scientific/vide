@@ -59,7 +59,7 @@ const LibraryPrepration = () => {
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
-    { key: 'internal_id' , label: 'Internal ID' },
+    { key: 'internal_id', label: 'Internal ID' },
     { key: 'sample_date', label: 'Sample Date' },
     { key: 'sample_type', label: 'Sample Type' },
     { key: 'trf', label: 'TRF' },
@@ -190,7 +190,7 @@ const LibraryPrepration = () => {
       testName === "WES + Mito" ||
       testName === "CES + Mito" ||
       testName === "HRR" ||
-      testName === "HCP" 
+      testName === "HCP"
     ) {
       return insertPooledColumns([
         "select",
@@ -275,7 +275,7 @@ const LibraryPrepration = () => {
           })
           .filter(Boolean);
         const testName = Object.keys(storedData)[0];
-  
+
         // If local data exists for this testName, use it and do not overwrite
         if (testName && storedData[testName]) {
           if (Array.isArray(storedData[testName])) {
@@ -289,7 +289,7 @@ const LibraryPrepration = () => {
           setTestName(testName);
           return; // Do not fetch or overwrite with API data
         }
-  
+
         // Otherwise, fetch from API
         const response = await axios.get(`/api/pool-data`, {
           params: {
@@ -308,7 +308,7 @@ const LibraryPrepration = () => {
               acc[tn].push(row);
               return acc;
             }, {});
-  
+
             // Only update localStorage if there was no local data for this testName
             if (!storedData[testName] || (Array.isArray(storedData[testName]) && storedData[testName].length === 0)) {
               const mergedData = { ...storedData, ...newData };
@@ -337,7 +337,7 @@ const LibraryPrepration = () => {
         toast.error("An error occurred while fetching pool info.");
       }
     };
-  
+
     fetchPoolInfo();
   }, []);
 
@@ -410,7 +410,7 @@ const LibraryPrepration = () => {
             column.key === "patient_name" ||
             column.key === "sample_type" ||
             column.key === "pool_no" ||
-            column.key === "internal_id" 
+            column.key === "internal_id"
           ) {
             return <span>{value}</span> || "";
           }
@@ -551,7 +551,7 @@ const LibraryPrepration = () => {
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
-   // getPaginationRowModel: getPaginationRowModel(),
+    // getPaginationRowModel: getPaginationRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     meta: {
       updateData: (rowIndex, columnId, value) => {
@@ -768,15 +768,15 @@ const LibraryPrepration = () => {
     const [value, setValue] = useState(initialValue || "");
     const inputRef = useRef(null);
 
-  
+
     const handleChange = (e) => {
       setValue(e.target.value);
     };
-  
+
     const handleBlur = () => {
       updateData(rowIndex, columnId, value);
     };
-  
+
     // This ensures Tab key works as expected
     const handleKeyDown = (e) => {
       if (e.key === "Tab") {
@@ -784,7 +784,7 @@ const LibraryPrepration = () => {
         // Let browser handle focus to next input
       }
     };
-  
+
     return (
       <Input
         ref={inputRef}
@@ -998,53 +998,106 @@ const LibraryPrepration = () => {
 
           <div className="">
             {/* Table */}
-             <div
-              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4 h-[400px] overflow-y-auto"
-              style={{ maxWidth: 'calc(100vw - 50px)' }}
-            >
-              <Table className="min-w-full">
-                <TableHeader className="bg-orange-100 dark:bg-gray-800">
-                  {table.getHeaderGroups().map(headerGroup => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map(header => (
-                        <TableHead key={header.id}>
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
+            <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 50px)' }}>
+              <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
+                <table className="min-w-full border-collapse table-auto">
+                  <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-30">
+                    {table.getHeaderGroups().map(headerGroup => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map(header => (
+                          <th
+                            key={header.id}
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="cursor-pointer px-4 py-2 text-left border-b border-gray-200 sticky top-0 z-30 bg-orange-100 dark:bg-gray-800 whitespace-nowrap"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
 
-                {/* Inside your TableBody render logic: */}
-                <TableBody>
-                  {table.getRowModel().rows.map((row, rowIndex) => {
-                    // Check if this row is part of a previous pool
-                    const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(rowIndex));
-                    const isFirstOfPool = pool && rowIndex === Math.min(...pool.sampleIndexes);
+                  <tbody>
+                    {table.getRowModel().rows.map((row, rowIndex) => {
+                      const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(rowIndex));
+                      const isFirstOfPool = pool && rowIndex === Math.min(...pool.sampleIndexes);
 
-                    // Check if this row is part of the current selection
-                    const isSelected = currentSelection.includes(rowIndex);
-                    const isFirstSelected = isSelected && rowIndex === Math.min(...currentSelection);
+                      const isSelected = currentSelection.includes(rowIndex);
+                      const isFirstSelected = isSelected && rowIndex === Math.min(...currentSelection);
 
-                    return (
-                      <React.Fragment key={row.id}>
-                        <TableRow>
-                          {columns.map((col, colIdx) => {
-                            // Show pooled columns for previous pools (editable, merged)
-                            if (pooledColumns.includes(col.accessorKey) && pool) {
-                              if (isFirstOfPool) {
+                      return (
+                        <React.Fragment key={row.id}>
+                          <tr>
+                            {columns.map((col, colIdx) => {
+                              // Pooled (existing) inputs
+                              if (pooledColumns.includes(col.accessorKey) && pool) {
+                                if (isFirstOfPool) {
+                                  return (
+                                    <td
+                                      key={col.accessorKey}
+                                      rowSpan={pool.sampleIndexes.length}
+                                      className="align-middle bg-slate-100 px-2 py-1 border border-gray-300"
+                                    >
+                                      <input
+                                        className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
+                                        placeholder={col.header || col.accessorKey}
+                                        value={pool.values[col.accessorKey] || ""}
+                                        onChange={e => {
+                                          const value = e.target.value;
+                                          setPooledRowData(prev =>
+                                            prev.map(p => {
+                                              if (p !== pool) return p;
+                                              const updated = { ...p.values, [col.accessorKey]: value };
+
+                                              // --- Formula logic ---
+                                              const poolConc = parseFloat(updated.pool_conc) || 0;
+                                              const size = parseFloat(updated.size) || 0;
+                                              updated.nm_conc = (size > 0 && poolConc > 0)
+                                                ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
+                                                : "";
+
+                                              const nmConc = parseFloat(updated.nm_conc) || 0;
+                                              updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
+
+                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
+                                              updated.total_vol_for_2nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
+                                                ? (parseFloat(updated.one_tenth_of_nm_conc) * libVolFor2nm / 2).toFixed(2)
+                                                : "";
+
+                                              const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
+                                              updated.nfw_volu_for_2nm = (totalVolFor2nm && libVolFor2nm)
+                                                ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
+                                                : "";
+
+                                              return { ...p, values: updated };
+                                            })
+                                          );
+                                        }}
+                                      />
+                                    </td>
+                                  );
+                                }
+                                return null; // Covered by rowspan
+                              }
+
+                              // Pooled (new) inputs
+                              if (
+                                pooledColumns.includes(col.accessorKey) &&
+                                showPooledFields &&
+                                isFirstSelected
+                              ) {
                                 return (
-                                  <TableCell
+                                  <td
                                     key={col.accessorKey}
-                                    rowSpan={pool.sampleIndexes.length}
-                                    style={{ verticalAlign: "middle", background: "#f1f5f9" }}
+                                    rowSpan={currentSelection.length}
+                                    className="align-middle bg-slate-50 px-2 py-1 border border-gray-300"
                                   >
-                                    <Input
+                                    <input
                                       className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
                                       placeholder={col.header || col.accessorKey}
-                                      value={pool.values[col.accessorKey] || ""}
+                                      value={pool?.values[col.accessorKey] || ""}
                                       onChange={e => {
                                         const value = e.target.value;
                                         setPooledRowData(prev =>
@@ -1052,172 +1105,74 @@ const LibraryPrepration = () => {
                                             if (p !== pool) return p;
                                             const updated = { ...p.values, [col.accessorKey]: value };
 
-                                            // --- Formula logic for pooled columns ---
-                                            if (
-                                              col.accessorKey === "pool_conc" ||
-                                              col.accessorKey === "size"
-                                            ) {
-                                              const poolConc = parseFloat(updated.pool_conc) || 0;
-                                              const size = parseFloat(updated.size) || 0;
-                                              updated.nm_conc =
-                                                size > 0 && poolConc > 0
-                                                  ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
-                                                  : "";
-                                            }
-                                            if (
-                                              col.accessorKey === "pool_conc" ||
-                                              col.accessorKey === "size" ||
-                                              col.accessorKey === "nm_conc"
-                                            ) {
-                                              const nmConc = parseFloat(updated.nm_conc) || 0;
-                                              updated.one_tenth_of_nm_conc =
-                                                nmConc > 0 ? (nmConc / 10).toFixed(2) : "";
-                                            }
-                                            if (
-                                              col.accessorKey === "total_vol_for_2nm" ||
-                                              col.accessorKey === "lib_vol_for_2nm" ||
-                                              col.accessorKey === "one_tenth_of_nm_conc"
-                                            ) {
-                                              const oneTenthOfNmConc =
-                                                parseFloat(updated.one_tenth_of_nm_conc) || 0;
-                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
-                                              updated.total_vol_for_2nm =
-                                                oneTenthOfNmConc > 0 && libVolFor2nm > 0
-                                                  ? (oneTenthOfNmConc * libVolFor2nm / 2).toFixed(2)
-                                                  : "";
-                                            }
-                                            if (
-                                              col.accessorKey === "total_vol_for_2nm" ||
-                                              col.accessorKey === "lib_vol_for_2nm"
-                                            ) {
-                                              const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
-                                              updated.nfw_volu_for_2nm =
-                                                totalVolFor2nm > 0 && updated.lib_vol_for_2nm > 0
-                                                  ? (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2)
-                                                  : "";
-                                            }
-                                            // --- End formula logic ---
-
-                                            return {
-                                              ...p,
-                                              values: updated,
-                                            };
-                                          })
-                                        );
-                                      }}
-                                    />
-                                  </TableCell>
-                                );
-                              }
-                              // For other rows in the pool, skip rendering this cell (covered by rowSpan)
-                              return null;
-                            }
-
-                            // Show pooled columns for current selection (editable, merged)
-                            if (
-                              pooledColumns.includes(col.accessorKey) &&
-                              showPooledFields &&
-                              isFirstSelected
-                            ) {
-                              return (
-                                <TableCell
-                                  key={col.accessorKey}
-                                  rowSpan={currentSelection.length}
-                                  style={{ verticalAlign: "middle", background: "#f8fafc" }}
-                                >
-                                  <Input
-                                    className="border border-orange-300 rounded p-1 text-xs w-[200px] bg-gray-100"
-                                    placeholder={col.header || col.accessorKey}
-                                    value={pool.values[col.accessorKey] || ""}
-                                    onChange={e => {
-                                      const value = e.target.value;
-                                      setPooledRowData(prev =>
-                                        prev.map(p => {
-                                          if (p !== pool) return p;
-                                          const updated = { ...p.values, [col.accessorKey]: value };
-
-                                          // --- Formula logic for pooled columns ---
-                                          if (col.accessorKey === "pool_conc" || col.accessorKey === "size") {
+                                            // --- Formula logic ---
                                             const poolConc = parseFloat(updated.pool_conc) || 0;
                                             const size = parseFloat(updated.size) || 0;
                                             updated.nm_conc = (size > 0 && poolConc > 0)
                                               ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
                                               : "";
-                                          }
-                                          if (col.accessorKey === "pool_conc" || col.accessorKey === "size" || col.accessorKey === "nm_conc") {
+
                                             const nmConc = parseFloat(updated.nm_conc) || 0;
                                             updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
-                                          }
-                                          if (col.accessorKey === "total_vol_for_2nm" || col.accessorKey === "lib_vol_for_2nm" || col.accessorKey === "one_tenth_of_nm_conc") {
-                                            const oneTenthOfNmConc = parseFloat(updated.one_tenth_of_nm_conc) || 0;
+
                                             const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
-                                            updated.total_vol_for_2nm = (oneTenthOfNmConc > 0 && libVolFor2nm > 0)
-                                              ? (oneTenthOfNmConc * libVolFor2nm / 2).toFixed(2)
+                                            updated.total_vol_for_2nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
+                                              ? (parseFloat(updated.one_tenth_of_nm_conc) * libVolFor2nm / 2).toFixed(2)
                                               : "";
-                                          }
-                                          if (col.accessorKey === "total_vol_for_2nm" || col.accessorKey === "lib_vol_for_2nm") {
+
                                             const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
-                                            updated.nfw_volu_for_2nm = (totalVolFor2nm > 0 && updated.lib_vol_for_2nm > 0)
-                                              ? (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2)
+                                            updated.nfw_volu_for_2nm = (totalVolFor2nm && libVolFor2nm)
+                                              ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
                                               : "";
-                                          }
-                                          // --- End formula logic ---
 
-                                          return {
-                                            ...p,
-                                            values: updated,
-                                          };
-                                        })
-                                      );
-                                    }}
-                                  />
-                                </TableCell>
+                                            return { ...p, values: updated };
+                                          })
+                                        );
+                                      }}
+                                    />
+                                  </td>
+                                );
+                              }
+
+                              if (
+                                pooledColumns.includes(col.accessorKey) &&
+                                ((showPooledFields && isSelected) || pool)
+                              ) {
+                                return null; // skip cell covered by rowspan
+                              }
+
+                              // Default cell render
+                              return (
+                                <td key={col.accessorKey} className="px-4 py-1 border-b border-gray-100">
+                                  {flexRender(
+                                    col.cell,
+                                    row.getVisibleCells().find(c => c.column.id === col.accessorKey)?.getContext?.() || {}
+                                  )}
+                                </td>
                               );
-                            }
-                            // For other selected rows, skip rendering this cell (covered by rowSpan)
-                            if (
-                              pooledColumns.includes(col.accessorKey) &&
-                              ((showPooledFields && isSelected) || pool)
-                            ) {
-                              return null;
-                            }
+                            })}
+                          </tr>
 
-                            // For non-pooled columns, render as usual
-                            return (
-                              <TableCell key={col.accessorKey}>
-                                {flexRender(
-                                  col.cell,
-                                  { ...row.getVisibleCells().find(c => c.column.id === col.accessorKey)?.getContext?.() }
-                                )}
-                              </TableCell>
-                            );
-                          })}
-                        </TableRow>
-
-                        {/* Show Done button after last selected row, only if pooled fields are not shown */}
-                        {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && !showPooledFields && (
-                          <TableRow>
-                            <TableCell colSpan={columns.length}>
-                              <Button onClick={handleDone}>Done</Button>
-                            </TableCell>
-                          </TableRow>
-                        )}
-
-                        {/* Show Create Pool button after pooled input row */}
-                        {/* {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && showPooledFields && (
-                          <TableRow>
-                            <TableCell colSpan={columns.length}>
-                              <Button onClick={handleDone} className="bg-blue-600 text-white">Create Pool</Button>
-                            </TableCell>
-                          </TableRow>
-                        )} */}
-                      </React.Fragment>
-                    );
-                  })}
-                </TableBody>
-
-              </Table>
+                          {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && !showPooledFields && (
+                            <tr>
+                              <td colSpan={columns.length} className="py-2 px-4">
+                                <Button
+                                  onClick={handleDone}
+                                  className=" text-white text-sm px-4 py-1 rounded bg-black"
+                                >
+                                  Done
+                                </Button>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
           </div>
           <Button
             type="button"

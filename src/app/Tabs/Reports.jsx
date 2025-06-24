@@ -706,58 +706,49 @@ const Reports = () => {
 
           {/* Table */}
           <div className="">
-            <div
-              className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 w-full"
-              style={{ maxWidth: 'calc(100vw - 50px)' }}
-            >
-              <div className="overflow-y-auto" style={{ maxHeight: 500 }}>
-                <Table className="min-w-full">
-                  <TableHeader>
-                    {table.getHeaderGroups().map(headerGroup => (
-                      <TableRow key={headerGroup.id}>
-                        {headerGroup.headers.map(header => (
-                          <TableHead
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 50px)' }}>
+              <div className="h-[500px] overflow-y-auto w-full">
+                <table className="min-w-full border-collapse table-auto">
+                  <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-50">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <th
                             key={header.id}
-                            className="sticky top-0 z-30 bg-orange-100 dark:bg-gray-800"
-                            style={{
-                              position: 'sticky',
-                              top: 0,
-                              zIndex: 30,
-                              background: 'rgb(255 237 213)', // fallback for orange-100
-                            }}
                             onClick={header.column.getToggleSortingHandler()}
+                            className="cursor-pointer px-4 py-2 text-left border-b border-gray-200 bg-orange-100 dark:bg-gray-800 sticky top-0 z-50 whitespace-nowrap"
                           >
                             {header.isPlaceholder
                               ? null
                               : flexRender(header.column.columnDef.header, header.getContext())}
-                            {/* Sorting indicator here if needed */}
-                          </TableHead>
+                          </th>
                         ))}
-                      </TableRow>
+                      </tr>
                     ))}
-                  </TableHeader>
-                  <TableBody>
+                  </thead>
+                  <tbody>
                     {table.getRowModel().rows.length ? (
-                      table.getRowModel().rows.map(row => (
-                        <TableRow key={row.id ?? row.index}>
-                          {row.getVisibleCells().map(cell => (
-                            <TableCell key={cell.id}>
+                      table.getRowModel().rows.map((row) => (
+                        <tr key={row.id ?? row.index}>
+                          {row.getVisibleCells().map((cell) => (
+                            <td key={cell.id} className="px-4 py-2 border-b border-gray-100">
                               {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </TableCell>
+                            </td>
                           ))}
-                        </TableRow>
+                        </tr>
                       ))
                     ) : (
-                      <TableRow>
-                        <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
+                      <tr>
+                        <td colSpan={columns.length} className="text-center py-4 text-gray-400">
                           No data
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                     )}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             </div>
+
           </div>
 
           <Button

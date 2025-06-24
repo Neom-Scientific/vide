@@ -45,7 +45,7 @@ const Processing = () => {
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
-    { key: 'internal_id' , label: 'Internal ID' },
+    { key: 'internal_id', label: 'Internal ID' },
     { key: 'dept_name', label: 'Department Name' },
     { key: 'run_id', label: 'Run ID' },
     { key: 'sample_date', label: 'Sample Date' },
@@ -757,52 +757,52 @@ const Processing = () => {
 
           {/* Table */}
           <div className="">
-            <div
-              className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full py-4 h-[400px] overflow-y-auto"
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap"
               style={{ maxWidth: 'calc(100vw - 50px)' }}
             >
-              <Table className="min-w-full">
-                <TableHeader className="bg-orange-100 dark:bg-gray-800">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <TableHead
-                          key={header.id}
-                          className="cursor-pointer"
-                          onClick={header.column.getToggleSortingHandler()} // Add sorting handler
-                        >
-                          {header.isPlaceholder
-                            ? null
-                            : flexRender(header.column.columnDef.header, header.getContext())}
-                          {/* Show sorting indicator */}
-                          {header.column.getIsSorted() === "asc"}
-                          {header.column.getIsSorted() === "desc"}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.length ? (
-                    table.getRowModel().rows.map(row => (
-                      <TableRow key={row.id ?? row.index}>
-                        {row.getVisibleCells().map(cell => (
-                          <TableCell key={cell.id}>
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </TableCell>
+              <div className="h-[400px] overflow-y-auto w-full">
+                <table className="min-w-full border-collapse table-auto">
+                  <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-50">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            onClick={header.column.getToggleSortingHandler()}
+                            className="cursor-pointer px-4 py-2 text-left border-b border-gray-200 bg-orange-100 dark:bg-gray-800 sticky top-0 z-50"
+                          >
+                            {header.isPlaceholder
+                              ? null
+                              : flexRender(header.column.columnDef.header, header.getContext())}
+                          </th>
                         ))}
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={columns.length} className="text-center py-4 text-gray-400">
-                        No data
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody>
+                    {table.getRowModel().rows.length ? (
+                      table.getRowModel().rows.map(row => (
+                        <tr key={row.id ?? row.index}>
+                          {row.getVisibleCells().map(cell => (
+                            <td key={cell.id} className="px-4 py-2 border-b border-gray-100">
+                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={columns.length} className="text-center py-4 text-gray-400">
+                          No data
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
+
+
           </div>
           <div className="flex justify-between items-center mb-4">
             <Button
