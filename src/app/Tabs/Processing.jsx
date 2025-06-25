@@ -758,7 +758,7 @@ const Processing = () => {
           {/* Table */}
           <div className="">
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap"
-              style={{ maxWidth: 'calc(100vw - 50px)' }}
+              style={{ maxWidth: 'calc(100vw - 60px)' }}
             >
               <div className="h-[400px] overflow-y-auto w-full">
                 <table className="min-w-full border-collapse table-auto">

@@ -706,7 +706,7 @@ const Reports = () => {
 
           {/* Table */}
           <div className="">
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 50px)' }}>
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 60px)' }}>
               <div className="h-[500px] overflow-y-auto w-full">
                 <table className="min-w-full border-collapse table-auto">
                   <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-50">

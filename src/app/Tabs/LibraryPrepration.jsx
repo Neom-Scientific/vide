@@ -40,7 +40,11 @@ const LibraryPrepration = () => {
   const [showPooledFields, setShowPooledFields] = useState(false);
   const [pooledValues, setPooledValues] = useState({});
   const [showPooledRowIndex, setShowPooledRowIndex] = useState(null);
+  const [selectedCells, setSelectedCells] = useState([]);
   const [getTheTestNames, setGetTheTestNames] = useState([]);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectionStart, setSelectionStart] = useState(null);
+  const [bulkValue, setBulkValue] = useState("");
   const [processing, setProcessing] = useState(false);
   const [pooledRowData, setPooledRowData] = useState([]); // [{ sampleIndexes: [1, 2, 3], values: {} }]
   const [currentSelection, setCurrentSelection] = useState([]);
@@ -743,6 +747,13 @@ const LibraryPrepration = () => {
     }
   };
 
+  const editableColumns = allColumns
+      .map(col => col.key)
+      .filter(key =>
+        !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
+        && !pooledColumns.includes(key) // if you don't want pooled columns to be editable
+      );
+
   useEffect(() => {
     // For each pool, update all rows in tableRows that belong to that pool
     setTableRows(prevRows => {
@@ -768,37 +779,222 @@ const LibraryPrepration = () => {
     const [value, setValue] = useState(initialValue || "");
     const inputRef = useRef(null);
 
+    const isSelected = selectedCells.some(
+      cell => cell.rowIndex === rowIndex && cell.columnId === columnId
+    );
+
 
     const handleChange = (e) => {
       setValue(e.target.value);
+      // handleBlur(); // Update data immediately on change
     };
 
     const handleBlur = () => {
       updateData(rowIndex, columnId, value);
     };
 
-    // This ensures Tab key works as expected
-    const handleKeyDown = (e) => {
-      if (e.key === "Tab") {
-        handleBlur();
-        // Let browser handle focus to next input
+    // useEffect(() => {
+    //   updateData(rowIndex, columnId, value);
+    // }, [value, rowIndex, columnId, updateData]);
+
+    const handleMouseDown = (e) => {
+      setIsSelecting(true);
+      setSelectionStart({ rowIndex, columnId });
+      setSelectedCells([{ rowIndex, columnId }]);
+    };
+
+    // const editableColumns = allColumns
+    //   .map(col => col.key)
+    //   .filter(key =>
+    //     !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
+    //     && !pooledColumns.includes(key) // if you don't want pooled columns to be editable
+    //   );
+
+    const handleMouseEnter = (e) => {
+      if (isSelecting && selectionStart) {
+        const cells = [];
+        const minRow = Math.min(selectionStart.rowIndex, rowIndex);
+        const maxRow = Math.max(selectionStart.rowIndex, rowIndex);
+        const columns = editableColumns;
+        const startColIdx = columns.indexOf(selectionStart.columnId);
+        const endColIdx = columns.indexOf(columnId);
+        const minCol = Math.min(startColIdx, endColIdx);
+        const maxCol = Math.max(startColIdx, endColIdx);
+
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            cells.push({ rowIndex: r, columnId: columns[c] });
+          }
+        }
+        setSelectedCells(cells);
       }
+    };
+
+    const handleMouseUp = () => {
+      setIsSelecting(false);
+      setSelectionStart(null);
+    };
+
+    const lastSelectedCell = useRef(null);
+
+    const handleCellClick = (e) => {
+      if (e.shiftKey && lastSelectedCell.current) {
+        // Select a rectangle from lastSelectedCell to current cell
+        const start = lastSelectedCell.current;
+        const end = { rowIndex, columnId };
+        const minRow = Math.min(start.rowIndex, end.rowIndex);
+        const maxRow = Math.max(start.rowIndex, end.rowIndex);
+        const columns = editableColumns;
+        const startColIdx = columns.indexOf(start.columnId);
+        const endColIdx = columns.indexOf(end.columnId);
+        const minCol = Math.min(startColIdx, endColIdx);
+        const maxCol = Math.max(startColIdx, endColIdx);
+    
+        const cells = [];
+        for (let r = minRow; r <= maxRow; r++) {
+          for (let c = minCol; c <= maxCol; c++) {
+            cells.push({ rowIndex: r, columnId: columns[c] });
+          }
+        }
+        setSelectedCells(cells);
+      } else if (e.ctrlKey || e.metaKey) {
+        setSelectedCells(prev =>
+          isSelected
+            ? prev.filter(cell => !(cell.rowIndex === rowIndex && cell.columnId === columnId))
+            : [...prev, { rowIndex, columnId }]
+        );
+        lastSelectedCell.current = { rowIndex, columnId };
+      } else {
+        setSelectedCells([{ rowIndex, columnId }]);
+        lastSelectedCell.current = { rowIndex, columnId };
+      }
+      inputRef.current.focus();
+      e.stopPropagation();
     };
 
     return (
       <Input
         ref={inputRef}
-        className="border border-orange-300 rounded p-1 text-xs w-[200px]"
+        className={`border border-orange-300 rounded p-1 text-xs w-[200px] ${isSelected ? "ring-2 ring-orange-500 bg-orange-50" : ""}`}
         value={value}
         type="text"
         placeholder={`Enter ${columnId}`}
         onChange={handleChange}
         onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
         tabIndex={0} // ensure it's tabbable
+        onClick={handleCellClick}
+      //   onMouseDown={handleMouseDown}
+      //   onMouseEnter={handleMouseEnter}
+      //   onMouseUp={handleMouseUp}
       />
     );
   };
+
+  useEffect(() => {
+    const handlePaste = (e) => {
+      if (!document.activeElement || document.activeElement.tagName !== "BODY") return;
+      if (!window.getSelection().isCollapsed) return; // Don't override normal text selection paste
+
+      const clipboard = e.clipboardData.getData("text/plain");
+      if (!clipboard) return;
+
+      // Parse clipboard into a 2D array
+      const rows = clipboard.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
+      if (rows.length === 0) return;
+
+      // Get all selected cells sorted by rowIndex, columnId
+      const sortedCells = [...selectedCells].sort((a, b) => {
+        if (a.rowIndex === b.rowIndex) {
+          return a.columnId.localeCompare(b.columnId);
+        }
+        return a.rowIndex - b.rowIndex;
+      });
+
+      setTableRows(prevRows => {
+        const updatedRows = [...prevRows];
+        let cellIdx = 0;
+        for (let r = 0; r < rows.length; r++) {
+          for (let c = 0; c < rows[r].length; c++) {
+            if (cellIdx >= sortedCells.length) break;
+            const { rowIndex, columnId } = sortedCells[cellIdx];
+            updatedRows[rowIndex] = { ...updatedRows[rowIndex], [columnId]: rows[r][c] };
+            cellIdx++;
+          }
+        }
+        return updatedRows;
+      });
+      e.preventDefault();
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [selectedCells]);
+
+  useEffect(() => {
+    const handleCopy = (e) => {
+      if (!selectedCells.length) return;
+
+      // Sort cells by rowIndex, then columnId
+      const sortedCells = [...selectedCells].sort((a, b) => {
+        if (a.rowIndex === b.rowIndex) {
+          return a.columnId.localeCompare(b.columnId);
+        }
+        return a.rowIndex - b.rowIndex;
+      });
+
+      // Group cells by rowIndex
+      const grouped = sortedCells.reduce((acc, cell) => {
+        if (!acc[cell.rowIndex]) acc[cell.rowIndex] = [];
+        acc[cell.rowIndex].push(cell);
+        return acc;
+      }, {});
+
+      // Build clipboard string
+      const lines = Object.keys(grouped)
+        .sort((a, b) => a - b)
+        .map(rowIdx =>
+          grouped[rowIdx]
+            .sort((a, b) => a.columnId.localeCompare(b.columnId))
+            .map(cell => tableRows[cell.rowIndex][cell.columnId] ?? "")
+            .join('\t')
+        );
+
+      const clipboardString = lines.join('\n');
+      e.clipboardData.setData('text/plain', clipboardString);
+      e.preventDefault();
+    };
+
+    window.addEventListener("copy", handleCopy);
+    return () => window.removeEventListener("copy", handleCopy);
+  }, [selectedCells, tableRows]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Only trigger if Delete or Backspace is pressed and cells are selected
+      if (
+        selectedCells.length > 0 &&
+        (e.key === "Delete" || e.key === "Backspace") &&
+        // Don't trigger if an input is focused (let the input handle it)
+        document.activeElement.tagName !== "INPUT"
+      ) {
+        setTableRows(prevRows =>
+          prevRows.map((row, rowIndex) => {
+            const updatedRow = { ...row };
+            selectedCells.forEach(cell => {
+              if (cell.rowIndex === rowIndex) {
+                updatedRow[cell.columnId] = "";
+              }
+            });
+            return updatedRow;
+          })
+        );
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedCells]);
 
   useEffect(() => {
     const storedData = JSON.parse(localStorage.getItem('libraryPreparationData'));
@@ -996,10 +1192,40 @@ const LibraryPrepration = () => {
             </Tabs>
           </div>
 
+          {selectedCells.length > 1 && (
+            <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 bg-white p-4 rounded shadow z-50">
+              <input
+                type="text"
+                placeholder="Bulk value"
+                value={bulkValue}
+                onChange={e => setBulkValue(e.target.value)}
+                className="border p-2"
+              />
+              <Button
+                onClick={() => {
+                  setTableRows(prevRows =>
+                    prevRows.map((row, rowIndex) => {
+                      const updatedRow = { ...row };
+                      selectedCells.forEach(cell => {
+                        if (cell.rowIndex === rowIndex) {
+                          updatedRow[cell.columnId] = bulkValue;
+                        }
+                      });
+                      return updatedRow;
+                    })
+                  );
+                  setBulkValue("");
+                }}
+              >
+                Apply to Selected
+              </Button>
+            </div>
+          )}
+
           <div className="">
             {/* Table */}
-            <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 50px)' }}>
-              <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
+            <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 60px)' }}>
+              <div className="overflow-y-auto" style={{ maxHeight: 700 }}>
                 <table className="min-w-full border-collapse table-auto">
                   <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-30">
                     {table.getHeaderGroups().map(headerGroup => (
