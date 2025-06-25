@@ -748,11 +748,11 @@ const LibraryPrepration = () => {
   };
 
   const editableColumns = allColumns
-      .map(col => col.key)
-      .filter(key =>
-        !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
-        && !pooledColumns.includes(key) // if you don't want pooled columns to be editable
-      );
+    .map(col => col.key)
+    .filter(key =>
+      !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
+      && !pooledColumns.includes(key) // if you don't want pooled columns to be editable
+    );
 
   useEffect(() => {
     // For each pool, update all rows in tableRows that belong to that pool
@@ -815,15 +815,18 @@ const LibraryPrepration = () => {
         const cells = [];
         const minRow = Math.min(selectionStart.rowIndex, rowIndex);
         const maxRow = Math.max(selectionStart.rowIndex, rowIndex);
-        const columns = editableColumns;
-        const startColIdx = columns.indexOf(selectionStart.columnId);
-        const endColIdx = columns.indexOf(columnId);
+        const visibleColumns = columns.map(col => col.accessorKey);
+        const startColIdx = visibleColumns.indexOf(selectionStart.columnId);
+        const endColIdx = visibleColumns.indexOf(columnId);
         const minCol = Math.min(startColIdx, endColIdx);
         const maxCol = Math.max(startColIdx, endColIdx);
-
+    
         for (let r = minRow; r <= maxRow; r++) {
           for (let c = minCol; c <= maxCol; c++) {
-            cells.push({ rowIndex: r, columnId: columns[c] });
+            const colKey = visibleColumns[c];
+            if (editableColumns.includes(colKey)) {
+              cells.push({ rowIndex: r, columnId: colKey });
+            }
           }
         }
         setSelectedCells(cells);
@@ -838,38 +841,15 @@ const LibraryPrepration = () => {
     const lastSelectedCell = useRef(null);
 
     const handleCellClick = (e) => {
-      if (e.shiftKey && lastSelectedCell.current) {
-        // Select a rectangle from lastSelectedCell to current cell
-        const start = lastSelectedCell.current;
-        const end = { rowIndex, columnId };
-        const minRow = Math.min(start.rowIndex, end.rowIndex);
-        const maxRow = Math.max(start.rowIndex, end.rowIndex);
-        const columns = editableColumns;
-        const startColIdx = columns.indexOf(start.columnId);
-        const endColIdx = columns.indexOf(end.columnId);
-        const minCol = Math.min(startColIdx, endColIdx);
-        const maxCol = Math.max(startColIdx, endColIdx);
-    
-        const cells = [];
-        for (let r = minRow; r <= maxRow; r++) {
-          for (let c = minCol; c <= maxCol; c++) {
-            cells.push({ rowIndex: r, columnId: columns[c] });
-          }
-        }
-        setSelectedCells(cells);
-      } else if (e.ctrlKey || e.metaKey) {
+      if (e.ctrlKey || e.metaKey) {
         setSelectedCells(prev =>
           isSelected
             ? prev.filter(cell => !(cell.rowIndex === rowIndex && cell.columnId === columnId))
             : [...prev, { rowIndex, columnId }]
         );
-        lastSelectedCell.current = { rowIndex, columnId };
       } else {
         setSelectedCells([{ rowIndex, columnId }]);
-        lastSelectedCell.current = { rowIndex, columnId };
       }
-      inputRef.current.focus();
-      e.stopPropagation();
     };
 
     return (
@@ -882,53 +862,137 @@ const LibraryPrepration = () => {
         onChange={handleChange}
         onBlur={handleBlur}
         tabIndex={0} // ensure it's tabbable
-        onClick={handleCellClick}
-      //   onMouseDown={handleMouseDown}
-      //   onMouseEnter={handleMouseEnter}
-      //   onMouseUp={handleMouseUp}
+        // onClick={handleCellClick}
+        onMouseDown={handleMouseDown}
+        onMouseEnter={handleMouseEnter}
+        onMouseUp={handleMouseUp}
       />
     );
   };
 
   useEffect(() => {
     const handlePaste = (e) => {
-      if (!document.activeElement || document.activeElement.tagName !== "BODY") return;
-      if (!window.getSelection().isCollapsed) return; // Don't override normal text selection paste
-
+      if (!selectedCells.length) return;
+  
       const clipboard = e.clipboardData.getData("text/plain");
       if (!clipboard) return;
-
+  
       // Parse clipboard into a 2D array
       const rows = clipboard.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
       if (rows.length === 0) return;
-
-      // Get all selected cells sorted by rowIndex, columnId
-      const sortedCells = [...selectedCells].sort((a, b) => {
-        if (a.rowIndex === b.rowIndex) {
-          return a.columnId.localeCompare(b.columnId);
-        }
-        return a.rowIndex - b.rowIndex;
-      });
-
+  
+      const visibleColumns = columns.map(col => col.accessorKey)
+      const visibleEditableColumns = visibleColumns.filter(key => editableColumns.includes(key));
+  
+      // Find the top-left cell in the selection
+      const rowIndexes = selectedCells.map(cell => cell.rowIndex);
+      const colIndexes = selectedCells.map(cell => visibleEditableColumns.indexOf(cell.columnId));
+      const minRow = Math.min(...rowIndexes);
+      const minCol = Math.min(...colIndexes);
+  
       setTableRows(prevRows => {
-        const updatedRows = [...prevRows];
-        let cellIdx = 0;
+        let updatedRows = [...prevRows];
         for (let r = 0; r < rows.length; r++) {
           for (let c = 0; c < rows[r].length; c++) {
-            if (cellIdx >= sortedCells.length) break;
-            const { rowIndex, columnId } = sortedCells[cellIdx];
-            updatedRows[rowIndex] = { ...updatedRows[rowIndex], [columnId]: rows[r][c] };
-            cellIdx++;
+            const rowIndex = minRow + r;
+            const colIndex = minCol + c;
+            if (
+              rowIndex < updatedRows.length &&
+              colIndex < visibleEditableColumns.length
+            ) {
+              const columnId = visibleEditableColumns[colIndex];
+              // Use the same logic as updateData to apply formulas
+              let updatedRow = { ...updatedRows[rowIndex], [columnId]: rows[r][c] };
+  
+              // --- Apply your formulas here (copy from updateData) ---
+              // Example (add all your formula logic here):
+              const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+              const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+              const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
+              const volume = parseFloat(updatedRow.volume) || 0;
+              const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
+              const one_tenth_of_nm_conc = parseFloat(updatedRow.one_tenth_of_nm_conc) || 0;
+              const size = parseFloat(updatedRow.size) || 0;
+              const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
+              const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
+  
+              if (columnId === "lib_qubit" || columnId === "total_vol_for_2nm") {
+                const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
+                const size = parseFloat(updatedRow.size) || 0;
+                const nm_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : 0;
+  
+                updatedRow.nm_conc = parseFloat(nm_conc.toFixed(2));
+  
+                const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+  
+                if (nm_conc > 0 && total_vol_for_2nm > 0) {
+                  updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+                  if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
+                    updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
+                  }
+                  updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+                } else {
+                  updatedRow.lib_vol_for_2nm = 0;
+                  updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
+                }
+              }
+  
+              if (columnId === 'pool_conc' || columnId === 'size') {
+                const poolConc = parseFloat(updatedRow.pool_conc) || 0;
+                updatedRow.nm_conc = size > 0 ? ((poolConc / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+              }
+  
+              if (qubit_lib_qc_ng_ul) {
+                updatedRow.lib_vol_for_hyb = parseFloat(200 / qubit_lib_qc_ng_ul).toFixed(2)
+              }
+  
+              if (columnId === "size") {
+                updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
+              }
+              if (qubit_dna || per_rxn_gdna) {
+                updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.ceil((per_rxn_gdna / qubit_dna) * 3) : "";
+              }
+  
+              if (columnId === "volume" || columnId === "gdna_volume_3x") {
+                const gdna_volume_3x = parseFloat(updatedRow.gdna_volume_3x) || 0;
+                updatedRow.nfw = volume > 0 ? volume - gdna_volume_3x : "";
+              }
+  
+              if (columnId === "qubit_lib_qc_ng_ul") {
+                updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
+                updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
+              }
+              if (columnId === "stock_ng_ul") {
+                const stock = parseFloat(rows[r][c]) || 0;
+                updatedRow.stock_ng_ul = stock;
+              }
+  
+              if (columnId === "qubit_lib_qc_ng_ul") {
+                updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
+              }
+  
+              if (columnId === 'pool_conc' || columnId === 'size') {
+                updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
+              }
+  
+              if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm") {
+                updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
+                updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
+              }
+              // --- End formula logic ---
+  
+              updatedRows[rowIndex] = updatedRow;
+            }
           }
         }
         return updatedRows;
       });
       e.preventDefault();
     };
-
+  
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [selectedCells]);
+  }, [selectedCells, editableColumns]);
 
   useEffect(() => {
     const handleCopy = (e) => {
