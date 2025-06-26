@@ -510,149 +510,152 @@ const Reports = () => {
 
       {/* top filters */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4 mb-2">
-          <div className="me-5">
-            <label className="block font-semibold mb-1">Sample id</label>
-            <Input
-              name='sample_id'
-              placeholder="Sample id"
-              className="my-1 w-[200px] border-2 border-orange-300"
-            />
-          </div>
-          <div className="me-5">
-            <label className="block font-semibold mb-1 whitespace-nowrap">Test name</label>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  className="h-10 bg-gray-700 hover:bg-gray-800 cursor-pointer text-white"
-                >
-                  Add Test
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="min-w-[250px]">
-                {allTests
-                  .filter(test => !selectedTestNames.includes(test))
-                  .map(test => (
-                    <DropdownMenuItem
-                      key={test}
-                      onClick={() => {
-                        if (selectedTestNames.includes(test)) {
-                          return;
-                        }
-                        const updated = [...selectedTestNames, test];
-                        setSelectedTestNames(updated);
-                      }}
-                    >
-                      <span className="text-sm">{test}</span>
-                    </DropdownMenuItem>
-                  ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          <div>
-            <label className="block font-semibold mb-1">Selected Test Name</label>
-            <div className="flex w-[400px] border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 ml-2" style={{ flex: 1 }}>
-              {selectedTestNames.length === 0 && (
-                <span className="text-gray-400 dark:text-white">No test added</span>
-              )}
-              {selectedTestNames.map((test, idx) => (
-                <span
-                  key={test}
-                  className="flex items-center bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-semibold"
-                >
-                  {test}
-                  <button
-                    type="button"
-                    className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
-                    onClick={() => {
-                      const updated = selectedTestNames.filter(t => t !== test);
-                      setSelectedTestNames(updated);
-                    }}
-                    aria-label={`Remove ${test}`}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="me-5">
-            <label className="block font-semibold mb-1">Status</label>
-            <select
-              name='sample_status'
-              className="w-[400px] border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-            >
-              <option value="">Select Status</option>
-              <option value="ready">Ready for Reporting</option>
-              <option value="reported">Reported</option>
-            </select>
-          </div>
-
-          <div className="flex gap-4 me-5">
-            <div className="me-5">
-              <label className="block font-semibold mb-1 mt-2">From Date</label>
-              <Input
-                name='from_date'
-                type="date"
-                className="my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-              />
-            </div>
-            <div>
-              <label className="block font-semibold mb-1 mt-2">To Date</label>
-              <Input
-                name='to_date'
-                type="date"
-                className="my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-              />
-            </div>
-          </div>
-
-        </div>
-
-        <div className="flex gap-4 mb-2">
-          <div className="me-5">
-            <label className="block font-semibold mb-1 mt-2">Doctor's Name</label>
-            <Input
-              name='doctor_name'
-              placeholder="Doctor's Name"
-              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-            />
-          </div>
-
-          <div className="me-5">
-            <label className="block font-semibold mb-1 mt-2">Dept. Name</label>
-            <Input
-              name='dept_name'
-              placeholder="Dept. Name"
-              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-            />
-          </div>
-
-          <div className="me-5">
-            <label className="block font-semibold mb-1 mt-2">Run id</label>
-            <Input
-              name='run_id'
-              placeholder="Run id"
-              className="w-[400px] my-1 border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-            />
-          </div>
-
-        </div>
-
-        <div className='grid grid-cols-4 gap-4 mb-2 '>
-
-          <div>
-            <Button
-              type='submit'
-              onClick={handleSubmit}
-              className="mt-6 bg-gray-700 hover:bg-gray-800 text-white cursor-pointer w-[200px]">
-              Retrieve
-            </Button>
-          </div>
-        </div>
-
-      </div>
+             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 items-end ">
+               <div>
+                 <label className="block font-semibold mb-1">Sample id</label>
+                 <Input
+                   name='sample_id'
+                   placeholder="Sample id"
+                   className="w-full border-2 border-orange-300"
+                 />
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1 whitespace-nowrap">Test name</label>
+                 <DropdownMenu>
+                   <DropdownMenuTrigger asChild>
+                     <Button
+                       type="button"
+                       className="h-10 bg-gray-700 hover:bg-gray-800 cursor-pointer text-white w-full"
+                     >
+                       Add Test
+                     </Button>
+                   </DropdownMenuTrigger>
+                   <DropdownMenuContent className="min-w-[250px]">
+                     {allTests
+                       .filter(test => !selectedTestNames.includes(test))
+                       .map(test => (
+                         <DropdownMenuItem
+                           key={test}
+                           onClick={() => {
+                             if (selectedTestNames.includes(test)) {
+                               return;
+                             }
+                             const updated = [...selectedTestNames, test];
+                             setSelectedTestNames(updated);
+                           }}
+                         >
+                           <span className="text-sm">{test}</span>
+                         </DropdownMenuItem>
+                       ))}
+                   </DropdownMenuContent>
+                 </DropdownMenu>
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">Selected Test Name</label>
+                 <div className="flex border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 min-h-[42px] w-full">
+                   {selectedTestNames.length === 0 && (
+                     <span className="text-gray-400 dark:text-white">No test added</span>
+                   )}
+                   {selectedTestNames.map((test, idx) => (
+                     <span
+                       key={test}
+                       className="flex items-center bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-sm font-semibold"
+                     >
+                       {test}
+                       <button
+                         type="button"
+                         className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
+                         onClick={() => {
+                           const updated = selectedTestNames.filter(t => t !== test);
+                           setSelectedTestNames(updated);
+                         }}
+                         aria-label={`Remove ${test}`}
+                       >
+                         ×
+                       </button>
+                     </span>
+                   ))}
+                 </div>
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">Sample Status</label>
+                 <select
+                   name='sample_status'
+                   className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+                 >
+                   <option value="">Select Sample Status</option>
+                   <option value="processing">Under Processing</option>
+                   <option value="reporting">Ready for Reporting</option>
+                 </select>
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">Sample Indicator</label>
+                 <select
+                   name='sample_indicator'
+                   className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+                   onChange={e => {
+                     const options = Array.from(e.target.selectedOptions, option => option.value);
+                     setSelectedSampleIndicator(options);
+                   }}
+                 >
+                   <option value="">Select the Sample Indicator</option>
+                   <option value="dna_isolation">DNA Isolation</option>
+                   <option value="lib_prep">Library Prep</option>
+                   <option value="under_seq">Under sequencing</option>
+                   <option value="seq_completed">Sequencing completed</option>
+                 </select>
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">From Date</label>
+                 <Input
+                   name='from_date'
+                   type="date"
+                   className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
+                 />
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">To Date</label>
+                 <Input
+                   name='to_date'
+                   type="date"
+                   className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
+                 />
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">Doctor's Name</label>
+                 <Input
+                   name='doctor_name'
+                   placeholder="Doctor's Name"
+                   className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
+                 />
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">Dept. Name</label>
+                 <Input
+                   name='dept_name'
+                   placeholder="Dept. Name"
+                   className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
+                 />
+               </div>
+               <div>
+                 <label className="block font-semibold mb-1">Run id</label>
+                 <Input
+                   name='run_id'
+                   placeholder="Run id"
+                   className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
+                 />
+               </div>
+               <div className="col-span-full">
+                 <Button
+                   type='submit'
+                   onClick={() => { handlesubmit() }}
+                   className="w-[240px] mt-[20px] bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
+                 >
+                   Retrieve
+                 </Button>
+               </div>
+             </div>
+           </div>
 
       {tableRows && tableRows.length > 0 && (
         <div>
