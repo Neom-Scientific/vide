@@ -1,25 +1,13 @@
-import React, { use, useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import {
-  ColumnDef,
-  SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
@@ -28,6 +16,7 @@ import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CldOgImage } from "next-cloudinary";
 
 
 const LibraryPrepration = () => {
@@ -39,15 +28,15 @@ const LibraryPrepration = () => {
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
   const [showPooledFields, setShowPooledFields] = useState(false);
   const [pooledValues, setPooledValues] = useState({});
-  const [showPooledRowIndex, setShowPooledRowIndex] = useState(null);
   const [selectedCells, setSelectedCells] = useState([]);
   const [getTheTestNames, setGetTheTestNames] = useState([]);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectionStart, setSelectionStart] = useState(null);
   const [bulkValue, setBulkValue] = useState("");
   const [processing, setProcessing] = useState(false);
-  const [pooledRowData, setPooledRowData] = useState([]); // [{ sampleIndexes: [1, 2, 3], values: {} }]
+  const [pooledRowData, setPooledRowData] = useState([]);
   const [currentSelection, setCurrentSelection] = useState([]);
+  const [createdBatchIds, setCreatedBatchIds] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
   const user = JSON.parse(Cookies.get('user') || '{}');
   const testNameRef = useRef(testName);
@@ -117,9 +106,9 @@ const LibraryPrepration = () => {
     { key: 'size', label: 'Size (bp)' },
     { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'nm_conc', label: 'nM conc' },
-    { key: 'lib_vol_for_2nm', label: 'Library Volume for 2nM from 1/10 of nM' },
-    { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 2nM' },
-    { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
+    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 20nM' },
+    { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
+    { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
     { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
     { key: 'per_rxn_gdna', label: 'Per Rxn gDNA (ng/rxn)' },
     { key: 'volume', label: 'Volume (ul)' },
@@ -136,6 +125,9 @@ const LibraryPrepration = () => {
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'data_required', label: 'Data Required(GB)' },
     { key: 'pool_no', label: 'Pool No.' },
+    { key: 'batch_id', label: 'Batch ID' },
+    { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
+    { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
   ];
 
 
@@ -144,10 +136,12 @@ const LibraryPrepration = () => {
     "size",
     "nm_conc",
     "one_tenth_of_nm_conc",
-    "total_vol_for_2nm",
     "lib_vol_for_2nm",
     "nfw_volu_for_2nm",
+    "total_vol_for_2nm",
   ];
+
+  const finalPoolingColumns = ["vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool"];
 
   const insertPooledColumns = (columns) => {
     const result = [];
@@ -159,10 +153,21 @@ const LibraryPrepration = () => {
     }
     return result;
   };
+  const insertFinalPoolingColumns = (columns) => {
+    const result = [];
+    for (let col of columns) {
+      result.push(col);
+      if (col === "data_required") {
+        result.push(...finalPoolingColumns); // insert final pooling columns after data_required
+      }
+    }
+    return result
+  }
 
   const getDefaultVisible = (testName) => {
+    let baseCols = [];
     if (testName === "Myeloid") {
-      return insertPooledColumns([
+      baseCols = [
         "sno",
         "sample_id",
         "registration_date",
@@ -183,7 +188,7 @@ const LibraryPrepration = () => {
         "lib_vol_for_2nm",
         "nfw_volu_for_2nm",
         "data_required",
-      ]);
+      ];
     } else if (
       testName === "WES" ||
       testName === "CS" ||
@@ -196,9 +201,10 @@ const LibraryPrepration = () => {
       testName === "HRR" ||
       testName === "HCP"
     ) {
-      return insertPooledColumns([
+      baseCols = [
         "select",
         "sno",
+        "batch_id",
         "pool_no",
         "sample_id",
         "registration_date",
@@ -217,11 +223,12 @@ const LibraryPrepration = () => {
         "qubit_lib_qc_ng_ul",
         "lib_vol_for_hyb",
         "data_required",
-      ]);
+      ];
     } else if (testName === "SGS" || testName === "HLA") {
-      return insertPooledColumns([
+      baseCols = [
         "select",
         "sno",
+        "batch_id",
         "pool_no",
         "sample_id",
         "registration_date",
@@ -235,9 +242,9 @@ const LibraryPrepration = () => {
         "qubit_lib_qc_ng_ul",
         "pooling_volume",
         "data_required",
-      ]);
+      ];
     }
-    return [];
+    return insertFinalPoolingColumns(insertPooledColumns(baseCols));
   };
 
 
@@ -403,9 +410,19 @@ const LibraryPrepration = () => {
             return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
           }
 
-          if (pooledColumns.includes(key)) {
-            return <span>{value}</span>;
-          }
+          // if (pooledColumns.includes(key)) {
+          //   if (key === "total_vol_for_2nm") {
+          //     return (
+          //       <InputCell
+          //         value={value || ""}
+          //         rowIndex={info.row.index}
+          //         columnId={key}
+          //         updateData={table.options.meta.updateData}
+          //       />
+          //     );
+          //   }
+          //   return <span>{value}</span>;
+          // }
 
           if (
             column.key === "sno" ||
@@ -414,7 +431,8 @@ const LibraryPrepration = () => {
             column.key === "patient_name" ||
             column.key === "sample_type" ||
             column.key === "pool_no" ||
-            column.key === "internal_id"
+            column.key === "internal_id" ||
+            column.key === "batch_id"
           ) {
             return <span>{value}</span> || "";
           }
@@ -577,7 +595,7 @@ const LibraryPrepration = () => {
             const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
             const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
 
-            if (columnId === "lib_qubit" || columnId === "total_vol_for_2nm") {
+            if (columnId === "lib_qubit") {
               const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
               const size = parseFloat(updatedRow.size) || 0;
               const nm_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : 0;
@@ -589,16 +607,42 @@ const LibraryPrepration = () => {
               if (nm_conc > 0 && total_vol_for_2nm > 0) {
                 updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
                 if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
-                  updatedRow.lib_vol_for_2nm = total_vol_for_2nm; // Cap lib_vol_for_2nm to total_vol_for_2nm
+                  updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
                 }
                 updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
-                console.log('nfw_volu_for_2nm:', updatedRow.nfw_volu_for_2nm);
-                console.log('lib_vol_for_2nm:', updatedRow.lib_vol_for_2nm);
-                console.log('total_vol_for_2nm:', total_vol_for_2nm);
               } else {
                 updatedRow.lib_vol_for_2nm = 0;
-                updatedRow.nfw_volu_for_2nm = total_vol_for_2nm; // Default to total_vol_for_2nm if lib_vol_for_2nm is invalid
+                updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
               }
+              return updatedRow;
+            }
+
+            if (
+              columnId === "total_vol_for_2nm"
+            ) {
+              const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+              const percent = parseFloat(updatedRow.vol_for_40nm_percent_pooling) || 0;
+              updatedRow.volume_from_40nm_for_total_25ul_pool =
+                (total_vol_for_2nm && percent)
+                  ? ((total_vol_for_2nm * percent) / 100).toFixed(2)
+                  : "";
+              console.log('total_vol_for_2nm:', total_vol_for_2nm, 'percent:', percent, 'volume_from_40nm_for_total_25ul_pool:', updatedRow.volume_from_40nm_for_total_25ul_pool);
+              return updatedRow;
+            }
+
+            if (columnId === "total_vol_for_2nm") {
+              updatedRow.nfw_volu_for_2nm =
+                updatedRow.lib_vol_for_2nm && value
+                  ? parseFloat((parseFloat(value) - parseFloat(updatedRow.lib_vol_for_2nm)).toFixed(2))
+                  : "";
+              const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+              const percent = parseFloat(updatedRow.vol_for_40nm_percent_pooling) || 0;
+              updatedRow.volume_from_40nm_for_total_25ul_pool =
+                (total_vol_for_2nm && percent)
+                  ? ((total_vol_for_2nm * percent) / 100).toFixed(2)
+                  : "";
+              console.log('nfw_volu_for_2nm:', updatedRow.nfw_volu_for_2nm)
+              console.log('total_vol_for_2nm:', total_vol_for_2nm, 'percent:', percent, 'volume_from_40nm_for_total_25ul_pool:', updatedRow.volume_from_40nm_for_total_25ul_pool);
               return updatedRow;
             }
 
@@ -616,7 +660,7 @@ const LibraryPrepration = () => {
               updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
             }
             if (qubit_dna || per_rxn_gdna) {
-              updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.ceil((per_rxn_gdna / qubit_dna) * 3) : "";
+              updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.round((per_rxn_gdna / qubit_dna) * 3) : "";
             }
 
             if (columnId === "volume" || columnId === "gdna_volume_3x") {
@@ -632,26 +676,14 @@ const LibraryPrepration = () => {
             if (columnId === "stock_ng_ul") {
               const stock = parseFloat(value) || 0;
               updatedRow.stock_ng_ul = stock;
-              // console.log('Parsed stock_ng_ul:', stock);
-              // console.log('lib_vol_for_hyb:', updatedRow.lib_vol_for_hyb);
             }
 
             if (columnId === "qubit_lib_qc_ng_ul") {
               updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
             }
 
-            // if (columnId === 'lib_qc_for_ng_ul' || columnId === 'size') {
-            //   updatedRow.nm_conc = size > 0 ? ((qubit_lib_qc_ng_ul / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
-            // }
             if (columnId === 'pool_conc' || columnId === 'size') {
               updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
-              // console.log('nm_conc:', updatedRow.nm_conc);
-              // console.log('one_tenth_of_nm_conc:', updatedRow.one_tenth_of_nm_conc);
-            }
-
-            if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm") {
-              updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
-              updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
             }
             return updatedRow;
 
@@ -717,10 +749,10 @@ const LibraryPrepration = () => {
     }
   };
 
-  const handleDone = async () => {
+  const handleCreatePool = async () => {
     if (Array.isArray(currentSelection) && currentSelection.length > 0) {
       try {
-        const response = await axios.get('/api/pool-no');
+        const response = await axios.get('/api/pool-no?id=pool_no');
         if (response.data[0].status === 200) {
           const poolNo = response.data[0].pool_no;
           setTableRows(prevRows =>
@@ -747,11 +779,40 @@ const LibraryPrepration = () => {
     }
   };
 
+  const handleCreateBatch = async () => {
+    if (Array.isArray(currentSelection) && currentSelection.length > 0) {
+      try {
+        const response = await axios.get('/api/pool-no?id=batch_id');
+        if (response.data[0].status === 200) {
+          const batchId = response.data[0].batch_id;
+          setTableRows(prevRows =>
+            prevRows.map((row, idx) =>
+              currentSelection.includes(idx)
+                ? { ...row, batch_id: batchId }
+                : row
+            )
+          );
+          setPooledRowData(prev => [
+            ...prev,
+            { sampleIndexes: [...currentSelection], values: pooledValues }
+          ]);
+          setPooledValues({});
+          setCurrentSelection([]);
+          setShowPooledFields(false);
+          setRowSelection({});
+          setCreatedBatchIds(prev => [...prev, batchId]);
+        } else {
+          toast.error(response.data[0].message);
+        }
+      } catch (error) {
+        console.log('something went wrong:', error);
+      }
+    }
+  }
   const editableColumns = allColumns
     .map(col => col.key)
     .filter(key =>
       !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
-      && !pooledColumns.includes(key) // if you don't want pooled columns to be editable
     );
 
   useEffect(() => {
@@ -783,32 +844,29 @@ const LibraryPrepration = () => {
       cell => cell.rowIndex === rowIndex && cell.columnId === columnId
     );
 
+    useEffect(() => {
+      setValue(initialValue);
+    }, [initialValue]);
 
     const handleChange = (e) => {
       setValue(e.target.value);
-      // handleBlur(); // Update data immediately on change
     };
 
     const handleBlur = () => {
       updateData(rowIndex, columnId, value);
     };
 
-    // useEffect(() => {
-    //   updateData(rowIndex, columnId, value);
-    // }, [value, rowIndex, columnId, updateData]);
-
+    // Disable selection logic if we're clicking into the input for typing
     const handleMouseDown = (e) => {
+      if (e.detail === 1 && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        // Single click, not modifier — allow editing, don't trigger selection logic
+        return;
+      }
+
       setIsSelecting(true);
       setSelectionStart({ rowIndex, columnId });
       setSelectedCells([{ rowIndex, columnId }]);
     };
-
-    // const editableColumns = allColumns
-    //   .map(col => col.key)
-    //   .filter(key =>
-    //     !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
-    //     && !pooledColumns.includes(key) // if you don't want pooled columns to be editable
-    //   );
 
     const handleMouseEnter = (e) => {
       if (isSelecting && selectionStart) {
@@ -820,7 +878,7 @@ const LibraryPrepration = () => {
         const endColIdx = visibleColumns.indexOf(columnId);
         const minCol = Math.min(startColIdx, endColIdx);
         const maxCol = Math.max(startColIdx, endColIdx);
-    
+
         for (let r = minRow; r <= maxRow; r++) {
           for (let c = minCol; c <= maxCol; c++) {
             const colKey = visibleColumns[c];
@@ -838,20 +896,6 @@ const LibraryPrepration = () => {
       setSelectionStart(null);
     };
 
-    const lastSelectedCell = useRef(null);
-
-    const handleCellClick = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        setSelectedCells(prev =>
-          isSelected
-            ? prev.filter(cell => !(cell.rowIndex === rowIndex && cell.columnId === columnId))
-            : [...prev, { rowIndex, columnId }]
-        );
-      } else {
-        setSelectedCells([{ rowIndex, columnId }]);
-      }
-    };
-
     return (
       <Input
         ref={inputRef}
@@ -861,8 +905,7 @@ const LibraryPrepration = () => {
         placeholder={`Enter ${columnId}`}
         onChange={handleChange}
         onBlur={handleBlur}
-        tabIndex={0} // ensure it's tabbable
-        // onClick={handleCellClick}
+        tabIndex={1}
         onMouseDown={handleMouseDown}
         onMouseEnter={handleMouseEnter}
         onMouseUp={handleMouseUp}
@@ -870,26 +913,27 @@ const LibraryPrepration = () => {
     );
   };
 
+
   useEffect(() => {
     const handlePaste = (e) => {
       if (!selectedCells.length) return;
-  
+
       const clipboard = e.clipboardData.getData("text/plain");
       if (!clipboard) return;
-  
+
       // Parse clipboard into a 2D array
       const rows = clipboard.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
       if (rows.length === 0) return;
-  
+
       const visibleColumns = columns.map(col => col.accessorKey)
       const visibleEditableColumns = visibleColumns.filter(key => editableColumns.includes(key));
-  
+
       // Find the top-left cell in the selection
       const rowIndexes = selectedCells.map(cell => cell.rowIndex);
       const colIndexes = selectedCells.map(cell => visibleEditableColumns.indexOf(cell.columnId));
       const minRow = Math.min(...rowIndexes);
       const minCol = Math.min(...colIndexes);
-  
+
       setTableRows(prevRows => {
         let updatedRows = [...prevRows];
         for (let r = 0; r < rows.length; r++) {
@@ -903,7 +947,7 @@ const LibraryPrepration = () => {
               const columnId = visibleEditableColumns[colIndex];
               // Use the same logic as updateData to apply formulas
               let updatedRow = { ...updatedRows[rowIndex], [columnId]: rows[r][c] };
-  
+
               // --- Apply your formulas here (copy from updateData) ---
               // Example (add all your formula logic here):
               const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
@@ -915,18 +959,18 @@ const LibraryPrepration = () => {
               const size = parseFloat(updatedRow.size) || 0;
               const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
               const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
-  
-              if (columnId === "lib_qubit" || columnId === "total_vol_for_2nm") {
+
+              if (columnId === "lib_qubit") {
                 const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
                 const size = parseFloat(updatedRow.size) || 0;
                 const nm_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : 0;
-  
+
                 updatedRow.nm_conc = parseFloat(nm_conc.toFixed(2));
-  
+
                 const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-  
+
                 if (nm_conc > 0 && total_vol_for_2nm > 0) {
-                  updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+                  updatedRow.lib_vol_for_2nm = parseFloat(((20 * total_vol_for_2nm) / nm_conc).toFixed(2));
                   if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
                     updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
                   }
@@ -936,28 +980,49 @@ const LibraryPrepration = () => {
                   updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
                 }
               }
-  
+
+              if (columnId === "nm_conc" || columnId === "total_vol_for_2nm") {
+                if (nm_conc > 0 && total_vol_for_2nm > 0) {
+                  updatedRow.lib_vol_for_2nm = parseFloat(((20 * total_vol_for_2nm) / nm_conc).toFixed(2));
+                  if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
+                    updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
+                  }
+                  updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+                } else {
+                  updatedRow.lib_vol_for_2nm = "";
+                  updatedRow.nfw_volu_for_2nm = "";
+                }
+              }
+
+              if (columnId === "total_vol_for_2nm") {
+                updatedRow.nfw_volu_for_2nm =
+                  updatedRow.lib_vol_for_2nm && value
+                    ? parseFloat((parseFloat(value) - parseFloat(updatedRow.lib_vol_for_2nm)).toFixed(2))
+                    : "";
+                return updatedRow;
+              }
+
               if (columnId === 'pool_conc' || columnId === 'size') {
                 const poolConc = parseFloat(updatedRow.pool_conc) || 0;
                 updatedRow.nm_conc = size > 0 ? ((poolConc / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
               }
-  
+
               if (qubit_lib_qc_ng_ul) {
                 updatedRow.lib_vol_for_hyb = parseFloat(200 / qubit_lib_qc_ng_ul).toFixed(2)
               }
-  
+
               if (columnId === "size") {
                 updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
               }
               if (qubit_dna || per_rxn_gdna) {
-                updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.ceil((per_rxn_gdna / qubit_dna) * 3) : "";
+                updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.round((per_rxn_gdna / qubit_dna) * 3) : "";
               }
-  
+
               if (columnId === "volume" || columnId === "gdna_volume_3x") {
                 const gdna_volume_3x = parseFloat(updatedRow.gdna_volume_3x) || 0;
                 updatedRow.nfw = volume > 0 ? volume - gdna_volume_3x : "";
               }
-  
+
               if (columnId === "qubit_lib_qc_ng_ul") {
                 updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
                 updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
@@ -966,21 +1031,21 @@ const LibraryPrepration = () => {
                 const stock = parseFloat(rows[r][c]) || 0;
                 updatedRow.stock_ng_ul = stock;
               }
-  
+
               if (columnId === "qubit_lib_qc_ng_ul") {
                 updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
               }
-  
+
               if (columnId === 'pool_conc' || columnId === 'size') {
                 updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
               }
-  
-              if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm") {
-                updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
-                updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
-              }
+
+              // if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm") {
+              //   updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
+              //   updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
+              // }
               // --- End formula logic ---
-  
+
               updatedRows[rowIndex] = updatedRow;
             }
           }
@@ -989,7 +1054,7 @@ const LibraryPrepration = () => {
       });
       e.preventDefault();
     };
-  
+
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
   }, [selectedCells, editableColumns]);
@@ -1229,6 +1294,53 @@ const LibraryPrepration = () => {
     localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
   }, [pooledRowData, tableRows, testName]);
 
+  useEffect(() => {
+    // Group pools by batch_id
+    const poolsByBatch = {};
+    pooledRowData.forEach((pool, poolIdx) => {
+      // Find the batch_id for this pool (from the first sample in the pool)
+      const firstRow = pool.sampleIndexes
+        .map(idx => table.getRowModel().rows[idx])
+        .find(Boolean);
+      const batchId = firstRow?.original?.batch_id;
+      if (!batchId) return;
+      if (!poolsByBatch[batchId]) poolsByBatch[batchId] = [];
+      poolsByBatch[batchId].push({ pool, poolIdx });
+    });
+  
+    let needsUpdate = false;
+    let newPooledRowData = [...pooledRowData];
+  
+    Object.values(poolsByBatch).forEach(poolsInBatch => {
+      // Step 1: Get unscaled values
+      const unscaled = poolsInBatch.map(({ pool }) => {
+        const val = parseFloat(pool.values.volume_from_40nm_for_total_25ul_pool) || 0;
+        return val;
+      });
+      const sumUnscaled = unscaled.reduce((a, b) => a + b, 0) || 1; // avoid divide by zero
+  
+      // Step 2: Scale each pool's value so the sum is 25
+      poolsInBatch.forEach(({ pool, poolIdx }, i) => {
+        const scaled = ((unscaled[i] / sumUnscaled) * 25).toFixed(2);
+        if (pool.values.volume_from_40nm_for_total_25ul_pool !== scaled) {
+          needsUpdate = true;
+          newPooledRowData[poolIdx] = {
+            ...pool,
+            values: {
+              ...pool.values,
+              volume_from_40nm_for_total_25ul_pool: scaled,
+            }
+          };
+        }
+      });
+    });
+  
+    if (needsUpdate) {
+      setPooledRowData(newPooledRowData);
+    }
+    // eslint-disable-next-line
+  }, [pooledRowData, tableRows]);
+
   return (
     <div className="p-4 ">
       {!message ?
@@ -1247,11 +1359,7 @@ const LibraryPrepration = () => {
                     {testName}
                   </TabsTrigger>
                 ))}
-                {/* {getTheTestNames.length === 0 && (
-                  <span className="text-sm px-4 py-2 text-white font-bold">
-                    No Test Names Available
-                  </span>
-                )} */}
+
               </TabsList>
             </Tabs>
           </div>
@@ -1294,28 +1402,52 @@ const LibraryPrepration = () => {
                   <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-30">
                     {table.getHeaderGroups().map(headerGroup => (
                       <tr key={headerGroup.id}>
-                        {headerGroup.headers.map(header => (
-                          <th
-                            key={header.id}
-                            onClick={header.column.getToggleSortingHandler()}
-                            className="cursor-pointer px-4 py-2 text-left border-b border-gray-200 sticky top-0 z-30 bg-orange-100 dark:bg-gray-800 whitespace-nowrap"
-                          >
-                            {header.isPlaceholder
-                              ? null
-                              : flexRender(header.column.columnDef.header, header.getContext())}
-                          </th>
-                        ))}
+                        {headerGroup.headers.map((header, colIdx) => {
+                          const colKey = header.column.id;
+                          let stickyClass = "";
+                          let style = {};
+                          if (colKey === "lib_vol_for_2nm") style = { maxWidth: "120px", minWidth: "100px" };
+                          if (colKey === "volume_from_40nm_for_total_25ul_pool") style = { maxWidth: "120px", minWidth: "100px" };
+
+                          if (colKey === "sno") stickyClass = "sticky left-0 z-40 w-[60px]";
+                          if (colKey === "batch_id") stickyClass = "sticky left-[50px] z-40 w-[120px]";
+                          if (colKey === "pool_no") stickyClass = "sticky left-[120px] z-40 w-[100px]";
+                          if (colKey === "sample_id") stickyClass = "sticky left-[180px] z-40 w-[140px]";
+                          return (
+                            <th
+                              key={header.id}
+                              onClick={header.column.getToggleSortingHandler()}
+                              className={`cursor-pointer table-header px-4 py-2 text-left border-b border-gray-200 sticky top-0 z-30 bg-orange-100 dark:bg-gray-800 ${stickyClass}`}
+                              style={style}
+                            >
+                              {header.isPlaceholder
+                                ? null
+                                : flexRender(header.column.columnDef.header, header.getContext())}
+                            </th>
+                          );
+                        })}
                       </tr>
                     ))}
                   </thead>
 
                   <tbody>
-                    {table.getRowModel().rows.map((row, rowIndex) => {
+                    {table.getRowModel().rows.map((row, rowIndex, arr) => {
                       const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(rowIndex));
                       const isFirstOfPool = pool && rowIndex === Math.min(...pool.sampleIndexes);
 
                       const isSelected = currentSelection.includes(rowIndex);
                       const isFirstSelected = isSelected && rowIndex === Math.min(...currentSelection);
+
+                      const currentBatchId = row.original.batch_id;
+                      const isLastOfBatch =
+                        rowIndex === arr.length - 1 ||
+                        arr[rowIndex + 1].original.batch_id !== currentBatchId;
+
+                      const batchRows = arr.filter(r => r.original.batch_id === currentBatchId);
+                      const batchSum = batchRows.reduce(
+                        (sum, r) => sum + (parseFloat(r.original.data_required) || 0),
+                        0
+                      );
 
                       return (
                         <React.Fragment key={row.id}>
@@ -1328,10 +1460,10 @@ const LibraryPrepration = () => {
                                     <td
                                       key={col.accessorKey}
                                       rowSpan={pool.sampleIndexes.length}
-                                      className="align-middle bg-slate-100 px-2 py-1 border border-gray-300"
+                                      className="align-middle px-2 py-1 border border-gray-300"
                                     >
                                       <input
-                                        className="border border-orange-300 rounded p-1 w-[200px] bg-gray-100"
+                                        className="border border-orange-300 rounded p-1 w-[200px]"
                                         placeholder={col.header || col.accessorKey}
                                         value={pool.values[col.accessorKey] || ""}
                                         onChange={e => {
@@ -1341,9 +1473,25 @@ const LibraryPrepration = () => {
                                               if (p !== pool) return p;
                                               const updated = { ...p.values, [col.accessorKey]: value };
 
-                                              // --- Formula logic ---
+                                              // Always use the latest value if editing a dependency
+                                              const totalVolFor2nm =
+                                                col.accessorKey === "total_vol_for_2nm"
+                                                  ? parseFloat(value) || 0
+                                                  : parseFloat(updated.total_vol_for_2nm) || 0;
+                                              const percentPooling =
+                                                col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                  ? parseFloat(value) || 0
+                                                  : parseFloat(updated.vol_for_40nm_percent_pooling ?? 0) || 0;
+
+                                              updated.volume_from_40nm_for_total_25ul_pool =
+                                                (totalVolFor2nm && percentPooling)
+                                                  ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                  : "";
+
                                               const poolConc = parseFloat(updated.pool_conc) || 0;
+
                                               const size = parseFloat(updated.size) || 0;
+
                                               updated.nm_conc = (size > 0 && poolConc > 0)
                                                 ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
                                                 : "";
@@ -1351,21 +1499,112 @@ const LibraryPrepration = () => {
                                               const nmConc = parseFloat(updated.nm_conc) || 0;
                                               updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
-                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
-                                              updated.total_vol_for_2nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
-                                                ? (parseFloat(updated.one_tenth_of_nm_conc) * libVolFor2nm / 2).toFixed(2)
-                                                : "";
 
-                                              const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
-                                              updated.nfw_volu_for_2nm = (totalVolFor2nm && libVolFor2nm)
-                                                ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
-                                                : "";
+                                              updated.lib_vol_for_2nm = (20 * totalVolFor2nm / nmConc).toFixed(2);
+                                              updated.nfw_volu_for_2nm = (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2);
+
+                                              console.log('total_vol_for_2nm', updated.total_vol_for_2nm);
+                                              console.log('volume_from_40nm_for_total_25ul_pool', updated.volume_from_40nm_for_total_25ul_pool);
+                                              console.log('vol_for_40nm_percent_pooling', updated.vol_for_40nm_percent_pooling);
+
+                                              updated.volume_from_40nm_for_total_25ul_pool =
+                                                totalVolFor2nm && percentPooling
+                                                  ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                  : "";
 
                                               return { ...p, values: updated };
                                             })
                                           );
                                         }}
                                       />
+                                    </td>
+                                  );
+                                }
+                                return null; // Covered by rowspan
+                              }
+
+
+                              if (finalPoolingColumns.includes(col.accessorKey) && pool) {
+                                if (isFirstOfPool) {
+                                  // Calculate poolSum for this pool
+                                  const poolRows = pool.sampleIndexes.map(idx => arr[idx]);
+                                  const poolSum = poolRows.reduce(
+                                    (sum, r) => sum + (parseFloat(r.original.data_required) || 0),
+                                    0
+                                  );
+                                  // Calculate batchSum for the batch of this pool
+                                  const batchRows = arr.filter(r => r.original.batch_id === row.original.batch_id);
+                                  const batchSum = batchRows.reduce(
+                                    (sum, r) => sum + (parseFloat(r.original.data_required) || 0),
+                                    0
+                                  );
+                                  // Calculate percentage
+                                  const percent = batchSum > 0 ? ((poolSum / batchSum) * 100).toFixed(2) : "";
+
+                                  return (
+                                    <td
+                                      key={col.accessorKey}
+                                      rowSpan={pool.sampleIndexes.length}
+                                      className="align-middle px-2 py-1 border border-gray-300"
+                                    >
+                                      {col.accessorKey === "vol_for_40nm_percent_pooling" ? (
+                                        <input
+                                          className="border border-orange-300 rounded p-1 w-[200px] mb-1 "
+                                          value={percent}
+                                          onChange={e => {
+                                            const value = e.target.value;
+                                            setPooledRowData(prev =>
+                                              prev.map(p => {
+                                                if (p !== pool) return p;
+                                                const updated = { ...p.values, vol_for_40nm_percent_pooling: value };
+
+                                                const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm);
+                                                const percentPooling = parseFloat(value);
+
+                                                updated.volume_from_40nm_for_total_25ul_pool =
+                                                  !isNaN(totalVolFor2nm) && !isNaN(percentPooling)
+                                                    ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                    : "";
+
+                                                return { ...p, values: updated };
+                                              })
+                                            );
+                                          }}
+                                          placeholder="40nM vol. % pooling"
+                                        />
+                                      ) : (
+                                        <input
+                                          className="border border-orange-300 rounded p-1 w-[200px]"
+                                          placeholder={col.header || col.accessorKey}
+                                          value={pool.values[col.accessorKey] || ""}
+                                          onChange={e => {
+                                            const value = e.target.value;
+                                            setPooledRowData(prev =>
+                                              prev.map(p => {
+                                                if (p !== pool) return p;
+                                                const updated = { ...p.values, [col.accessorKey]: value };
+
+                                                // Always use the latest value if editing a dependency
+                                                const totalVolFor2nm =
+                                                  col.accessorKey === "total_vol_for_2nm"
+                                                    ? parseFloat(value) || 0
+                                                    : parseFloat(updated.total_vol_for_2nm) || 0;
+                                                const percentPooling =
+                                                  col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                    ? parseFloat(value) || 0
+                                                    : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
+
+                                                updated.volume_from_40nm_for_total_25ul_pool =
+                                                  (totalVolFor2nm && percentPooling)
+                                                    ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                    : "";
+
+                                                return { ...p, values: updated };
+                                              })
+                                            );
+                                          }}
+                                        />
+                                      )}
                                     </td>
                                   );
                                 }
@@ -1382,10 +1621,10 @@ const LibraryPrepration = () => {
                                   <td
                                     key={col.accessorKey}
                                     rowSpan={currentSelection.length}
-                                    className="align-middle bg-slate-50 px-2 py-1 border border-gray-300"
+                                    className="align-middle px-2 py-1 border border-gray-300"
                                   >
                                     <input
-                                      className="border border-orange-300 rounded p-1 w-[200px] bg-gray-100"
+                                      className="border border-orange-300 rounded p-1 w-[200px]"
                                       placeholder={col.header || col.accessorKey}
                                       value={pool?.values[col.accessorKey] || ""}
                                       onChange={e => {
@@ -1395,9 +1634,25 @@ const LibraryPrepration = () => {
                                             if (p !== pool) return p;
                                             const updated = { ...p.values, [col.accessorKey]: value };
 
-                                            // --- Formula logic ---
+                                            // Always use the latest value if editing a dependency
+                                            const totalVolFor2nm =
+                                              col.accessorKey === "total_vol_for_2nm"
+                                                ? parseFloat(value) || 0
+                                                : parseFloat(updated.total_vol_for_2nm) || 0;
+                                            const percentPooling =
+                                              col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                ? parseFloat(value) || 0
+                                                : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
+
+                                            updated.volume_from_40nm_for_total_25ul_pool =
+                                              (totalVolFor2nm && percentPooling)
+                                                ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                : "";
+
                                             const poolConc = parseFloat(updated.pool_conc) || 0;
+
                                             const size = parseFloat(updated.size) || 0;
+
                                             updated.nm_conc = (size > 0 && poolConc > 0)
                                               ? ((poolConc / (size * 660)) * 1000000).toFixed(2)
                                               : "";
@@ -1405,15 +1660,35 @@ const LibraryPrepration = () => {
                                             const nmConc = parseFloat(updated.nm_conc) || 0;
                                             updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
-                                            const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
-                                            updated.total_vol_for_2nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
-                                              ? (parseFloat(updated.one_tenth_of_nm_conc) * libVolFor2nm / 2).toFixed(2)
-                                              : "";
+                                            if (col.accessorKey === "lib_vol_for_2nm" || col.accessorKey === "nm_conc" || col.accessorKey === "one_tenth_of_nm_conc") {
+                                              const nmConc = parseFloat(updated.nm_conc) || 0;
+                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
 
-                                            const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
-                                            updated.nfw_volu_for_2nm = (totalVolFor2nm && libVolFor2nm)
-                                              ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
-                                              : "";
+                                              updated.total_vol_for_2nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
+                                                ? (parseFloat(updated.one_tenth_of_nm_conc) * libVolFor2nm / 2).toFixed(2)
+                                                : "";
+
+                                              updated.nfw_volu_for_2nm = (totalVolFor2nm && libVolFor2nm)
+                                                ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
+                                                : "";
+                                            }
+
+                                            if (col.accessorKey === "total_vol_for_2nm") {
+                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
+                                              updated.nfw_volu_for_2nm = (value && libVolFor2nm)
+                                                ? (parseFloat(value) - libVolFor2nm).toFixed(2)
+                                                : "";
+                                            }
+
+                                            updated.volume_from_40nm_for_total_25ul_pool =
+                                              (totalVolFor2nm && percentPooling)
+                                                ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                : "";
+
+                                            updated.volume_from_40nm_for_total_25ul_pool =
+                                              (totalVolFor2nm && percentPooling)
+                                                ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                : "";
 
                                             return { ...p, values: updated };
                                           })
@@ -1431,9 +1706,60 @@ const LibraryPrepration = () => {
                                 return null; // skip cell covered by rowspan
                               }
 
+                              if (finalPoolingColumns.includes(col.accessorKey) && pool) {
+                                if (isFirstOfPool) {
+                                  return (
+                                    <td
+                                      key={col.accessorKey}
+                                      rowSpan={pool.sampleIndexes.length}
+                                      className="align-middle px-2 py-1 border border-gray-300"
+                                    >
+                                      <input
+                                        className="border border-orange-300 text-black dark:text-white rounded p-1 w-[200px]"
+                                        placeholder={col.header || col.accessorKey}
+                                        value={pool.values[col.accessorKey] || ""}
+                                        onChange={e => {
+                                          const value = e.target.value;
+                                          setPooledRowData(prev =>
+                                            prev.map(p => {
+                                              if (p !== pool) return p;
+                                              const updated = { ...p.values, [col.accessorKey]: value };
+
+                                              // Always use the latest value if editing a dependency
+                                              const totalVolFor2nm =
+                                                col.accessorKey === "total_vol_for_2nm"
+                                                  ? parseFloat(value) || 0
+                                                  : parseFloat(updated.total_vol_for_2nm) || 0;
+                                              const percentPooling =
+                                                col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                  ? parseFloat(value) || 0
+                                                  : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
+
+                                              updated.volume_from_40nm_for_total_25ul_pool =
+                                                (totalVolFor2nm && percentPooling)
+                                                  ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+                                                  : "";
+                                              return { ...p, values: updated };
+                                            })
+                                          );
+                                        }}
+                                      />
+                                    </td>
+                                  );
+                                }
+                                return null; // Covered by rowspan
+                              }
                               // Default cell render
+                              let stickyClass = "";
+                              if (col.accessorKey === "sno") stickyClass = "sticky left-0 z-20 w-[60px] bg-white dark:bg-gray-900";
+                              if (col.accessorKey === "batch_id") stickyClass = "sticky left-[50px] z-20 w-[120px] bg-white dark:bg-gray-900";
+                              if (col.accessorKey === "pool_no") stickyClass = "sticky left-[120px] z-20 w-[100px] bg-white dark:bg-gray-900";
+                              if (col.accessorKey === "sample_id") stickyClass = "sticky left-[180px] z-20 w-[140px] bg-white dark:bg-gray-900";
                               return (
-                                <td key={col.accessorKey} className="px-4 py-1 border-b border-gray-100">
+                                <td
+                                  key={col.accessorKey}
+                                  className={`px-4 py-1 border-b border-gray-100 ${stickyClass}`}
+                                >
                                   {flexRender(
                                     col.cell,
                                     row.getVisibleCells().find(c => c.column.id === col.accessorKey)?.getContext?.() || {}
@@ -1443,15 +1769,42 @@ const LibraryPrepration = () => {
                             })}
                           </tr>
 
+                          {isLastOfBatch && createdBatchIds.includes(currentBatchId) && (
+                            <tr>
+                              {columns.map((col, colIdx) => {
+                                if (col.accessorKey === "data_required") {
+                                  return (
+                                    <td
+                                      key={col.accessorKey}
+                                      className="font-bold text-right pe-7"
+                                    >
+                                      Total Data: {batchSum}
+                                    </td>
+                                  );
+                                }
+                                // Empty cell for other columns
+                                return <td key={col.accessorKey}></td>;
+                              })}
+                            </tr>
+                          )}
+
                           {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && !showPooledFields && (
                             <tr>
                               <td colSpan={columns.length} className="py-2 px-4">
-                                <Button
-                                  onClick={handleDone}
-                                  className=" text-white text-sm px-4 py-1 rounded bg-black"
-                                >
-                                  Done
-                                </Button>
+                                <div className="w-[250px] flex justify-around">
+                                  <Button
+                                    onClick={handleCreatePool}
+                                    className="text-white text-sm px-4 py-1 rounded bg-black"
+                                  >
+                                    Create Pool
+                                  </Button>
+                                  <Button
+                                    onClick={handleCreateBatch}
+                                    className="text-white text-sm px-4 py-1 rounded bg-black"
+                                  >
+                                    Create Batch
+                                  </Button>
+                                </div>
                               </td>
                             </tr>
                           )}
@@ -1467,7 +1820,7 @@ const LibraryPrepration = () => {
           <Button
             type="button"
             onClick={handleSaveAll}
-            className="bg-green-600 hover:bg-green-700 mt-5 text-white cursor-pointer ml-2 min-w-[120px] h-12"
+            className="bg-green-600 hover:bg-green-700 mt-5 text-white cursor-pointer mx-2 min-w-[120px] h-12"
           >
             Save All
           </Button>

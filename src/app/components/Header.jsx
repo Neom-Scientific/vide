@@ -72,7 +72,10 @@ const Header = ({ activeTab, setActiveTab }) => {
     <header className="max-w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md transition-colors duration-300">
       <div className="container mx-auto flex justify-between items-center px-2">
         {/* Title */}
-        <a href="/" className="text-lg sm:text-2xl font-bold text-orange-500 whitespace-nowrap">
+        <a
+          href="/"
+          className=" xl:text-2xl lg:text-lg md:text-lg font-bold text-orange-500 break-words whitespace-normal max-w-[220px] sm:max-w-[350px] md:max-w-none"
+        >
           Visualization Index and Dashboard Execution
         </a>
         {/* Desktop nav */}
@@ -81,10 +84,15 @@ const Header = ({ activeTab, setActiveTab }) => {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-white dark:bg-gray-900 flex items-center space-x-4 overflow-x-auto max-w-full transition-colors duration-300">
                 <TabsTrigger value="dashboard" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Dashboard</TabsTrigger>
+
                 <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
+
                 <TabsTrigger value="processing" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
+
                 <TabsTrigger value="library-prepration" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
-                <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
+
+                <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Runs</TabsTrigger>
+
                 <TabsTrigger value="reports" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -211,7 +219,7 @@ const Header = ({ activeTab, setActiveTab }) => {
 
                 <TabsTrigger value="library-prepration" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
 
-                <TabsTrigger value="run-setup" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
+                <TabsTrigger value="run-setup" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Runs</TabsTrigger>
 
                 <TabsTrigger value="reports" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
               </TabsList>
