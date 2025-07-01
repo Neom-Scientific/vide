@@ -153,6 +153,9 @@ const Processing = () => {
     { key: 'final_pool_vol_ul', label: 'Final Pool Vol (ul)' },
     { key: 'ht_buffer_next_seq_1000_2000', label: 'HT Buffer Next Seq 1000-2000' },
     { key: 'lib_prep_date', label: 'Library Prep Date' },
+    { key: 'batch_id', label: 'Batch ID' },
+    { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
+    { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
   ];
 
   const allTests = [
@@ -488,6 +491,14 @@ const Processing = () => {
             poolsMap[poolNo].values[col] = row[col];
           }
         });
+
+        // --- NEW: Calculate and set volume_from_40nm_for_total_25ul_pool ---
+        const totalVolFor2nm = parseFloat(poolsMap[poolNo].values.total_vol_for_2nm) || 0;
+        const percentPooling = parseFloat(poolsMap[poolNo].values.vol_for_40nm_percent_pooling) || 0;
+        poolsMap[poolNo].values.volume_from_40nm_for_total_25ul_pool =
+          totalVolFor2nm && percentPooling
+            ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
+            : "";
       });
 
       // Convert poolsMap to array
