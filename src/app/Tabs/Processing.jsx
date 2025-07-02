@@ -427,6 +427,8 @@ const Processing = () => {
     "total_vol_for_2nm",
     "lib_vol_for_2nm",
     "nfw_volu_for_2nm",
+    "vol_for_40nm_percent_pooling",
+    "volume_from_40nm_for_total_25ul_pool",
   ];
 
   const handleSendForLibraryPreparation = () => {
@@ -492,13 +494,6 @@ const Processing = () => {
           }
         });
 
-        // --- NEW: Calculate and set volume_from_40nm_for_total_25ul_pool ---
-        const totalVolFor2nm = parseFloat(poolsMap[poolNo].values.total_vol_for_2nm) || 0;
-        const percentPooling = parseFloat(poolsMap[poolNo].values.vol_for_40nm_percent_pooling) || 0;
-        poolsMap[poolNo].values.volume_from_40nm_for_total_25ul_pool =
-          totalVolFor2nm && percentPooling
-            ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
-            : "";
       });
 
       // Convert poolsMap to array
