@@ -61,9 +61,9 @@ const Processing = () => {
     { key: 'patient_name', label: 'Patient Name' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
-    { key: 'sex', label: 'Sex' },
+    { key: 'sex', label: 'Gender' },
     { key: 'ethnicity', label: 'Ethnicity' },
-    { key: 'father_mother_name', label: 'Father/Husband Name' },
+    { key: 'father_mother_name', label: 'Father/Mother Name' },
     // { key: 'spouse_name', label: 'Spouse Name' },
     { key: 'address', label: 'Address' },
     { key: 'city', label: 'City' },
@@ -230,13 +230,24 @@ const Processing = () => {
           cell: (info) => {
             const isChecked = info.getValue() === "Yes";
             const rowIdx = info.row.index;
+            const rowData = info.row.original;
+      
+            // Disable logic
+            let disabled = false;
+            if (col.key === "dna_isolation" && rowData.lib_prep === "Yes") disabled = true;
+            if (col.key === "lib_prep" && (rowData.under_seq === "Yes" || rowData.seq_completed === "Yes")) disabled = true;
+            if (col.key === "dna_isolation" && (rowData.under_seq === "Yes" || rowData.seq_completed === "Yes")) disabled = true;
+            if (col.key === "under_seq" && rowData.seq_completed === "Yes") disabled = true;
+      
             return (
               <Checkbox
                 checked={isChecked}
                 className="border border-orange-400"
+                disabled={disabled}
                 onCheckedChange={async (checked) => {
+                  if (disabled) return;
                   const updatedRow = {
-                    ...info.row.original,
+                    ...rowData,
                     [col.key]: checked ? "Yes" : "No",
                   };
                   setTableRows((prev) =>
@@ -254,7 +265,7 @@ const Processing = () => {
                         idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
                       );
                       setTableRows(updatedRows);
-                      localStorage.setItem("searchData", JSON.stringify(updatedRows)); // Save updated data to localStorage
+                      localStorage.setItem("searchData", JSON.stringify(updatedRows));
                     } else {
                       toast.error(response.data[0].message || "Failed to update sample indicator.");
                     }

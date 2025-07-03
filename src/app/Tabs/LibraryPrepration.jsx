@@ -17,6 +17,8 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { CldOgImage } from "next-cloudinary";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronDown } from "lucide-react";
 
 
 const LibraryPrepration = () => {
@@ -48,86 +50,52 @@ const LibraryPrepration = () => {
 
 
   const allColumns = [
-    { key: 'hospital_name', label: 'Hospital Name' },
-    { key: 'vial_received', label: 'Vial Received' },
-    { key: 'specimen_quality', label: 'Specimen Quality' },
+    { key: 'sno', label: 'S.No.' },
+    { key: 'batch_id', label: 'Batch ID' },
+    { key: 'pool_no', label: 'Pool No.' },
+    { key: 'sample_id', label: 'Sample ID' },
     { key: 'registration_date', label: 'Registration Date' },
     { key: 'internal_id', label: 'Internal ID' },
-    { key: 'sample_date', label: 'Sample Date' },
+    { key: 'test_name', label: 'Test Name' },
     { key: 'sample_type', label: 'Sample Type' },
-    { key: 'trf', label: 'TRF' },
-    { key: 'collection_date_time', label: 'Collection Date Time' },
-    { key: 'storage_condition', label: 'Storage Condition' },
-    { key: 'prority', label: 'Prority' },
-    { key: 'hospital_id', label: 'Hospital ID' },
     { key: 'client_id', label: 'Client ID' },
     { key: 'client_name', label: 'Client Name' },
-    { key: 'sample_id', label: 'Sample ID' },
     { key: 'patient_name', label: 'Patient Name' },
-    { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
-    { key: 'sex', label: 'Sex' },
-    { key: 'ethnicity', label: 'Ethnicity' },
-    { key: 'father_husband_name', label: 'Father/Husband Name' },
-    { key: 'address', label: 'Address' },
-    { key: 'city', label: 'City' },
-    { key: 'state', label: 'State' },
-    { key: 'country', label: 'Country' },
-    { key: 'patient_mobile', label: "Patient's Mobile" },
-    { key: 'docter_mobile', label: "Doctor's Mobile" },
+    { key: 'sex', label: 'Gender' },
+    { key: 'father_husband_name', label: 'Father/Mother Name' },
     { key: 'docter_name', label: 'Doctor Name' },
-    { key: 'email', label: 'Email' },
-    { key: 'test_name', label: 'Test Name' },
-    { key: 'remarks', label: 'Remarks' },
-    { key: 'clinical_history', label: 'Clinical History' },
-    { key: 'repeat_required', label: 'Repeat Required' },
-    { key: 'repeat_reason', label: 'Repeat Reason' },
-    { key: 'repeat_date', label: 'Repeat Date' },
-    { key: 'selectedTestName', label: 'Selected Test Name' },
-    { key: 'systolic_bp', label: 'Systolic BP' },
-    { key: 'diastolic_bp', label: 'Diastolic BP' },
-    { key: 'total_cholesterol', label: 'Total Cholesterol' },
-    { key: 'hdl_cholesterol', label: 'HDL Cholesterol' },
-    { key: 'ldl_cholesterol', label: 'LDL Cholesterol' },
-    { key: 'diabetes', label: 'Diabetes' },
-    { key: 'smoker', label: 'Smoker' },
-    { key: 'hypertension_treatment', label: 'Hypertension Treatment' },
-    { key: 'statin', label: 'Statin' },
-    { key: 'aspirin_therapy', label: 'Aspirin Therapy' },
-    { key: 'dna_isolation', label: 'DNA Isolation' },
-    { key: 'lib_prep', label: 'Library Prep' },
-    { key: 'under_seq', label: 'Under Sequencing' },
-    { key: 'seq_completed', label: 'Sequencing Completed' },
+    { key: 'email', label: 'Doctor Email' },
+    { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
     { key: 'conc_rxn', label: 'conc/rxn (ng/rxn)' },
     { key: 'barcode', label: 'Barcode' },
-    { key: 'i5_index_reverse', label: 'i5 (reverse)' },
-    { key: 'i5_index_forward', label: 'i5 (forward)' },
-    { key: 'i7_index', label: 'i7 index' },
-    { key: 'size', label: 'Size (bp)' },
-    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
-    { key: 'nm_conc', label: 'nM conc' },
-    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 20nM' },
-    { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
-    { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
-    { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
     { key: 'per_rxn_gdna', label: 'Per Rxn gDNA (ng/rxn)' },
     { key: 'volume', label: 'Volume (ul)' },
     { key: 'gdna_volume_3x', label: 'gDNA Volume (ul) (3X)' },
     { key: 'nfw', label: 'NFW (ul) (3x)' },
     { key: 'plate_designation', label: 'Plate Designation' },
     { key: 'well', label: 'Well No./Barcode' },
+    { key: 'i5_index_reverse', label: 'i5 (reverse)' },
+    { key: 'i5_index_forward', label: 'i5 (forward)' },
+    { key: 'i7_index', label: 'i7 index' },
+    { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'qubit_lib_qc_ng_ul', label: 'Library Qubit (ng/ul)' },
-    { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb (ul)' },
+    { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
+    { key: 'size', label: 'Size (bp)' },
+    { key: 'nm_conc', label: 'nM conc' },
+    { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
+    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 20nM' },
+    { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
+    { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
+    { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'sample_volume', label: 'Sample Volume (ul)' },
     { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
-    { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
-    { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'data_required', label: 'Data Required(GB)' },
-    { key: 'pool_no', label: 'Pool No.' },
-    { key: 'batch_id', label: 'Batch ID' },
     { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
+    { key: 'remarks', label: 'Remarks' },
+    { key: 'clinical_history', label: 'Clinical History' },
   ];
 
 
@@ -353,212 +321,107 @@ const LibraryPrepration = () => {
   }, []);
 
   const columns = useMemo(() => {
-    const defaultVisible = getDefaultVisible(testName);
-
-    const columnsArr = [];
-
+    const cols = [];
     // Add checkbox column
-    if (defaultVisible.includes("select")) {
-      columnsArr.push({
-        accessorKey: "select",
-        header: "",
-        cell: ({ row }) => (
-          <Checkbox
-            checked={rowSelection[row.id] || false}
-            onCheckedChange={(checked) => {
-              const newSelection = { ...rowSelection, [row.id]: checked };
-              if (!checked) delete newSelection[row.id];
-              setRowSelection(newSelection);
-            }}
-          />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-      });
-    }
+    cols.push({
+      accessorKey: "select",
+      header: "",
+      cell: ({ row }) => (
+        <Checkbox
+          checked={rowSelection[row.id] || false}
+          onCheckedChange={(checked) => {
+            const newSelection = { ...rowSelection, [row.id]: checked };
+            if (!checked) delete newSelection[row.id];
+            setRowSelection(newSelection);
+          }}
+        />
+      ),
+      enableSorting: false,
+      enableHiding: true, // allow hiding via column selector
+    });
 
     // Add S. No. column
-    columnsArr.push({
+    cols.push({
       accessorKey: "sno",
       header: "S. No.",
       cell: ({ row }) => row.index + 1,
       enableSorting: false,
-      enableHiding: false,
+      enableHiding: true, // allow hiding via column selector
     });
 
-    // Map all defaultVisible (excluding already handled keys)
-    defaultVisible.forEach((key) => {
-      if (["select", "sno"].includes(key)) return;
+    // Add all other columns
+    cols.push(
+      ...allColumns
+        .filter(col => col.key !== "select" && col.key !== "sno")
+        .map((column) => ({
+          accessorKey: column.key,
+          header: column.label,
+          cell: (info) => {
+            const value = typeof info.getValue === "function"
+              ? info.getValue()
+              : (info.row && info.row.original ? info.row.original[column.key] : "");
+              if(column.key === 'registration_date') {
+              return <span>{new Date(value).toLocaleDateString()}</span> || "";
+              }
+            if (
+              column.key === "sample_id" ||
+              column.key === "test_name" ||
+              column.key === "patient_name" ||
+              column.key === "sample_type" ||
+              column.key === "pool_no" ||
+              column.key === "internal_id" ||
+              column.key === "batch_id" ||
+              column.key === "registration_date" ||
+              column.key === "client_id" ||
+              column.key === "client_name" ||
+              column.key === "docter_name" ||
+              column.key === "email" ||
+              column.key === "remarks" ||
+              column.key === "clinical_history" ||
+              column.key === "father_husband_name" ||
+              column.key === "age" ||
+              column.key === "sex"
+            ) {
+              return <span>{value}</span> || "";
+            }
+            if (!info.row) return null;
+            return (
+              <InputCell
+                value={value || ""}
+                rowIndex={info.row.index}
+                columnId={column.key}
+                updateData={table.options.meta.updateData}
+              />
+            );
+          },
+          enableSorting: false,
+          enableHiding: true,
+        }))
+    );
 
-      const column = allColumns.find(col => col.key === key);
-      if (!column) {
-        console.warn(`Column with key "${key}" not found in allColumns.`);
-        return;
-      }
-
-      columnsArr.push({
-        accessorKey: column.key,
-        header: column.label,
-        cell: (info) => {
-          const value = typeof info.getValue === "function"
-            ? info.getValue()
-            : (info.row && info.row.original ? info.row.original[key] : "");
-          if (key === "registration_date") {
-            if (!value) return "";
-            const date = new Date(value);
-            if (isNaN(date)) return value;
-            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-          }
-
-          // if (pooledColumns.includes(key)) {
-          //   if (key === "total_vol_for_2nm") {
-          //     return (
-          //       <InputCell
-          //         value={value || ""}
-          //         rowIndex={info.row.index}
-          //         columnId={key}
-          //         updateData={table.options.meta.updateData}
-          //       />
-          //     );
-          //   }
-          //   return <span>{value}</span>;
-          // }
-
-          if (
-            column.key === "sno" ||
-            column.key === "sample_id" ||
-            column.key === "test_name" ||
-            column.key === "patient_name" ||
-            column.key === "sample_type" ||
-            column.key === "pool_no" ||
-            column.key === "internal_id" ||
-            column.key === "batch_id"
-          ) {
-            return <span>{value}</span> || "";
-          }
-
-          return (
-            <InputCell
-              value={value || ""}
-              rowIndex={info.row.index}
-              columnId={key}
-              updateData={table.options.meta.updateData}
-            />
-          );
-        },
-      });
-    });
-
-    return columnsArr;
-  }, [testName, rowSelection, allColumns, pooledColumns]);
+    return cols;
+  }, [allColumns, rowSelection]);
 
   useEffect(() => {
     const defaultVisible = getDefaultVisible(testName);
+
+    // Start with allColumns
     const visibility = allColumns.reduce((acc, col) => {
       acc[col.key] = defaultVisible.includes(col.key);
       return acc;
     }, {});
-    setColumnVisibility(visibility); // force update visibility
-  }, [testName]);
 
-  useEffect(() => {
-    let defaultVisible = [];
-    if (testName === "Myeloid") {
-      defaultVisible = [
-        "sno",
-        "sample_id",
-        "registration_date",
-        "internal_id",
-        "test_name",
-        "patient_name",
-        "sample_type",
-        "qubit_dna",
-        "conc_rxn",
-        "barcode",
-        "i5_index_forward",
-        "i5_index_reverse",
-        "i7_index",
-        "size",
-        "lib_qubit",
-        "nm_conc",
-        "total_vol_for_2nm",
-        "lib_vol_for_2nm",
-        "nfw_volu_for_2nm",
-        "data_required",
-      ];
-    } else if (
-      testName === "WES" ||
-      testName === "CS" ||
-      testName === "CES" ||
-      testName === "Cardio Comprehensive (Screening Test)" ||
-      testName === "Cardio Metabolic Syndrome (Screening Test)" ||
-      testName === "WES + Mito" ||
-      testName === "CES + Mito" ||
-      testName === "HRR" ||
-      testName === "HCP" ||
-      testName === "Cardio Comprehensive Myopathy"
-    ) {
-      defaultVisible = [
-        "sno",
-        "select",
-        "sample_id",
-        "registration_date",
-        "internal_id",
-        "test_name",
-        "patient_name",
-        "qubit_dna",
-        "per_rxn_gdna",
-        "volume",
-        "gdna_volume_3x",
-        "nfw",
-        "plate_designation",
-        "well",
-        "i5_index_reverse",
-        "i7_index",
-        "qubit_lib_qc_ng_ul",
-        "lib_vol_for_hyb",
-        "data_required",
-      ];
-    }
-    else if (testName === "SGS" || testName === 'HLA') {
-      defaultVisible = [
-        "sno",
-        "select",
-        "sample_id",
-        "registration_date",
-        "internal_id",
-        "test_name",
-        "patient_name",
-        "qubit_dna",
-        "well",
-        "i7_index",
-        "sample_volume",
-        "qubit_lib_qc_ng_ul",
-        "pooling_volume",
-        "data_required",
-      ];
-    }
-
-    const visibleColumns = defaultVisible.reduce((acc, key) => {
-      acc[key] = true;
-      return acc;
-    }, {});
-
-    // // Ensure all columns are included in the visibility state
-    // columns.forEach((col) => {
-    //   if (!visibleColumns.hasOwnProperty(col.accessorKey)) {
-    //     visibleColumns[col.accessorKey] = false;
-    //   }
-    // });
-
-    // Only update state if it has changed
-    setColumnVisibility(prev => {
-      const isEqual = Object.keys(visibleColumns).every(
-        key => prev[key] === visibleColumns[key]
-      );
-      return isEqual ? prev : visibleColumns;
+    // Ensure "select" and "sno" are included if present in defaultVisible
+    ["select", "sno"].forEach(key => {
+      if (defaultVisible.includes(key)) {
+        visibility[key] = true;
+      } else {
+        visibility[key] = false;
+      }
     });
-  }, [testName, columns]);
+
+    setColumnVisibility(visibility);
+  }, [testName]);
 
   const table = useReactTable({
     data: tableRows,
@@ -1491,6 +1354,54 @@ const LibraryPrepration = () => {
             </div>
           )}
 
+          <div className="mb-4 flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="min-w-[180px]">
+                  Select Columns <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
+                <DropdownMenuCheckboxItem
+                  checked={Object.values(table.getState().columnVisibility).every(Boolean)} // Check if all are visible
+                  onCheckedChange={(value) =>
+                    table.getAllLeafColumns().forEach((column) => column.toggleVisibility(!!value))
+                  }
+                >
+                  Select All
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  // Deselect All: show only defaultVisible columns
+                  onClick={() => {
+                    const visibleCols = getDefaultVisible(testName); // <-- get the correct default columns here
+                    table.getAllLeafColumns().forEach((column) => {
+                      column.toggleVisibility(visibleCols.includes(column.id));
+                    });
+                  }}
+                >
+                  Deselect All
+                </DropdownMenuCheckboxItem>
+                {table
+                  .getAllLeafColumns()
+                  .slice() // Create a copy of the array
+                  .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
+                  .filter((column) => column.getCanHide())
+                  .map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                    >
+                      {column.columnDef.header}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <span className="text-sm text-gray-500">
+              Showing {Object.values(table.getState().columnVisibility).filter(Boolean).length || columns.length} of {columns.length} columns
+            </span>
+          </div>
+
           <div className="">
             {/* Table */}
             <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 60px)' }}>
@@ -1549,34 +1460,34 @@ const LibraryPrepration = () => {
                       return (
                         <React.Fragment key={row.id}>
                           <tr>
-                            {columns.map((col, colIdx) => {
+                            {row.getVisibleCells().map((cell, colIdx) => {
                               // Pooled (existing) inputs
-                              if (pooledColumns.includes(col.accessorKey) && pool) {
+                              if (pooledColumns.includes(cell.column.id) && pool) {
                                 if (isFirstOfPool) {
                                   return (
                                     <td
-                                      key={col.accessorKey}
+                                      key={cell.column.id}
                                       rowSpan={pool.sampleIndexes.length}
                                       className="align-middle px-2 py-1 border border-gray-300"
                                     >
                                       <input
                                         className="border border-orange-300 rounded p-1 w-[200px]"
-                                        placeholder={col.header || col.accessorKey}
-                                        value={pool.values[col.accessorKey] || ""}
+                                        placeholder={cell.column.columnDef.header || cell.column.id}
+                                        value={pool.values[cell.column.id] || ""}
                                         onChange={e => {
                                           const value = e.target.value;
                                           setPooledRowData(prev =>
                                             prev.map(p => {
                                               if (p !== pool) return p;
-                                              const updated = { ...p.values, [col.accessorKey]: value };
+                                              const updated = { ...p.values, [cell.column.id]: value };
 
                                               // Always use the latest value if editing a dependency
                                               const totalVolFor2nm =
-                                                col.accessorKey === "total_vol_for_2nm"
+                                                cell.column.id === "total_vol_for_2nm"
                                                   ? parseFloat(value) || 0
                                                   : parseFloat(updated.total_vol_for_2nm) || 0;
                                               const percentPooling =
-                                                col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                cell.column.id === "vol_for_40nm_percent_pooling"
                                                   ? parseFloat(value) || 0
                                                   : parseFloat(updated.vol_for_40nm_percent_pooling ?? 0) || 0;
 
@@ -1600,7 +1511,7 @@ const LibraryPrepration = () => {
                                               return { ...p, values: updated };
                                             })
                                           );
-                                          table.options.meta.updateData(pool.sampleIndexes[0], col.accessorKey, value);
+                                          table.options.meta.updateData(pool.sampleIndexes[0], cell.column.id, value);
                                         }}
                                       />
                                     </td>
@@ -1610,7 +1521,7 @@ const LibraryPrepration = () => {
                               }
 
 
-                              if (finalPoolingColumns.includes(col.accessorKey) && pool) {
+                              if (finalPoolingColumns.includes(cell.column.id) && pool) {
                                 if (isFirstOfPool) {
                                   // Calculate poolSum for this pool
                                   const poolRows = pool.sampleIndexes.map(idx => arr[idx]);
@@ -1629,11 +1540,11 @@ const LibraryPrepration = () => {
 
                                   return (
                                     <td
-                                      key={col.accessorKey}
+                                      key={cell.column.id}
                                       rowSpan={pool.sampleIndexes.length}
                                       className="align-middle px-2 py-1 border border-gray-300"
                                     >
-                                      {col.accessorKey === "vol_for_40nm_percent_pooling" ? (
+                                      {cell.column.id === "vol_for_40nm_percent_pooling" ? (
                                         <input
                                           className="border border-orange-300 rounded p-1 w-[200px] mb-1 "
                                           value={
@@ -1657,29 +1568,29 @@ const LibraryPrepration = () => {
                                                 return { ...p, values: updated };
                                               })
                                             );
-                                            table.options.meta.updateData(pool.sampleIndexes[0], col.accessorKey, value);
+                                            table.options.meta.updateData(pool.sampleIndexes[0], cell.column.id, value);
                                           }}
                                           placeholder="40nM vol. % pooling"
                                         />
                                       ) : (
                                         <input
                                           className="border border-orange-300 rounded p-1 w-[200px]"
-                                          placeholder={col.header || col.accessorKey}
-                                          value={pool.values[col.accessorKey] || ""}
+                                          placeholder={cell.column.columnDef.header || cell.column.id}
+                                          value={pool.values[cell.column.id] || ""}
                                           onChange={e => {
                                             const value = e.target.value;
                                             setPooledRowData(prev =>
                                               prev.map(p => {
                                                 if (p !== pool) return p;
-                                                const updated = { ...p.values, [col.accessorKey]: value };
+                                                const updated = { ...p.values, [cell.column.id]: value };
 
                                                 // Always use the latest value if editing a dependency
                                                 const totalVolFor2nm =
-                                                  col.accessorKey === "total_vol_for_2nm"
+                                                  cell.column.id === "total_vol_for_2nm"
                                                     ? parseFloat(value) || 0
                                                     : parseFloat(updated.total_vol_for_2nm) || 0;
                                                 const percentPooling =
-                                                  col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                  cell.column.id === "vol_for_40nm_percent_pooling"
                                                     ? parseFloat(value) || 0
                                                     : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
@@ -1688,7 +1599,7 @@ const LibraryPrepration = () => {
                                                 return { ...p, values: updated };
                                               })
                                             );
-                                            table.options.meta.updateData(pool.sampleIndexes[0], col.accessorKey, value);
+                                            table.options.meta.updateData(pool.sampleIndexes[0], cell.column.id, value);
                                           }}
                                         />
                                       )}
@@ -1698,9 +1609,9 @@ const LibraryPrepration = () => {
                                 return null; // Covered by rowspan
                               }
 
-                              if (col.accessorKey === "vol_for_40nm_percent_pooling" && pool && isFirstOfPool) {
+                              if (cell.column.id === "vol_for_40nm_percent_pooling" && pool && isFirstOfPool) {
                                 return (
-                                  <td key={col.accessorKey} rowSpan={pool.sampleIndexes.length} className="align-middle px-2 py-1 border border-gray-300">
+                                  <td key={cell.column.id} rowSpan={pool.sampleIndexes.length} className="align-middle px-2 py-1 border border-gray-300">
                                     <input
                                       className="border border-orange-300 rounded p-1 w-[200px] mb-1"
                                       value={pool.values.vol_for_40nm_percent_pooling || ""}
@@ -1716,7 +1627,7 @@ const LibraryPrepration = () => {
                                             return { ...p, values: updated };
                                           })
                                         );
-                                        table.options.meta.updateData(pool.sampleIndexes[0], col.accessorKey, value);
+                                        table.options.meta.updateData(pool.sampleIndexes[0], cell.column.id, value);
                                       }}
                                       placeholder="40nM vol. % pooling"
                                     />
@@ -1724,15 +1635,15 @@ const LibraryPrepration = () => {
                                 );
                               }
 
-                              if (col.accessorKey === "volume_from_40nm_for_total_25ul_pool" && pool && isFirstOfPool) {
+                              if (cell.column.id === "volume_from_40nm_for_total_25ul_pool" && pool && isFirstOfPool) {
                                 const totalVolFor2nm = parseFloat(pool.values.total_vol_for_2nm) || 0;
                                 const percentPooling = parseFloat(pool.values.vol_for_40nm_percent_pooling) || 0;
                                 const var_name = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
                                 return (
-                                  <td key={col.accessorKey} rowSpan={pool.sampleIndexes.length} className="align-middle px-2 py-1 border border-gray-300">
+                                  <td key={cell.column.id} rowSpan={pool.sampleIndexes.length} className="align-middle px-2 py-1 border border-gray-300">
                                     <input
                                       className="border border-orange-300 text-black dark:text-white rounded p-1 w-[200px]"
-                                      placeholder={col.header || col.accessorKey}
+                                      placeholder={cell.column.columnDef.header || cell.column.id}
                                       value={pool.values.volume_from_40nm_for_total_25ul_pool || ""}
                                       readOnly
                                     />
@@ -1742,34 +1653,34 @@ const LibraryPrepration = () => {
 
                               // Pooled (new) inputs
                               if (
-                                pooledColumns.includes(col.accessorKey) &&
+                                pooledColumns.includes(cell.column.id) &&
                                 showPooledFields &&
                                 isFirstSelected
                               ) {
                                 return (
                                   <td
-                                    key={col.accessorKey}
+                                    key={cell.column.id}
                                     rowSpan={currentSelection.length}
                                     className="align-middle px-2 py-1 border border-gray-300"
                                   >
                                     <input
                                       className="border border-orange-300 rounded p-1 w-[200px]"
-                                      placeholder={col.header || col.accessorKey}
-                                      value={pool?.values[col.accessorKey] || ""}
+                                      placeholder={cell.column.columnDef.header || cell.column.id}
+                                      value={pool?.values[cell.column.id] || ""}
                                       onChange={e => {
                                         const value = e.target.value;
                                         setPooledRowData(prev =>
                                           prev.map(p => {
                                             if (p !== pool) return p;
-                                            const updated = { ...p.values, [col.accessorKey]: value };
+                                            const updated = { ...p.values, [cell.column.id]: value };
 
                                             // Always use the latest value if editing a dependency
                                             const totalVolFor2nm =
-                                              col.accessorKey === "total_vol_for_2nm"
+                                              cell.column.id === "total_vol_for_2nm"
                                                 ? parseFloat(value) || 0
                                                 : parseFloat(updated.total_vol_for_2nm) || 0;
                                             const percentPooling =
-                                              col.accessorKey === "vol_for_40nm_percent_pooling"
+                                              cell.column.id === "vol_for_40nm_percent_pooling"
                                                 ? parseFloat(value) || 0
                                                 : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
@@ -1786,7 +1697,7 @@ const LibraryPrepration = () => {
                                             const nmConc = parseFloat(updated.nm_conc) || 0;
                                             updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
-                                            if (col.accessorKey === "lib_vol_for_2nm" || col.accessorKey === "nm_conc" || col.accessorKey === "one_tenth_of_nm_conc") {
+                                            if (cell.column.id === "lib_vol_for_2nm" || cell.column.id === "nm_conc" || cell.column.id === "one_tenth_of_nm_conc") {
                                               const nmConc = parseFloat(updated.nm_conc) || 0;
                                               const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
 
@@ -1799,7 +1710,7 @@ const LibraryPrepration = () => {
                                                 : "";
                                             }
 
-                                            if (col.accessorKey === "total_vol_for_2nm") {
+                                            if (cell.column.id === "total_vol_for_2nm") {
                                               const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
                                               updated.nfw_volu_for_2nm = (value && libVolFor2nm)
                                                 ? (parseFloat(value) - libVolFor2nm).toFixed(2)
@@ -1811,7 +1722,7 @@ const LibraryPrepration = () => {
                                             return { ...p, values: updated };
                                           })
                                         );
-                                        table.options.meta.updateData(pool.sampleIndexes[0], col.accessorKey, value);
+                                        table.options.meta.updateData(pool.sampleIndexes[0], cell.column.id, value);
                                       }}
                                     />
                                   </td>
@@ -1819,38 +1730,38 @@ const LibraryPrepration = () => {
                               }
 
                               if (
-                                pooledColumns.includes(col.accessorKey) &&
+                                pooledColumns.includes(cell.column.id) &&
                                 ((showPooledFields && isSelected) || pool)
                               ) {
                                 return null; // skip cell covered by rowspan
                               }
 
-                              if (finalPoolingColumns.includes(col.accessorKey) && pool) {
+                              if (finalPoolingColumns.includes(cell.column.id) && pool) {
                                 if (isFirstOfPool) {
                                   return (
                                     <td
-                                      key={col.accessorKey}
+                                      key={cell.column.id}
                                       rowSpan={pool.sampleIndexes.length}
                                       className="align-middle px-2 py-1 border border-gray-300"
                                     >
                                       <input
                                         className="border border-orange-300 text-black dark:text-white rounded p-1 w-[200px]"
-                                        placeholder={col.header || col.accessorKey}
-                                        value={pool.values[col.accessorKey] || ""}
+                                        placeholder={cell.column.columnDef.header || cell.column.id}
+                                        value={pool.values[cell.column.id] || ""}
                                         onChange={e => {
                                           const value = e.target.value;
                                           setPooledRowData(prev =>
                                             prev.map(p => {
                                               if (p !== pool) return p;
-                                              const updated = { ...p.values, [col.accessorKey]: value };
+                                              const updated = { ...p.values, [cell.column.id]: value };
 
                                               // Always use the latest value if editing a dependency
                                               const totalVolFor2nm =
-                                                col.accessorKey === "total_vol_for_2nm"
+                                                cell.column.id === "total_vol_for_2nm"
                                                   ? parseFloat(value) || 0
                                                   : parseFloat(updated.total_vol_for_2nm) || 0;
                                               const percentPooling =
-                                                col.accessorKey === "vol_for_40nm_percent_pooling"
+                                                cell.column.id === "vol_for_40nm_percent_pooling"
                                                   ? parseFloat(value) || 0
                                                   : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
@@ -1858,7 +1769,7 @@ const LibraryPrepration = () => {
                                               return { ...p, values: updated };
                                             })
                                           );
-                                          table.options.meta.updateData(pool.sampleIndexes[0], col.accessorKey, value);
+                                          table.options.meta.updateData(pool.sampleIndexes[0], cell.column.id, value);
                                         }}
                                       />
                                     </td>
@@ -1868,18 +1779,18 @@ const LibraryPrepration = () => {
                               }
                               // Default cell render
                               let stickyClass = "";
-                              if (col.accessorKey === "sno") stickyClass = "sticky left-0 z-20 w-[60px] bg-white dark:bg-gray-900";
-                              if (col.accessorKey === "batch_id") stickyClass = "sticky left-[50px] z-20 w-[120px] bg-white dark:bg-gray-900";
-                              if (col.accessorKey === "pool_no") stickyClass = "sticky left-[120px] z-20 w-[100px] bg-white dark:bg-gray-900";
-                              if (col.accessorKey === "sample_id") stickyClass = "sticky left-[180px] z-20 w-[140px] bg-white dark:bg-gray-900";
+                              if (cell.column.id === "sno") stickyClass = "sticky left-0 z-20 w-[60px] bg-white dark:bg-gray-900";
+                              if (cell.column.id === "batch_id") stickyClass = "sticky left-[50px] z-20 w-[120px] bg-white dark:bg-gray-900";
+                              if (cell.column.id === "pool_no") stickyClass = "sticky left-[120px] z-20 w-[100px] bg-white dark:bg-gray-900";
+                              if (cell.column.id === "sample_id") stickyClass = "sticky left-[180px] z-20 w-[140px] bg-white dark:bg-gray-900";
                               return (
                                 <td
-                                  key={col.accessorKey}
+                                  key={cell.column.id}
                                   className={`px-4 py-1 border-b border-gray-100 ${stickyClass}`}
                                 >
                                   {flexRender(
-                                    col.cell,
-                                    row.getVisibleCells().find(c => c.column.id === col.accessorKey)?.getContext?.() || {}
+                                    cell.column.columnDef.cell,
+                                    cell.getContext()
                                   )}
                                 </td>
                               );

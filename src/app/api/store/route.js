@@ -79,7 +79,7 @@ export async function POST(request) {
             ORDER BY project_id DESC
             LIMIT 1
             `;
-            const seqResult = await pool.query(seqQuery, [todayStr]);
+            const seqResult = await pool.query(seqQuery);
             let nextSeq = 1;
             if (seqResult.rows.length > 0 && seqResult.rows[0].project_id) {
                 // Extract the numeric part and increment
