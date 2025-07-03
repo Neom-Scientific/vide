@@ -199,7 +199,7 @@ export async function GET(request) {
             });
         }
         if (role === 'SuperAdmin') {
-            const { rows } = await pool.query(` SELECT run_id , total_required, total_gb_available, selected_application, table_data, count FROM run_setup ORDER BY seq_run_date DESC;`);
+            const { rows } = await pool.query(` SELECT run_id ,seq_run_date total_required, total_gb_available, selected_application, table_data, count FROM run_setup ORDER BY seq_run_date DESC;`);
             if (rows.length === 0) {
                 response.push({
                     status: 404,
@@ -214,7 +214,7 @@ export async function GET(request) {
         }
         else {
             const { rows } = await pool.query(
-                `SELECT run_id, total_required, total_gb_available, selected_application, table_data, count FROM run_setup WHERE hospital_name = $1 ORDER BY seq_run_date DESC;`,
+                `SELECT run_id, total_required, total_gb_available, selected_application, table_data, seq_run_date,count FROM run_setup WHERE hospital_name = $1 ORDER BY seq_run_date DESC;`,
                 [hospital_name]
             );
             if (rows.length === 0) {

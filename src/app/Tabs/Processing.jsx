@@ -20,14 +20,6 @@ import {
   DropdownMenuTrigger,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";

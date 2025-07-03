@@ -25,6 +25,9 @@ const page = () => {
       if (parsedUser.role !== 'SuperAdmin') {
         router.push('/');
       }
+      if(parsedUser.role === 'SuperAdmin') {
+        setActiveTab('Assign-User');
+      }
     }
     setIsUserLoaded(true); // Mark user as loaded
   }, []);
