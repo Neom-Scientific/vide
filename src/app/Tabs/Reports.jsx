@@ -648,7 +648,7 @@ const Reports = () => {
                <div className="col-span-full">
                  <Button
                    type='submit'
-                   onClick={() => { handlesubmit() }}
+                   onClick={() => { handleSubmit() }}
                    className="w-[240px] mt-[20px] bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
                  >
                    Retrieve

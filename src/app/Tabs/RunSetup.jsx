@@ -60,10 +60,10 @@ const RunSetup = () => {
     defaultValues: {
       // application: '',
       seq_run_date: '',
-      total_gb_available: '0',
+      total_gb_available: '',
       instument_type: '',
       pool_size: 0, // Ensure numeric default value
-      pool_conc_run_setup: '0',
+      pool_conc_run_setup: '',
       nm_cal: 0,
       total_required: 0,
       final_pool_vol_ul: 0,
@@ -211,6 +211,9 @@ const RunSetup = () => {
       if (response.data[0].status === 200) {
         toast.success("Run setup submitted successfully!");
         form.reset();
+        form.setValue("total_gb_available", '0')
+        form.setValue("final_pool_vol_ul", 0);
+        form.setValue("pool_size", 0);
         setSelectedTestNames([]);
         setSelectedCheckboxes([]);
         localStorage.removeItem('runSetupForm'); // <-- clear localStorage here
@@ -301,9 +304,11 @@ const RunSetup = () => {
     setSelectedCheckboxes(updatedCheckboxes);
 
     // Calculate the average size
-    const updatedSize = poolData
+    const updatedSize = [...new Set(
+      poolData
       .filter((pool) => updatedCheckboxes.includes(pool.test_name))
-      .map((pool) => Number(pool.size)); // Ensure size is a number
+      .map((pool) => Number(pool.size)) // Ensure size is a number
+    )]; // Use Set to get unique sizes
 
     console.log('updatedSize', updatedSize);
     const avgSize = updatedSize.length > 0
@@ -325,19 +330,28 @@ const RunSetup = () => {
   };
 
   useEffect(() => {
-    const totalGbAvailable = Number(form.watch("total_gb_available")); // Watch for changes in total_gb_available
-
+    const totalGbAvailable = Number(form.watch("total_gb_available"));
+  
     if (totalGbAvailable > 0) {
       const updatedPercentageData = poolData
         .filter((pool) => selectedCheckboxes.includes(pool.test_name))
-        .map((pool) => ({
-          test_name: pool.test_name,
-          percentage: parseFloat(((pool.data_required / totalGbAvailable) * 100).toFixed(2)),
-        }));
-
+        .map((pool) => {
+          const dataRequired = Number(pool.data_required);
+          let percent = 0;
+          if (Math.abs(dataRequired - totalGbAvailable) < 0.01) { // Use a small threshold
+            percent = 100;
+          } else if (totalGbAvailable !== 0) {
+            percent = (dataRequired / totalGbAvailable) * 100;
+          }
+          return {
+            test_name: pool.test_name,
+            percentage: percent
+          };
+        });
+  
       setPercentage(updatedPercentageData);
     } else {
-      setPercentage([]); // Reset percentages if total_gb_available is invalid
+      setPercentage([]);
     }
   }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
 
@@ -553,7 +567,7 @@ const RunSetup = () => {
                                           {totalDataRequiredForTest > 0 ? totalDataRequiredForTest : 'N/A'}
                                         </TableCell>
                                         <TableCell>
-                                          {percentageForTest}%
+                                          {Math.abs(percentageForTest - 100) < 0.0000000000001 ? "100%" : percentageForTest.toFixed(2) + "%"}
                                         </TableCell>
                                         <TableCell>
                                           {calculatedFinalPoolVolUl > 0 ? calculatedFinalPoolVolUl : 'N/A'}
@@ -1102,6 +1116,7 @@ const RunSetup = () => {
                         {col}
                       </th>
                     ))}
+                    <th className="px-6 py-3 min-w-[160px] whitespace-nowrap">Instrument Type</th>
                     <th className="px-6 py-3 min-w-[160px] whitespace-nowrap">Run Sample Count</th>
                     <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Remarks</th>
                   </tr>
@@ -1127,6 +1142,9 @@ const RunSetup = () => {
                           </td>
                         );
                       })}
+                      <td className='p-3'>
+                        {run.instument_type === 'NextSeq_550' ? 'NextSeq 550' : 'NextSeq 1000/2000'}
+                      </td>
                       <td className='p-3'>
                         {run.count}
                       </td>
