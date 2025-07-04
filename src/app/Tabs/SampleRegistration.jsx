@@ -325,6 +325,8 @@ export const SampleRegistration = () => {
       setTrfFile(null); // Reset TRF file
       setTrfUrl(''); // Reset TRF URL
       form.setValue('trf-upload', null); // Reset TRF upload input
+      form.setValue('trf', ''); // Reset TRF name
+      form.setValue('trf_file', ''); // Reset TRF file field
       localStorage.removeItem('sampleRegistrationForm'); // Clear localStorage
     }
     else if (res.data[0].status === 400) {

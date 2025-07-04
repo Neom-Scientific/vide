@@ -454,7 +454,7 @@ const RunSetup = () => {
       }
       catch (e) {
         console.error('Error in RunSetup component:', e);
-        toast.error("An error occurred while loading the Run Setup component.");
+        // toast.error("An error occurred while loading the Run Setup component.");
       }
     }
     fetchRunDetails();
