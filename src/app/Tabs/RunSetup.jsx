@@ -100,6 +100,7 @@ const RunSetup = () => {
 
 
   const testColumns = [
+    "WES",
     "CS",
     "CES",
     "Myeloid",
@@ -1108,9 +1109,13 @@ const RunSetup = () => {
                 <tbody>
                   {runDetails && runDetails.map((run, index) => (
 
-                    <tr key={index} className="border-b">
-                      <td>{run.run_id}</td>
-                      <td>{run.seq_run_date}</td>
+                    <tr key={index} className="border-b text-center">
+                      <td className='p-3'>{run.run_id}</td>
+                      <td className='p-3'>
+                        {run.seq_run_date
+                          ? new Date(run.seq_run_date).toLocaleDateString('en-GB')
+                          : ''}
+                      </td>
                       {testColumns.map((test, idx) => {
                         // Find the data for this test in table_data
                         const testData = run.table_data
@@ -1122,10 +1127,10 @@ const RunSetup = () => {
                           </td>
                         );
                       })}
-                      <td>
+                      <td className='p-3'>
                         {run.count}
                       </td>
-                      <td>{run.remarks || ""}</td>
+                      <td className='p-3'>{run.remarks || ""}</td>
                     </tr>
                   )
                   )}
