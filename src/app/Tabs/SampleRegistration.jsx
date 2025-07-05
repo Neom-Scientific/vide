@@ -22,7 +22,7 @@ const formSchema = z.object({
     .email('Invalid email address'),
   // test_name: z.string().min(1, 'Test Name is required'),
   selectedTestName: z.string().min(1, 'Add the test name to confirm'),
-  hospital_id: z.string().min(1, 'Hospital ID is required'),
+  hospital_id: z.string().min(1, 'Organization ID is required'),
   patient_name: z.string().min(1, 'Patient Name is required'),
   trf: z.string().min(1, 'TRF is required'),
   specimen_quality: z.string().min(1, 'Specimen Quality is required'),
@@ -519,7 +519,7 @@ export const SampleRegistration = () => {
                       </div>
                       <Input
                         disabled={user?.role !== 'SuperAdmin'}
-                        placeholder='Hospital ID'
+                        placeholder='Organization ID'
                         className='my-2 border-2 border-orange-300'
                         {...field} />
                     </FormItem>

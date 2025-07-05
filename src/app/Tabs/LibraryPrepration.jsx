@@ -1146,12 +1146,18 @@ const LibraryPrepration = () => {
       const syncedRows = tableRows.map((row, idx) => {
         const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(idx));
         if (pool) {
+          // Only merge pooledColumns, not all pool.values
+          const pooledFields = pooledColumns.reduce((acc, key) => {
+            acc[key] = pool.values[key];
+            return acc;
+          }, {});
           return {
             ...row,
-            ...pool.values,
+            ...pooledFields,
+            id: idx + 1,
           };
         }
-        return row;
+        return { ...row, id: idx + 1 };
       });
       const payload = {
         hospital_name: user.hospital_name,

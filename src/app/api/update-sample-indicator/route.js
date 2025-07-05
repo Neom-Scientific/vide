@@ -20,7 +20,7 @@ export async function POST(request) {
 
         if (!hospital_name) {
             response.push({
-                message: 'Hospital name is required',
+                message: 'Organization name is required',
                 status: 400
             });
         }

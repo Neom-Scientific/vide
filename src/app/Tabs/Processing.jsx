@@ -46,7 +46,7 @@ const Processing = () => {
     { key: 'collection_date_time', label: 'Collection Date Time' },
     { key: 'storage_condition', label: 'Storage Condition' },
     { key: 'prority', label: 'Prority' },
-    { key: 'hospital_id', label: 'Hospital ID' },
+    { key: 'hospital_id', label: 'Organization ID' },
     { key: 'client_id', label: 'Client ID' },
     { key: 'client_name', label: 'Client Name' },
     { key: 'sample_id', label: 'Sample ID' },
@@ -194,7 +194,7 @@ const Processing = () => {
       enableHiding: false,
     },
     ...allColumns.map((col) => {
-      if (col.key === "registration_date") {
+      if (col.key === "registration_date" || col.key === "sample_date" || col.key === "repeat_date" || col.key === "seq_run_date" || col.key === "report_releasing_date" || col.key === "lib_prep_date" || col.key === "collection_date_time") {
         return {
           accessorKey: col.key,
           header: col.label,
@@ -205,12 +205,7 @@ const Processing = () => {
             const date = new Date(value);
             if (isNaN(date)) return value;
             // Format: YYYY-MM-DD HH:mm
-            const yyyy = date.getFullYear();
-            const mm = String(date.getMonth() + 1).padStart(2, "0");
-            const dd = String(date.getDate()).padStart(2, "0");
-            const hh = String(date.getHours()).padStart(2, "0");
-            const min = String(date.getMinutes()).padStart(2, "0");
-            return `${yyyy}-${mm}-${dd} ${hh}:${min}`;
+            return <span>{new Date(value).toLocaleDateString()}</span> || "";
           },
         };
       }

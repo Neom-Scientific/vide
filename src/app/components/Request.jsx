@@ -17,8 +17,6 @@ const formSchema = z.object({
         .min(1, "Phone number is required")
         .regex(/^\d+$/, "Phone number must contain only digits")
         .min(10, "Phone number must be at least 10 digits"),
-    // hospital_id: z.string().min(1, "Hospital ID is required"),
-
 });
 
 const Request = () => {
