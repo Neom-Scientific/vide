@@ -443,10 +443,10 @@ const Processing = () => {
     }
 
     // Prevent sending if any checked row already has a run_id
-    if (checkedRows.some(row => row.run_id !== null && row.run_id !== undefined && row.run_id !== "")) {
-      toast.error("Run Id is already provided to the selected samples.");
-      return;
-    }
+    // if (checkedRows.some(row => row.run_id !== null && row.run_id !== undefined && row.run_id !== "")) {
+    //   toast.error("Run Id is already provided to the selected samples.");
+    //   return;
+    // }
 
     // Group new rows by test_name
     const newGroupedData = checkedRows.reduce((acc, row) => {

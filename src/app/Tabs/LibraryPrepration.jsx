@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { CldOgImage } from "next-cloudinary";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
+import { isEqual } from "lodash";
 
 
 const LibraryPrepration = () => {
@@ -360,9 +361,9 @@ const LibraryPrepration = () => {
             const value = typeof info.getValue === "function"
               ? info.getValue()
               : (info.row && info.row.original ? info.row.original[column.key] : "");
-              if(column.key === 'registration_date') {
+            if (column.key === 'registration_date') {
               return <span>{new Date(value).toLocaleDateString()}</span> || "";
-              }
+            }
             if (
               column.key === "sample_id" ||
               column.key === "test_name" ||
@@ -792,31 +793,35 @@ const LibraryPrepration = () => {
       if (!clipboard) return;
 
       // Parse clipboard into a 2D array
-      const rows = clipboard.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
-      if (rows.length === 0) return;
+      const clipboardRows = clipboard.split(/\r?\n/).filter(Boolean).map(row => row.split('\t'));
+      if (clipboardRows.length === 0) return;
 
-      const visibleColumns = columns.map(col => col.accessorKey)
-      const visibleEditableColumns = visibleColumns.filter(key => editableColumns.includes(key));
+      // Get visible columns in order (including non-editable)
+      const visibleColumns = columns
+        .filter(col => table.getState().columnVisibility[col.accessorKey])
+        .map(col => col.accessorKey);
 
-      // Find the top-left cell in the selection
-      const rowIndexes = selectedCells.map(cell => cell.rowIndex);
-      const colIndexes = selectedCells.map(cell => visibleEditableColumns.indexOf(cell.columnId));
-      const minRow = Math.min(...rowIndexes);
-      const minCol = Math.min(...colIndexes);
+      // Find selection bounds
+      // Use selection start point as origin
+      const origin = selectionStart || selectedCells[0]; // fallback
+      const startRow = origin.rowIndex;
+      const startCol = visibleColumns.indexOf(origin.columnId);
 
       setTableRows(prevRows => {
         let updatedRows = [...prevRows];
-        for (let r = 0; r < rows.length; r++) {
-          for (let c = 0; c < rows[r].length; c++) {
-            const rowIndex = minRow + r;
-            const colIndex = minCol + c;
+        for (let r = 0; r < clipboardRows.length; r++) {
+          for (let c = 0; c < clipboardRows[r].length; c++) {
+            const rowIndex = startRow + r;
+            const colIndex = startCol + c;
+            const columnId = visibleColumns[colIndex];
+
             if (
               rowIndex < updatedRows.length &&
-              colIndex < visibleEditableColumns.length
+              editableColumns.includes(columnId)
             ) {
-              const columnId = visibleEditableColumns[colIndex];
-              // Use the same logic as updateData to apply formulas
-              let updatedRow = { ...updatedRows[rowIndex], [columnId]: rows[r][c] };
+              const pastedValue = clipboardRows[r][c];
+
+              let updatedRow = { ...updatedRows[rowIndex], [columnId]: pastedValue };
 
               // --- Apply your formulas here (copy from updateData) ---
               // Example (add all your formula logic here):
@@ -884,6 +889,7 @@ const LibraryPrepration = () => {
               if (columnId === "size") {
                 updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
               }
+
               if (qubit_dna || per_rxn_gdna) {
                 updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.round((per_rxn_gdna / qubit_dna) * 3) : "";
               }
@@ -910,12 +916,6 @@ const LibraryPrepration = () => {
                 updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
               }
 
-              // if (columnId === "one_tenth_of_nm_conc" || columnId === "total_vol_for_2nm" || columnId === "lib_vol_for_2nm") {
-              //   updatedRow.total_vol_for_2nm = one_tenth_of_nm_conc > 0 ? (one_tenth_of_nm_conc * lib_vol_for_2nm / 2).toFixed(2) : "";
-              //   updatedRow.nfw_volu_for_2nm = total_vol_for_2nm > 0 ? (updatedRow.total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2) : "";
-              // }
-              // --- End formula logic ---
-
               updatedRows[rowIndex] = updatedRow;
             }
           }
@@ -927,7 +927,7 @@ const LibraryPrepration = () => {
 
     window.addEventListener("paste", handlePaste);
     return () => window.removeEventListener("paste", handlePaste);
-  }, [selectedCells, editableColumns]);
+  }, [selectedCells, editableColumns, columns, table]);
 
   useEffect(() => {
     const handleCopy = (e) => {
@@ -1220,86 +1220,85 @@ const LibraryPrepration = () => {
   }, [pooledRowData, tableRows, testName]);
 
 
-
   useEffect(() => {
-    // Group pools by batch_id
+    if (!pooledRowData.length || !tableRows.length) return;
+
+    let needsUpdate = false;
     const poolsByBatch = {};
+
+    // Group pools by batch_id
     pooledRowData.forEach((pool, poolIdx) => {
-      // Find the batch_id for this pool (from the first sample in the pool)
-      const firstRow = pool.sampleIndexes
-        .map(idx => table.getRowModel().rows[idx])
-        .find(Boolean);
-      const batchId = firstRow?.original?.batch_id;
+      const firstIdx = pool.sampleIndexes[0];
+      const batchId = tableRows[firstIdx]?.batch_id;
       if (!batchId) return;
       if (!poolsByBatch[batchId]) poolsByBatch[batchId] = [];
       poolsByBatch[batchId].push({ pool, poolIdx });
     });
 
-    let needsUpdate = false;
     let newPooledRowData = [...pooledRowData];
 
     Object.values(poolsByBatch).forEach(poolsInBatch => {
-      // Step 1: Get unscaled values
-      const unscaled = poolsInBatch.map(({ pool }) => {
-        const val = parseFloat(pool.values.volume_from_40nm_for_total_25ul_pool) || 0;
-        return val;
-      });
-      const sumUnscaled = unscaled.reduce((a, b) => a + b, 0) || 1; // avoid divide by zero
+      // 1. Calculate percent for each pool (as before)
+      const batchRows = tableRows.filter(row => row.batch_id === tableRows[poolsInBatch[0].pool.sampleIndexes[0]]?.batch_id);
+      const batchSum = batchRows.reduce(
+        (sum, row) => sum + (parseFloat(row.data_required) || 0),
+        0
+      );
 
-      // Step 2: Scale each pool's value so the sum is 25
+      // 2. Calculate initial (unscaled) volume for each pool
+      const unscaled = poolsInBatch.map(({ pool, poolIdx }) => {
+        const totalVol = parseFloat(pool.values.total_vol_for_2nm) || 0;
+
+        // Calculate poolSum for this pool
+        const poolSum = pool.sampleIndexes.reduce(
+          (sum, idx) => sum + (parseFloat(tableRows[idx]?.data_required) || 0),
+          0
+        );
+
+        // Use calculated percent if available, else recalculate
+        const percent = pool.values.vol_for_40nm_percent_pooling
+          ? parseFloat(pool.values.vol_for_40nm_percent_pooling) || 0
+          : batchSum > 0 ? ((poolSum / batchSum) * 100) : 0;
+
+        const vol = ((totalVol * percent) / 100) || 0;
+
+        // Update percent if needed
+        const percentStr = batchSum > 0 ? ((poolSum / batchSum) * 100).toFixed(2) : "";
+        if (pool.values.vol_for_40nm_percent_pooling !== percentStr) {
+          needsUpdate = true;
+          newPooledRowData[poolIdx] = {
+            ...pool,
+            values: {
+              ...pool.values,
+              vol_for_40nm_percent_pooling: percentStr,
+            }
+          };
+        }
+        return vol;
+      });
+
+      // 3. Scale so sum is 25
+      const sumUnscaled = unscaled.reduce((a, b) => a + b, 0) || 1;
       poolsInBatch.forEach(({ pool, poolIdx }, i) => {
         const scaled = ((unscaled[i] / sumUnscaled) * 25).toFixed(2);
         if (pool.values.volume_from_40nm_for_total_25ul_pool !== scaled) {
           needsUpdate = true;
           newPooledRowData[poolIdx] = {
-            ...pool,
+            ...newPooledRowData[poolIdx],
             values: {
-              ...pool.values,
+              ...newPooledRowData[poolIdx].values,
               volume_from_40nm_for_total_25ul_pool: scaled,
             }
           };
         }
-
-        // --- NEW: Auto-fill vol_for_40nm_percent_pooling if empty ---
-        // Calculate poolSum and batchSum for percent
-        const arr = table.getRowModel().rows;
-        const poolRows = pool.sampleIndexes.map(idx => arr[idx]);
-        const poolSum = poolRows.reduce(
-          (sum, r) => sum + (parseFloat(r.original.data_required) || 0),
-          0
-        );
-        const batchRows = arr.filter(r => r.original.batch_id === poolRows[0]?.original?.batch_id);
-        const batchSum = batchRows.reduce(
-          (sum, r) => sum + (parseFloat(r.original.data_required) || 0),
-          0
-        );
-        const percent = batchSum > 0 ? ((poolSum / batchSum) * 100).toFixed(2) : "";
-
-        if (
-          !pool.values.vol_for_40nm_percent_pooling ||
-          pool.values.vol_for_40nm_percent_pooling === ""
-        ) {
-          needsUpdate = true;
-          newPooledRowData[poolIdx] = {
-            ...pool,
-            values: {
-              ...pool.values,
-              vol_for_40nm_percent_pooling: percent,
-            }
-          };
-          // Also update the main table row for the first sample in the pool
-          if (typeof table.options.meta.updateData === "function") {
-            table.options.meta.updateData(pool.sampleIndexes[0], "vol_for_40nm_percent_pooling", percent);
-          }
-        }
       });
     });
 
-    if (needsUpdate) {
+    if (needsUpdate && !isEqual(newPooledRowData, pooledRowData)) {
       setPooledRowData(newPooledRowData);
     }
     // eslint-disable-next-line
-  }, [pooledRowData, tableRows]);
+  }, [tableRows, pooledRowData]);
 
   return (
     <div className="p-4 ">
@@ -1335,17 +1334,52 @@ const LibraryPrepration = () => {
               />
               <Button
                 onClick={() => {
-                  setTableRows(prevRows =>
-                    prevRows.map((row, rowIndex) => {
+                  setTableRows(prevRows => {
+                    let updatedRows = [...prevRows];
+                    const affectedRows = new Set();
+
+                    // 1. Set bulk value for selected cells
+                    selectedCells.forEach(cell => {
+                      updatedRows[cell.rowIndex] = {
+                        ...updatedRows[cell.rowIndex],
+                        [cell.columnId]: bulkValue
+                      };
+                      affectedRows.add(cell.rowIndex);
+                    });
+
+                    // 2. Recalculate formulas for all affected rows
+                    updatedRows = updatedRows.map((row, idx) => {
+                      if (!affectedRows.has(idx)) return row;
+
+                      // --- Formula logic (copy from updateData) ---
                       const updatedRow = { ...row };
-                      selectedCells.forEach(cell => {
-                        if (cell.rowIndex === rowIndex) {
-                          updatedRow[cell.columnId] = bulkValue;
-                        }
-                      });
+                      const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+                      const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+                      const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
+                      const volume = parseFloat(updatedRow.volume) || 0;
+                      const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
+
+                      // gdna_volume_3x
+                      updatedRow.gdna_volume_3x = (qubit_dna > 0 && per_rxn_gdna > 0)
+                        ? Math.round((per_rxn_gdna / qubit_dna) * 3)
+                        : "";
+
+                      // nfw
+                      const gdna_volume_3x = parseFloat(updatedRow.gdna_volume_3x) || 0;
+                      updatedRow.nfw = volume > 0 ? volume - gdna_volume_3x : "";
+
+                      // nfw_volu_for_2nm
+                      if (total_vol_for_2nm && lib_vol_for_2nm) {
+                        updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - lib_vol_for_2nm).toFixed(2));
+                      }
+
+                      // ...add any other formulas you want to auto-calculate here...
+
                       return updatedRow;
-                    })
-                  );
+                    });
+
+                    return updatedRows;
+                  });
                   setBulkValue("");
                 }}
               >
@@ -1797,22 +1831,11 @@ const LibraryPrepration = () => {
                             })}
                           </tr>
 
-                          {isLastOfBatch && createdBatchIds.includes(currentBatchId) && (
+                          {isLastOfBatch && (
                             <tr>
-                              {columns.map((col, colIdx) => {
-                                if (col.accessorKey === "data_required") {
-                                  return (
-                                    <td
-                                      key={col.accessorKey}
-                                      className="font-bold text-right pe-7"
-                                    >
-                                      Total Data: {batchSum}
-                                    </td>
-                                  );
-                                }
-                                // Empty cell for other columns
-                                return <td key={col.accessorKey}></td>;
-                              })}
+                              <td colSpan={columns.length} className="font-bold text-xl py-3 pe-[500px] text-right">
+                                Total Data: {batchSum}
+                              </td>
                             </tr>
                           )}
 
