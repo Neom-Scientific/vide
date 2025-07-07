@@ -253,7 +253,7 @@ export async function POST(request) {
             testName === "HCP" ||
             testName === "Cardio Comprehensive Myopathy") {
             for (const sample of rows) {
-                const { sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, internal_id, batch_id , vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool} = sample;
+                const { sample_id, qubit_dna, data_required, per_rxn_gdna, volume, gdna_volume_3x, nfw, plate_designation, well, i5_index_reverse, i7_index, qubit_lib_qc_ng_ul, stock_ng_ul, lib_vol_for_hyb, gb_per_sample, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, internal_id, batch_id , vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool, test_name} = sample;
 
                 if (!sample_id) {
                     response.push({ message: 'Sample Id is required', status: 400 });
@@ -378,7 +378,7 @@ export async function POST(request) {
                       sanitized.pool_no,
                       sample_id,
                       hospital_name,
-                      testName,
+                      test_name,
                       internal_id,
                       batch_id,
                         sanitized.vol_for_40nm_percent_pooling || null,
@@ -408,7 +408,7 @@ export async function POST(request) {
                     sanitized.lib_vol_for_hyb, sanitized.gb_per_sample,
                     sanitized.pool_conc, sanitized.size, sanitized.nm_conc, sanitized.one_tenth_of_nm_conc,
                     sanitized.total_vol_for_2nm, sanitized.lib_vol_for_2nm,
-                    sanitized.nfw_volu_for_2nm, sanitized.pool_no, sample_id, testName, hospital_name, batch_id, sanitized.vol_for_40nm_percent_pooling || null, sanitized.volume_from_40nm_for_total_25ul_pool || null]
+                    sanitized.nfw_volu_for_2nm, sanitized.pool_no, sample_id, test_name, hospital_name, batch_id, sanitized.vol_for_40nm_percent_pooling || null, sanitized.volume_from_40nm_for_total_25ul_pool || null]
                 );
                 response.push({ message: 'Data updated successfully', status: 200 });
             }

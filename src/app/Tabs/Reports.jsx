@@ -57,10 +57,10 @@ const Reports = () => {
     'Myeloid',
     'HLA',
     'SGS',
-    'WES + Mito',
+    // 'WES + Mito',
     'HCP',
     'HRR',
-    'CES + Mito',
+    // 'CES + Mito',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -339,6 +339,27 @@ const Reports = () => {
           header: "Upload Report",
           cell: info => {
             const sampleId = info.row.original.sample_id;
+            const testName = info.row.original.test_name;
+            // If test name contains "Mito", render two inputs
+            if (testName && testName.toLowerCase().includes("mito")) {
+              return (
+                <div className="flex flex-col gap-1">
+                  <input
+                    type="file"
+                    className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
+                    onChange={e => handleFileUpload(e.target.files[0], sampleId)}
+                    accept=".pdf,.doc,.docx"
+                  />
+                  <input
+                    type="file"
+                    className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
+                    onChange={e => handleFileUpload(e.target.files[0], sampleId + "_mito")}
+                    accept=".pdf,.doc,.docx"
+                  />
+                </div>
+              );
+            }
+            // Otherwise, render one input
             return (
               <input
                 type="file"

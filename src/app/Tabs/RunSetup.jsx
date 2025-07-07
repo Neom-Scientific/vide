@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { zodResolver } from '@hookform/resolvers/zod'
 import axios from 'axios'
 import Cookies from 'js-cookie'
+import { CldOgImage } from 'next-cloudinary'
 import React, { use, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { toast, ToastContainer } from 'react-toastify'
@@ -185,7 +186,15 @@ const RunSetup = () => {
       if (response.data[0].status === 200) {
         const poolDataForTest = response.data[0].data;
         // console.log('poolDataForTest', poolDataForTest);
-        setPoolData((prev) => [...prev, ...poolDataForTest]);
+        setPoolData((prev) => {
+          // Remove any existing pool data for this test (and its + Mito variant)
+          const filtered = prev.filter(
+            (pool) =>
+              pool.test_name !== selectedTestName &&
+              pool.test_name !== `${selectedTestName} + Mito`
+          );
+          return [...filtered, ...poolDataForTest];
+        });
       } else if (response.data[0].status === 404) {
         console.log("No pool data found for the provided Organization Name and test name");
       }
@@ -235,7 +244,6 @@ const RunSetup = () => {
 
   const validateTotalGbAvailable = () => {
     const totalRequired = form.getValues("total_required"); // Get the current value of total_required
-    console.log('totalRequired', totalRequired);
     const totalGbAvailable = form.getValues("total_gb_available"); // Get the current value of total_gb_available
 
     if (Number(totalGbAvailable) < Number(totalRequired)) {
@@ -290,7 +298,7 @@ const RunSetup = () => {
 
       // Extract the size data for the selected test_name
       const sizeData = poolData
-        .filter((pool) => pool.test_name === testName)
+        .filter((pool) => pool.test_name === testName || pool.test_name === `${testName} + Mito`)
         .map((pool) => Number(pool.size)); // Ensure size is a number
 
       // Update the size state
@@ -301,7 +309,7 @@ const RunSetup = () => {
 
       // Remove the size data for the deselected test_name
       const sizeDataToRemove = poolData
-        .filter((pool) => pool.test_name === testName)
+        .filter((pool) => pool.test_name === testName || pool.test_name === `${testName} + Mito`)
         .map((pool) => Number(pool.size)); // Ensure size is a number
 
       setSize((prev) => prev.filter((size) => !sizeDataToRemove.includes(size)));
@@ -321,12 +329,18 @@ const RunSetup = () => {
       ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
       : 0;
     console.log('avgSize', avgSize);
+    console.log('poolData', poolData);
 
     setAvgSize(avgSize); // Update the avgSize state
 
     const totalRequired = poolData
-      .filter((pool) => updatedCheckboxes.includes(pool.test_name)) // Filter pool data for selected test names
+      .filter((pool) =>
+        updatedCheckboxes.some(
+          (test) => pool.test_name === test || pool.test_name === `${test} + Mito`
+        )
+      )
       .reduce((sum, pool) => sum + (pool.data_required || 0), 0); // Sum up the data_required values
+    console.log('total_required', totalRequired);
 
     form.setValue("total_required", totalRequired); // Update the total_required field in the form
 
@@ -339,21 +353,27 @@ const RunSetup = () => {
     const totalGbAvailable = Number(form.watch("total_gb_available"));
 
     if (totalGbAvailable > 0) {
-      const updatedPercentageData = poolData
-        .filter((pool) => selectedCheckboxes.includes(pool.test_name))
-        .map((pool) => {
-          const dataRequired = Number(pool.data_required);
-          let percent = 0;
-          if (Math.abs(dataRequired - totalGbAvailable) < 0.01) { // Use a small threshold
-            percent = 100;
-          } else if (totalGbAvailable !== 0) {
-            percent = (dataRequired / totalGbAvailable) * 100;
-          }
-          return {
-            test_name: pool.test_name,
-            percentage: percent
-          };
-        });
+      const updatedPercentageData = selectedCheckboxes.map((test) => {
+        // Sum data_required for both test and test + Mito
+        const totalDataRequired = poolData
+          .filter(
+            (pool) =>
+              pool.test_name === test ||
+              pool.test_name === `${test} + Mito`
+          )
+          .reduce((sum, pool) => sum + (Number(pool.data_required) || 0), 0);
+
+        let percent = 0;
+        if (Math.abs(totalDataRequired - totalGbAvailable) < 0.01) {
+          percent = 100;
+        } else if (totalGbAvailable !== 0) {
+          percent = (totalDataRequired / totalGbAvailable) * 100;
+        }
+        return {
+          test_name: test,
+          percentage: percent
+        };
+      });
 
       setPercentage(updatedPercentageData);
     } else {
@@ -467,6 +487,19 @@ const RunSetup = () => {
     fetchRunDetails();
   }, [])
 
+  useEffect(() => {
+    // Calculate average size based on checked checkboxes
+    const updatedSize = [...new Set(
+      poolData
+        .filter((pool) => selectedCheckboxes.includes(pool.test_name))
+        .map((pool) => Number(pool.size))
+    )];
+    const avg = updatedSize.length > 0
+      ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
+      : 0;
+    setAvgSize(avg);
+  }, [selectedCheckboxes, poolData]);
+
 
   return (
     <div>
@@ -553,12 +586,19 @@ const RunSetup = () => {
                                   {selectedTestNames.map((test) => {
                                     // Calculate the total data_required for the current test
                                     const totalDataRequiredForTest = poolData
-                                      .filter((pool) => pool.test_name === test)
+                                      .filter((pool) =>
+                                        pool.test_name === test ||
+                                        pool.test_name === `${test} + Mito`
+                                      )
                                       .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
+                                    {/* console.log('totalDataRequiredForTest', totalDataRequiredForTest); */ }
 
                                     // Get the percentage for the current test_name
                                     const percentageForTest = percentage
-                                      .filter((item) => item.test_name === test)
+                                      .filter((pool) =>
+                                        pool.test_name === test ||
+                                        pool.test_name === `${test} + Mito`
+                                      )
                                       .reduce((sum, item) => sum + item.percentage, 0) || 0;
 
                                     // Get the final pool volume (ul) from the input field
@@ -584,6 +624,7 @@ const RunSetup = () => {
                                             type="checkbox"
                                             name="select_application"
                                             className="w-[20px] h-[20px]"
+                                            checked={selectedCheckboxes.includes(test)} // <-- controlled by state
                                             onChange={(e) => handleCheckboxChange(test, e.target.checked)} // Handle checkbox change
                                           />
                                         </TableCell>

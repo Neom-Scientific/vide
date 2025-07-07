@@ -158,10 +158,10 @@ const Processing = () => {
     'Myeloid',
     'HLA',
     'SGS',
-    'WES + Mito',
+    // 'WES + Mito',
     'HCP',
     'HRR',
-    'CES + Mito',
+    // 'CES + Mito',
     'SolidTumor Panel',
     'Cardio Comprehensive (Screening Test)',
     'Cardio Metabolic Syndrome (Screening Test)',
@@ -436,18 +436,15 @@ const Processing = () => {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
-
-    // Prevent sending if any checked row already has a run_id
-    // if (checkedRows.some(row => row.run_id !== null && row.run_id !== undefined && row.run_id !== "")) {
-    //   toast.error("Run Id is already provided to the selected samples.");
-    //   return;
-    // }
-
-    // Group new rows by test_name
+  
+    // Group new rows by main test name (strip " + Mito" if present)
     const newGroupedData = checkedRows.reduce((acc, row) => {
-      const testName = row.test_name;
-      if (!acc[testName]) acc[testName] = [];
-      acc[testName].push(row);
+      // Extract main test name (before " + Mito")
+      const mainTestName = row.test_name.includes(" + Mito")
+        ? row.test_name.split(" + Mito")[0].trim()
+        : row.test_name;
+      if (!acc[mainTestName]) acc[mainTestName] = [];
+      acc[mainTestName].push(row);
       return acc;
     }, {});
 

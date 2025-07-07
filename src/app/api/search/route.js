@@ -32,7 +32,7 @@ export async function GET(request) {
         status: 400,
         message: "Please provide at least one search parameter"
       });
-          }
+    }
 
     // Validate date range
     if (from_dates.length && to_dates.length) {
@@ -44,7 +44,7 @@ export async function GET(request) {
           status: 400,
           message: "Invalid date format"
         });
-              }
+      }
       if (fromDate > toDate) {
         response.push({
           status: 400,
@@ -66,7 +66,17 @@ export async function GET(request) {
     };
 
     addFilter('sample_id', sample_ids);
-    addFilter('test_name', test_names);
+    // addFilter('test_name', test_names);
+    if (test_names.length) {
+      let testNameConditions = [];
+      test_names.forEach((name) => {
+        testNameConditions.push(`test_name = $${idx++}`);
+        values.push(name);
+        testNameConditions.push(`test_name = $${idx++}`);
+        values.push(`${name} + Mito`);
+      });
+      where.push(`(${testNameConditions.join(' OR ')})`);
+    }
     addFilter('run_id', run_ids);
     addFilter('sample_status', sample_statuses);
     addFilter('doctor_name', doctor_names);
