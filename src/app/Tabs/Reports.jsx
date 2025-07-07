@@ -88,6 +88,7 @@ const Reports = () => {
     { key: 'trf', label: 'TRF' },
     { key: 'report_status', label: 'Report Status' },
     { key: 'report_link', label: 'Report Link' },
+    { key: 'mito_report_link', label: 'Mito Report Link' },
     { key: 'upload_report', label: 'Upload Report' },
     { key: 'hpo_status', label: 'HPO Status' },
     { key: 'annotation', label: 'Annotation' },
@@ -184,7 +185,7 @@ const Reports = () => {
     }
   };
 
-  const handleFileUpload = async (file, sampleId) => {
+  const handleFileUpload = async (file, sampleId, isMito = false) => {
     if (!file) {
       toast.error("No file selected");
       return;
@@ -205,45 +206,50 @@ const Reports = () => {
 
       // Prepare the updates object
       const registrationDate = tableRows.find(row => row.sample_id === sampleId)?.registration_date;
-      const reportReleasingDate = new Date().toISOString(); // Current date in ISO format
+      const reportReleasingDate = new Date().toISOString();
       const tatDays = Math.ceil(
         (new Date(reportReleasingDate) - new Date(registrationDate)) / (1000 * 60 * 60 * 24)
-      ); // Calculate TAT days
+      );
+
       const updates = {
-        report_link: file.name, // Use the file name as the report link
-        report_releasing_date: new Date().toISOString(), // Current date in ISO format
-        sample_status: "Reported", // Set the report status to "Reported"
-        tat_days: tatDays, // Set the TAT days
+        report_releasing_date: reportReleasingDate,
+        sample_status: "Reported",
+        tat_days: tatDays,
       };
 
-      console.log('updates:', updates);
-      console.log('sampleId:', sampleId);
+      if (isMito) {
+        updates["mito_report_link"] = file.name;
+      } else {
+        updates["report_link"] = file.name;
+      }
 
-      // Send the PUT request to update the database
       const response = await axios.put("/api/store", {
         sample_id: sampleId,
         updates,
       });
 
       if (response.data[0].status === 200) {
-        toast.success("Report uploaded and updated successfully!");
-        // Update the tableRows state to reflect the change
+        toast.success(`Report (${isMito ? 'Mito' : 'Main'}) uploaded successfully!`);
         setTableRows((prevRows) =>
-          prevRows.map((row) =>
-            row.sample_id === sampleId
-              ? { ...row, ...updates }
-              : row
-          )
+          prevRows.map((row) => {
+            if (row.sample_id === sampleId) {
+              if (isMito && row.test_name && row.test_name.toLowerCase().includes("mito")) {
+                return { ...row, ...updates };
+              }
+              if (!isMito && (!row.test_name || !row.test_name.toLowerCase().includes("mito"))) {
+                return { ...row, ...updates };
+              }
+            }
+            return row;
+          })
         );
       } else {
-        toast.error(`Failed to update report: ${response.data.message}`);
+        toast.error(`Failed to update ${isMito ? 'mito' : 'main'} report`);
       }
-      // } else {
-      //   toast.error("Failed to upload the file");
-      // }
+
     } catch (error) {
-      console.error("Error uploading file:", error);
-      toast.error("An error occurred while uploading the file.");
+      console.error("Upload error:", error);
+      toast.error("Error during report upload");
     }
   };
 
@@ -340,22 +346,29 @@ const Reports = () => {
           cell: info => {
             const sampleId = info.row.original.sample_id;
             const testName = info.row.original.test_name;
-            // If test name contains "Mito", render two inputs
+            // If test name contains "Mito", render two inputs with headers
             if (testName && testName.toLowerCase().includes("mito")) {
               return (
-                <div className="flex flex-col gap-1">
-                  <input
-                    type="file"
-                    className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
-                    onChange={e => handleFileUpload(e.target.files[0], sampleId)}
-                    accept=".pdf,.doc,.docx"
-                  />
-                  <input
-                    type="file"
-                    className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
-                    onChange={e => handleFileUpload(e.target.files[0], sampleId + "_mito")}
-                    accept=".pdf,.doc,.docx"
-                  />
+                <div className="flex flex-col gap-2">
+                  <div>
+                    <span className="block text-xs font-semibold mb-1">Main Report</span>
+                    <input
+                      type="file"
+                      className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
+                      onChange={e => handleFileUpload(e.target.files[0], sampleId, false)}
+                      accept=".pdf,.doc,.docx"
+                    />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-semibold mb-1">Mito Report</span>
+                    <input
+                      type="file"
+                      className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
+                      onChange={e => handleFileUpload(e.target.files[0], sampleId, true)}
+                      accept=".pdf,.doc,.docx"
+                    />
+
+                  </div>
                 </div>
               );
             }
@@ -394,6 +407,7 @@ const Reports = () => {
     'trf',
     'report_status',
     'report_link',
+    'mito_report_link',
     ...(isPrivilegedUser ? ["upload_report"] : []), // Only show actions for privileged users
     ...(isPrivilegedUser ? ["hospital_name"] : []),
     'hpo_status',
@@ -605,7 +619,7 @@ const Reports = () => {
               className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
-                <option value="reporting">Ready for Reporting</option>
+              <option value="reporting">Ready for Reporting</option>
               <option value="reported">Reported</option>
             </select>
           </div>
