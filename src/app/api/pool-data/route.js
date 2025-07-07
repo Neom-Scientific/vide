@@ -9,7 +9,8 @@ export async function GET(request) {
         return val ? val.split(',').map(v => v.trim()).filter(Boolean) : [];
     };
     const testNames = parseList('application'); // Parse test names from query parameters
-    const sample_ids = parseList('sample_id').map(id => parseInt(id, 10)).filter(Number.isInteger); // Ensure sample_ids are integers
+    const sample_ids = parseList('sample_id').filter(id => typeof id === 'string' && id.trim().length > 0); // Ensure sample_ids are non-empty strings
+    console.log('sample_ids', sample_ids);
 
     try {
         const response = [];
@@ -34,7 +35,7 @@ export async function GET(request) {
         // Query by sample_ids if provided
         if (sample_ids.length > 0) {
             const { rows } = await pool.query(
-                `SELECT * FROM master_sheet WHERE sample_id = ANY($1::integer[]) ORDER BY registration_date;`,
+                `SELECT * FROM master_sheet WHERE sample_id = ANY($1::text[]) ORDER BY registration_date;`,
                 [sample_ids]
             );
 

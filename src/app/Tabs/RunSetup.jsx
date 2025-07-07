@@ -49,6 +49,7 @@ const RunSetup = () => {
   const [selectedTestNames, setSelectedTestNames] = useState([]);
   const [selectedCheckboxes, setSelectedCheckboxes] = useState([]); // Track selected checkboxes
   const [size, setSize] = useState([]);
+  const [allTestNames, setAllTestNames] = useState([]); // Store full objects for all test names
   const [percentage, setPercentage] = useState([]);
   const [avgSize, setAvgSize] = useState(0);
   const [InstrumentType, setInstrumentType] = useState('');
@@ -125,10 +126,11 @@ const RunSetup = () => {
         }
 
         const response = await axios.get(`/api/test-names?hospital_name=${user.hospital_name}`);
-        console.log('response', response.data);
+        // console.log('response', response.data);
         if (response.data[0].status === 200) {
-          console.log('response.data[0].data.test_name', response.data[0].data);
+          // console.log('test_names and sample ids', response.data[0].data);
           setTestNames(response.data[0].data);
+          setAllTestNames(response.data[0].data); // Save full objects
         } else if (response.data[0].status === 404) {
           setTestNames([]);
           console.log("No test names found for the provided Organization Name");
@@ -166,19 +168,23 @@ const RunSetup = () => {
       form.setValue("selected_application", updatedSelectedTestNames.join(", "));
 
       // --- NEW: Get sample_ids for this test_name ---
+      console.log('testNames', testNames);
       const testObj = testNames.find(t => t.test_name === selectedTestName);
+      console.log('testObj', testObj);
       const sampleIdsParam = testObj && testObj.sample_ids && testObj.sample_ids.length > 0
         ? testObj.sample_ids.join(',')
         : '';
+
+      console.log('sampleIdsParam', sampleIdsParam);
 
       // Fetch pool data for the selected test name and sample_ids
       const response = await axios.get(
         `/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}${sampleIdsParam ? `&sample_id=${sampleIdsParam}` : ''}`
       );
-      console.log('response', response.data);
+      // console.log('response', response.data);
       if (response.data[0].status === 200) {
         const poolDataForTest = response.data[0].data;
-        console.log('poolDataForTest', poolDataForTest);
+        // console.log('poolDataForTest', poolDataForTest);
         setPoolData((prev) => [...prev, ...poolDataForTest]);
       } else if (response.data[0].status === 404) {
         console.log("No pool data found for the provided Organization Name and test name");
@@ -306,8 +312,8 @@ const RunSetup = () => {
     // Calculate the average size
     const updatedSize = [...new Set(
       poolData
-      .filter((pool) => updatedCheckboxes.includes(pool.test_name))
-      .map((pool) => Number(pool.size)) // Ensure size is a number
+        .filter((pool) => updatedCheckboxes.includes(pool.test_name))
+        .map((pool) => Number(pool.size)) // Ensure size is a number
     )]; // Use Set to get unique sizes
 
     console.log('updatedSize', updatedSize);
@@ -331,7 +337,7 @@ const RunSetup = () => {
 
   useEffect(() => {
     const totalGbAvailable = Number(form.watch("total_gb_available"));
-  
+
     if (totalGbAvailable > 0) {
       const updatedPercentageData = poolData
         .filter((pool) => selectedCheckboxes.includes(pool.test_name))
@@ -348,7 +354,7 @@ const RunSetup = () => {
             percentage: percent
           };
         });
-  
+
       setPercentage(updatedPercentageData);
     } else {
       setPercentage([]);
@@ -418,6 +424,7 @@ const RunSetup = () => {
         if (parsed.selectedTestNames) setSelectedTestNames(parsed.selectedTestNames);
         if (parsed.selectedCheckboxes) setSelectedCheckboxes(parsed.selectedCheckboxes);
         if (parsed.poolData) setPoolData(parsed.poolData);
+        if (parsed.instument_type) setInstrumentType(parsed.instument_type);
       } catch (e) {
         console.error('Failed to parse run setup from localStorage', e);
       }
@@ -444,7 +451,7 @@ const RunSetup = () => {
     const fetchRunDetails = async () => {
       try {
         const response = await axios.get(`/api/run-setup?hospital_name=${user.hospital_name}&role=${user.role}`);
-        console.log('response', response.data);
+        // console.log('response', response.data);
         if (response.data[0].status === 200) {
           setRunDetails(response.data[0].data);
         }
@@ -589,7 +596,14 @@ const RunSetup = () => {
                                             form.setValue("selected_application", form.getValues("selected_application").replace(test, '').replace(/,,/g, ',').trim()); // Update selected_application field
                                             // send them to the applications
                                             setAvgSize(0); // Reset avgSize
-                                            setTestNames((prev) => [...prev, { test_name: test }]); // Add the test back to the dropdown
+                                            setTestNames((prev) => {
+                                              // Only add if not already present
+                                              if (prev.some(t => t.test_name === test)) return prev;
+                                              // Find the full object from allTestNames
+                                              const fullObj = allTestNames.find(t => t.test_name === test);
+                                              if (!fullObj) return prev;
+                                              return [...prev, fullObj];
+                                            });
                                           }}
                                         >
                                           x
@@ -753,6 +767,28 @@ const RunSetup = () => {
                           onChange={(e) => {
                             field.onChange(e); // Update form state
                             setInstrumentType(e.target.value); // Update instrument type state
+
+                            // Clear instrument-specific fields
+                            if (e.target.value === "NextSeq_550") {
+                              form.setValue("total_volume_2nm_next_seq_1000_2000", 0);
+                              form.setValue("final_pool_conc_vol_2nm_next_seq_1000_2000", 0);
+                              form.setValue("rsbetween_vol_2nm_next_seq_1000_2000", 0);
+                              form.setValue("loading_conc_1000_2000", 600);
+                              form.setValue("total_volume_600pm_next_seq_1000_2000", 0);
+                              form.setValue("vol_of_2nm_for_600pm_next_seq_1000_2000", 0);
+                              form.setValue("vol_of_rs_between_for_600pm_next_seq_1000_2000", 0);
+                              // Optionally clear 550 fields too if you want a full reset
+                            } else if (e.target.value === "NextSeq_1000_2000") {
+                              form.setValue("total_volume_2nm_next_seq_550", 0);
+                              form.setValue("final_pool_conc_vol_2nm_next_seq_550", 0);
+                              form.setValue("nfw_vol_2nm_next_seq_550", 0);
+                              form.setValue("dinatured_lib_next_seq_550", 20);
+                              form.setValue("total_volume_next_seq_550", 0);
+                              form.setValue("loading_conc_550", 0);
+                              form.setValue("lib_required_next_seq_550", 0);
+                              form.setValue("buffer_volume_next_seq_550", 0);
+                              // Optionally clear 1000/2000 fields too if you want a full reset
+                            }
                           }}
                           className="mb-2 w-full p-2 border-2 border-orange-300 rounded"
                           required>
