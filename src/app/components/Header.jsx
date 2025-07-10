@@ -86,7 +86,7 @@ const Header = ({ activeTab, setActiveTab }) => {
               <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
               <TabsTrigger value="processing" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
               <TabsTrigger value="library-prepration" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
-              <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Runs</TabsTrigger>
+              <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
               <TabsTrigger value="reports" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
             </TabsList>
           </Tabs>
