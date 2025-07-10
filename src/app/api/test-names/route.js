@@ -14,15 +14,15 @@ export async function GET(request) {
         }
         const { rows } = await pool.query(
             `SELECT 
-  CASE 
-    WHEN test_name ILIKE '%+%mito' THEN TRIM(SPLIT_PART(test_name, '+', 1))
-    ELSE test_name
-  END AS base_test_name,
-  array_agg(sample_id) AS sample_ids
-FROM pool_info
-WHERE hospital_name = $1 AND run_id IS NULL
-GROUP BY base_test_name
-ORDER BY base_test_name;`,
+             CASE 
+             WHEN test_name ILIKE '%+%mito' THEN TRIM(SPLIT_PART(test_name, '+', 1))
+             ELSE test_name
+             END AS base_test_name,
+             array_agg(sample_id) AS sample_ids
+             FROM pool_info
+             WHERE hospital_name = $1 AND run_id IS NULL
+             GROUP BY base_test_name
+             ORDER BY base_test_name;`,
             [hospital_name]
         );
 

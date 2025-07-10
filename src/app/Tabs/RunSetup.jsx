@@ -209,7 +209,9 @@ const RunSetup = () => {
   const handleSubmit = async (data) => {
     try {
       const filteredPoolData = poolData.filter((pool) =>
-        selectedTestNames.includes(pool.test_name)
+        selectedTestNames.some(
+          (test) => pool.test_name === test || pool.test_name === `${test} + Mito`
+        )
       );
 
       const selectedSampleIds = filteredPoolData.map((pool) => pool.sample_id);
@@ -401,23 +403,34 @@ const RunSetup = () => {
 
 
   useEffect(() => {
-    const updatedTableData = selectedTestNames.map((test) => {
-
-      const filteredPoolData = poolData.filter((pool) => pool.test_name === test);
-
+    // Collect all unique test names (including + Mito variants) present in poolData for selected tests
+    const allTestVariants = [];
+    selectedTestNames.forEach((test) => {
+      if (poolData.some(pool => pool.test_name === test)) {
+        allTestVariants.push(test);
+      }
+      if (poolData.some(pool => pool.test_name === `${test} + Mito`)) {
+        allTestVariants.push(`${test} + Mito`);
+      }
+    });
+  
+    // Remove duplicates
+    const uniqueTestVariants = [...new Set(allTestVariants)];
+  
+    const updatedTableData = uniqueTestVariants.map((test) => {
+      const filteredPoolData = poolData.filter(pool => pool.test_name === test);
+  
       const sampleCount = filteredPoolData.length;
-
-      const totalDataRequiredForTest = poolData
-        .filter((pool) => pool.test_name === test)
+      const totalDataRequiredForTest = filteredPoolData
         .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
-
+  
       const percentageForTest = percentage
         .filter((item) => item.test_name === test)
         .reduce((sum, item) => sum + item.percentage, 0) || 0;
-
+  
       const finalPoolVolUl = form.getValues("final_pool_vol_ul");
       const calculatedFinalPoolVolUl = parseFloat(((percentageForTest / 100) * finalPoolVolUl).toFixed(2));
-
+  
       return {
         test_name: test,
         total_data_required: totalDataRequiredForTest,
@@ -426,8 +439,7 @@ const RunSetup = () => {
         final_pool_volume_ul: calculatedFinalPoolVolUl,
       };
     });
-
-    // Update table_data directly in the form state
+  
     form.setValue("table_data", JSON.stringify(updatedTableData));
   }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]);
 
@@ -474,6 +486,7 @@ const RunSetup = () => {
         // console.log('response', response.data);
         if (response.data[0].status === 200) {
           setRunDetails(response.data[0].data);
+          console.log('response.data[0].data', response.data[0].data);
         }
         if (response.data[0].status === 400) {
           toast.error(response.data[0].message || "No data found for the provided Organization Name");
@@ -911,6 +924,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
+                              disabled
                               value={field.value ?? ""}
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Stock Concentration"
@@ -1087,6 +1101,7 @@ const RunSetup = () => {
                               {...field}
                               type="number"
                               placeholder="Enter Loading Concentration"
+                              disabled
                               value={600}
                               className="mb-2 border-2 border-orange-300"
                             />
