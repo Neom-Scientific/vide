@@ -1260,10 +1260,6 @@ const RunSetup = () => {
                                 });
                                 if(response.data[0].status === 200){
                                 fetchRunDetails(); // Refresh run details after saving remarks
-                                toast.success("Remarks saved!");
-                                }
-                                if(response.data[0].status === 404){
-                                  toast.error(response.data[0].message);
                                 }
                               } catch (err) {
                                 console.log('error', err);

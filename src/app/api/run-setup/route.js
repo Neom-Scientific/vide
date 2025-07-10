@@ -214,7 +214,7 @@ export async function GET(request) {
         }
         else {
             const { rows } = await pool.query(
-                `SELECT run_id, total_required, total_gb_available, selected_application,instument_type, table_data, seq_run_date,count FROM run_setup WHERE hospital_name = $1 ORDER BY seq_run_date DESC;`,
+                `SELECT run_id, total_required, total_gb_available, selected_application,instument_type, table_data, seq_run_date,count,run_remarks FROM run_setup WHERE hospital_name = $1 ORDER BY run_id;`,
                 [hospital_name]
             );
             if (rows.length === 0) {
