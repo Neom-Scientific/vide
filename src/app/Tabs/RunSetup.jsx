@@ -235,6 +235,7 @@ const RunSetup = () => {
         setSelectedCheckboxes([]);
         localStorage.removeItem('runSetupForm'); // <-- clear localStorage here
         setPoolData([]);
+        fetchRunDetails(); // Fetch updated run details after submission
       } else if (response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the provided Organization Name and test name");
       }
@@ -413,24 +414,24 @@ const RunSetup = () => {
         allTestVariants.push(`${test} + Mito`);
       }
     });
-  
+
     // Remove duplicates
     const uniqueTestVariants = [...new Set(allTestVariants)];
-  
+
     const updatedTableData = uniqueTestVariants.map((test) => {
       const filteredPoolData = poolData.filter(pool => pool.test_name === test);
-  
+
       const sampleCount = filteredPoolData.length;
       const totalDataRequiredForTest = filteredPoolData
         .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
-  
+
       const percentageForTest = percentage
         .filter((item) => item.test_name === test)
         .reduce((sum, item) => sum + item.percentage, 0) || 0;
-  
+
       const finalPoolVolUl = form.getValues("final_pool_vol_ul");
       const calculatedFinalPoolVolUl = parseFloat(((percentageForTest / 100) * finalPoolVolUl).toFixed(2));
-  
+
       return {
         test_name: test,
         total_data_required: totalDataRequiredForTest,
@@ -439,7 +440,7 @@ const RunSetup = () => {
         final_pool_volume_ul: calculatedFinalPoolVolUl,
       };
     });
-  
+
     form.setValue("table_data", JSON.stringify(updatedTableData));
   }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]);
 
@@ -479,24 +480,25 @@ const RunSetup = () => {
     return () => subscription.unsubscribe();
   }, [form, selectedTestNames, selectedCheckboxes, poolData]);
 
-  useEffect(() => {
-    const fetchRunDetails = async () => {
-      try {
-        const response = await axios.get(`/api/run-setup?hospital_name=${user.hospital_name}&role=${user.role}`);
-        // console.log('response', response.data);
-        if (response.data[0].status === 200) {
-          setRunDetails(response.data[0].data);
-          console.log('response.data[0].data', response.data[0].data);
-        }
-        if (response.data[0].status === 400) {
-          toast.error(response.data[0].message || "No data found for the provided Organization Name");
-        }
+  const fetchRunDetails = async () => {
+    try {
+      const response = await axios.get(`/api/run-setup?hospital_name=${user.hospital_name}&role=${user.role}`);
+      // console.log('response', response.data);
+      if (response.data[0].status === 200) {
+        setRunDetails(response.data[0].data);
+        console.log('response.data[0].data', response.data[0].data);
       }
-      catch (e) {
-        console.error('Error in RunSetup component:', e);
-        // toast.error("An error occurred while loading the Run Setup component.");
+      if (response.data[0].status === 400) {
+        toast.error(response.data[0].message || "No data found for the provided Organization Name");
       }
     }
+    catch (e) {
+      console.error('Error in RunSetup component:', e);
+      // toast.error("An error occurred while loading the Run Setup component.");
+    }
+  }
+
+  useEffect(() => {
     fetchRunDetails();
   }, [])
 
@@ -1240,7 +1242,37 @@ const RunSetup = () => {
                       <td className='p-3'>
                         {run.count}
                       </td>
-                      <td className='p-3'>{run.remarks || ""}</td>
+                      <td className='p-3'>
+                        {run && run.run_remarks ? (
+                          run.run_remarks
+                        ) : (
+                          <input
+                            name='run_remarks'
+                            type='text'
+                            className='border-2 border-orange-300 rounded p-1 w-[150px] text-black dark:text-white'
+                            placeholder='Enter remarks'
+                            onBlur={async (e) => {
+                              const value = e.target.value;
+                              try {
+                                const response = await axios.put('/api/run-setup', {
+                                  run_id: run.run_id,
+                                  run_remarks: value,
+                                });
+                                if(response.data[0].status === 200){
+                                fetchRunDetails(); // Refresh run details after saving remarks
+                                toast.success("Remarks saved!");
+                                }
+                                if(response.data[0].status === 404){
+                                  toast.error(response.data[0].message);
+                                }
+                              } catch (err) {
+                                console.log('error', err);
+                                toast.error("Failed to save remarks");
+                              }
+                            }}
+                          />
+                        )}
+                      </td>
                     </tr>
                   )
                   )}

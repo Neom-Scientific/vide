@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { run } from "googleapis/build/src/apis/run";
 import { NextResponse } from "next/server";
 
 export async function POST(request) {
@@ -199,7 +200,7 @@ export async function GET(request) {
             });
         }
         if (role === 'SuperAdmin') {
-            const { rows } = await pool.query(` SELECT run_id ,seq_run_date, instument_type ,total_required, total_gb_available, selected_application, table_data, count FROM run_setup ORDER BY seq_run_date DESC;`);
+            const { rows } = await pool.query(`SELECT run_id ,seq_run_date, instument_type ,total_required, total_gb_available, selected_application, run_remarks,table_data, count FROM run_setup ORDER BY run_id;`);
             if (rows.length === 0) {
                 response.push({
                     status: 404,
@@ -231,6 +232,49 @@ export async function GET(request) {
         }
         return NextResponse.json(response);
     } catch (error) {
+        console.log('error', error);
+        return NextResponse.json({
+            status: 500,
+            message: "Internal Server Error",
+            error: error.message
+        });
+    }
+}
+
+export async function PUT(request){
+    try{
+        const body = await request.json();
+        const {run_id ,run_remarks} = body;
+        const response = [];
+        if(!run_id || !run_remarks){
+            response.push({
+                status: 400,
+                message: "Run ID and Remarks are required"
+            });
+            return NextResponse.json(response);
+        }
+        const { rows } = await pool.query(
+            `UPDATE run_setup SET run_remarks = $1 WHERE run_id = $2 RETURNING *;`,
+            [run_remarks, run_id]
+        );
+
+        if(rows.length === 0){
+            response.push({
+                status: 404,
+                message: "Run setup not found"
+            });
+        }
+        else{
+            await pool.query(`UPDATE master_sheet SET run_remarks = $1 WHERE run_id = $2`,[run_remarks, run_id]);
+            response.push({
+                status: 200,
+                message: "Run remarks updated successfully",
+                data: rows[0]
+            });
+        }
+        return NextResponse.json(response);
+    }
+    catch(error){
         console.log('error', error);
         return NextResponse.json({
             status: 500,
