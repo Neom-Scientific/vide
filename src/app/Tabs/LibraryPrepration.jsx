@@ -716,6 +716,16 @@ const LibraryPrepration = () => {
     );
 
     useEffect(() => {
+      if (
+        isSelected &&
+        selectedCells.length === 1 &&
+        inputRef.current
+      ) {
+        inputRef.current.focus();
+      }
+    }, [isSelected]);
+
+    useEffect(() => {
       setValue(initialValue);
     }, [initialValue]);
 
@@ -729,17 +739,47 @@ const LibraryPrepration = () => {
 
     // Disable selection logic if we're clicking into the input for typing
     const handleMouseDown = (e) => {
-      if (e.detail === 1 && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
-        // Single click, not modifier — allow editing, don't trigger selection logic
+      // Only prevent default if starting a selection (e.g., shift/ctrl or double click)
+      const isAlreadySelected =
+        selectedCells.length === 1 &&
+        selectedCells[0].rowIndex === rowIndex &&
+        selectedCells[0].columnId === columnId;
+
+      // Deselect if already selected
+      if (isAlreadySelected) {
+        e.preventDefault();
+        setSelectedCells([]);
+        setIsSelecting(false);
+        setSelectionStart(null);
         return;
       }
 
-      setIsSelecting(true);
-      setSelectionStart({ rowIndex, columnId });
-      setSelectedCells([{ rowIndex, columnId }]);
+      if (
+        selectedCells.length > 0 &&
+        !(e.shiftKey || e.ctrlKey || e.metaKey || e.detail > 1)
+      ) {
+        setSelectedCells([{ rowIndex, columnId }]);
+        setIsSelecting(false);
+        setSelectionStart(null);
+        // Allow input to be focused for typing
+        return;
+      }
+
+      // If modifier keys or double click, start selection and prevent default
+      if (e.detail > 1 || e.shiftKey || e.ctrlKey || e.metaKey) {
+        e.preventDefault();
+        setIsSelecting(true);
+        setSelectionStart({ rowIndex, columnId });
+        setSelectedCells([{ rowIndex, columnId }]);
+        return;
+      }
+
+      // For single click, allow default (focus input for typing)
+      // Do not preventDefault here!
     };
 
     const handleMouseEnter = (e) => {
+      e.preventDefault(); // Prevent default to avoid text selection
       if (isSelecting && selectionStart) {
         const cells = [];
         const minRow = Math.min(selectionStart.rowIndex, rowIndex);
@@ -776,7 +816,6 @@ const LibraryPrepration = () => {
         placeholder={`Enter ${columnId}`}
         onChange={handleChange}
         onBlur={handleBlur}
-        tabIndex={1}
         onMouseDown={handleMouseDown}
         onMouseEnter={handleMouseEnter}
         onMouseUp={handleMouseUp}
