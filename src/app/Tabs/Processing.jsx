@@ -390,7 +390,7 @@ const Processing = () => {
       doctor_name: filters.doctor_name,
       dept_name: filters.dept_name,
       run_id: filters.run_id,
-      for:'process'
+      for: 'process'
     };
     if (user && user.role !== "SuperAdmin") {
       data.hospital_name = user.hospital_name; // Add hospital_name from user data
@@ -589,7 +589,7 @@ const Processing = () => {
       console.log('filters:', filters); // Debugging filters
       const data = {
         sample_id: filters.sample_id,
-        test_name: filters.selectedTestNames.join(","),
+        test_name: (filters.selectedTestNames || []).join(","),
         sample_status: filters.sample_status,
         sample_indicator: filters.sample_indicator,
         from_date: filters.from_date,
@@ -620,7 +620,6 @@ const Processing = () => {
           setTableRows(mappedData); // Update the tableRows state with the mapped data
           localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
         } else if (response.data[0].status === 400 || response.data[0].status === 404) {
-          toast.error(response.data[0].message || "No data found for the given filters.");
           setProcessing(false);
           setTableRows([]);
         }
@@ -628,7 +627,6 @@ const Processing = () => {
         if (error.response) {
           setTableRows([]);
           setProcessing(false);
-          toast.error(error.response.data.message || "An error occurred while fetching the data.");
         }
         console.error("Error fetching data:", error);
       }
