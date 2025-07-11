@@ -13,7 +13,7 @@ export async function POST(request) {
                 status: 404
             });
         }
-        console.log('table_data', setup.table_data);
+        // console.log('table_data', setup.table_data);
         const { rows } = await pool.query('SELECT nextval(\'run_id_seq\') AS next_id');
         const id = rows[0].next_id;
         run_id = `run_${id}`; // Generate the new run_id
@@ -152,7 +152,7 @@ export async function POST(request) {
         }
 
         // I am passing the array of the sample_id with the name sample_ids
-        console.log('sample_ids', setup.sample_ids);
+        // console.log('sample_ids', setup.sample_ids);
         if (setup.sample_ids && setup.sample_ids.length > 0) {
             const sampleIds = setup.sample_ids.map(id => id); // Trim and filter out empty strings
             if (sampleIds.length > 0) {
@@ -170,7 +170,7 @@ export async function POST(request) {
         return NextResponse.json(response);
     }
     catch (error) {
-        console.log('error', error);
+        // console.log('error', error);
         return NextResponse.json({
             error: "An error occurred while processing your request.",
             details: error.message
@@ -183,8 +183,8 @@ export async function GET(request) {
     const hospital_name = searchParams.get('hospital_name');
     const  role  = searchParams.get('role')
     try {
-        console.log('role', role);
-        console.log('hospital_name', hospital_name);
+        // console.log('role', role);
+        // console.log('hospital_name', hospital_name);
         const response = [];
         if (!hospital_name) {
             response.push({

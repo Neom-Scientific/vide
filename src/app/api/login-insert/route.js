@@ -1,6 +1,5 @@
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { use } from "react";
 
 export async function POST(request) {
     const body = await request.json();
@@ -17,7 +16,7 @@ export async function POST(request) {
             return NextResponse.json(response);
         }
         const userData = await pool.query('SELECT * FROM request_form WHERE username = $1', [username]);
-        console.log('rows', userData.rows);
+        // console.log('rows', userData.rows);
         const isPasswordValid = userData.rows[0].password === password;
         if (!isPasswordValid) {
             response.push({

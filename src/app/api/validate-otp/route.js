@@ -26,7 +26,7 @@ export async function POST(request) {
                     message: 'Invalid OTP',
                 });
             } else if(storedOtp === otp) {
-                console.log('otp matched');
+                // console.log('otp matched');
                 response.push({
                     status: 200,
                     message: 'OTP validated successfully',

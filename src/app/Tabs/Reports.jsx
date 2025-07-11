@@ -63,7 +63,7 @@ const Reports = () => {
   }, []);
   const allTests = [
     'WES',
-    'CS',
+    'Carrier Screening',
     'CES',
     'Myeloid',
     'HLA',
@@ -73,8 +73,8 @@ const Reports = () => {
     'HRR',
     // 'CES + Mito',
     'SolidTumor Panel',
-    'Cardio Comprehensive (Screening Test)',
-    'Cardio Metabolic Syndrome (Screening Test)',
+    'Cardio Comprehensive (Screening)',
+    'Cardio Metabolic Syndrome (Screening)',
     'Cardio Comprehensive Myopathy'
   ];
 

@@ -10,7 +10,7 @@ export async function GET(request) {
     };
     const testNames = parseList('application'); // Parse test names from query parameters
     const sample_ids = parseList('sample_id').filter(id => typeof id === 'string' && id.trim().length > 0); // Ensure sample_ids are non-empty strings
-    console.log('sample_ids', sample_ids);
+    // console.log('sample_ids', sample_ids);
 
     try {
         const response = [];
@@ -91,7 +91,7 @@ export async function GET(request) {
 export async function PUT(request) {
     const body = await request.json();
     const { sample_id, sample_indicator, indicator_status } = body.data;
-    console.log('body', body);
+    // console.log('body', body);
     try {
         const response = [];
 
@@ -243,10 +243,10 @@ export async function POST(request) {
             }
         }
         if (testName === "WES" ||
-            testName === "CS" ||
+            testName === "Carrier Screening" ||
             testName === "CES" ||
-            testName === "Cardio Comprehensive (Screening Test)" ||
-            testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+            testName === "Cardio Comprehensive (Screening)" ||
+            testName === "Cardio Metabolic Syndrome (Screening)" ||
             testName === "WES + Mito" ||
             testName === "CES + Mito" ||
             testName === "HRR" ||

@@ -103,7 +103,7 @@ const RunSetup = () => {
 
   const testColumns = [
     "WES",
-    "CS",
+    "Carrier Screening",
     "CES",
     "Myeloid",
     "HLA",
@@ -113,8 +113,8 @@ const RunSetup = () => {
     "HRR",
     "CES + Mito",
     "Solid Tumor Panel",
-    "Cardio Comprehensive (Screening Test)",
-    "Cardio Metabolic Syndrome (Screening Test)",
+    "Cardio Comprehensive (Screening)",
+    "Cardio Metabolic Syndrome (Screening)",
     "Cardio Comprehensive Myopathy"
   ];
 

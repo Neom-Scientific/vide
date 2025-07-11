@@ -10,7 +10,7 @@ export async function sendMail(email, subject, html) {
         },
     });
 
-    console.log('admin_email', process.env.ADMIN_EMAIL);
+    // console.log('admin_email', process.env.ADMIN_EMAIL);
 
     const mailOptions = {
         from: process.env.ADMIN_EMAIL,
@@ -21,7 +21,7 @@ export async function sendMail(email, subject, html) {
     let info = {};
     try {
         info = await transporter.sendMail(mailOptions);
-        console.log('Email sent: ' + info.response);
+        // console.log('Email sent: ' + info.response);
     } catch (error) {
         console.error('Error sending email: ', error);
     }

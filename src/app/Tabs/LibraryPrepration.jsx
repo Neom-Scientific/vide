@@ -160,10 +160,10 @@ const LibraryPrepration = () => {
       ];
     } else if (
       testName === "WES" ||
-      testName === "CS" ||
+      testName === "Carrier Screening" ||
       testName === "CES" ||
-      testName === "Cardio Comprehensive (Screening Test)" ||
-      testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+      testName === "Cardio Comprehensive (Screening)" ||
+      testName === "Cardio Metabolic Syndrome (Screening)" ||
       testName === "Cardio Comprehensive Myopathy" ||
       testName === "WES + Mito" ||
       testName === "CES + Mito" ||

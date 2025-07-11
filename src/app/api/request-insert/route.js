@@ -115,7 +115,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role'); // Default to 'NormalUser' if not provided
     const username = searchParams.get('username'); // Get username from query params 
-    console.log('first', role, username);
+    // console.log('first', role, username);
     try {
         let response = [];
         if (role === 'SuperAdmin') {

@@ -134,7 +134,7 @@ export const SampleRegistration = () => {
 
   const allTests = [
     'WES',
-    'CS',
+    'Carrier Screening',
     'CES',
     'Myeloid',
     'HLA',
@@ -144,8 +144,8 @@ export const SampleRegistration = () => {
     'HRR',
     'CES + Mito',
     'SolidTumor Panel',
-    'Cardio Comprehensive (Screening Test)',
-    'Cardio Metabolic Syndrome (Screening Test)',
+    'Cardio Comprehensive (Screening)',
+    'Cardio Metabolic Syndrome (Screening)',
     'Cardio Comprehensive Myopathy'
   ];
 
@@ -346,8 +346,8 @@ export const SampleRegistration = () => {
     }
     const updated = selectedTests.filter(test => test !== testToRemove);
     setSelectedTests(updated);
-    if (testToRemove === 'Cardio Comprehensive (Screening Test)' ||
-      testToRemove === 'Cardio Metabolic Syndrome (Screening Test)' ||
+    if (testToRemove === 'Cardio Comprehensive (Screening)' ||
+      testToRemove === 'Cardio Metabolic Syndrome (Screening)' ||
       testToRemove === 'Cardio Comprehensive Myopathy') {
       form.setValue('ldl_cholesterol', '');
       form.setValue('hdl_cholesterol', '');
@@ -1275,8 +1275,8 @@ export const SampleRegistration = () => {
                 </div>
 
                 {[
-                  "Cardio Comprehensive (Screening Test)",
-                  "Cardio Metabolic Syndrome (Screening Test)",
+                  "Cardio Comprehensive (Screening)",
+                  "Cardio Metabolic Syndrome (Screening)",
                   "Cardio Comprehensive Myopathy"
                 ].some(test => selectedTests.includes(test)) && (
                     <>

@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 export async function POST(request) {
     const body = await request.json();
     const { username, password ,confirm_password} = body;
-    console.log('username and password', username, password);
+    // console.log('username and password', username, password);
     try{
         let response = [];
         
@@ -20,7 +20,7 @@ export async function POST(request) {
 
         // Fetch user data
         const userData = await pool.query('SELECT * FROM request_form WHERE username = $1', [username]);
-        console.log('password', userData.rows[0].password)
+        // console.log('password', userData.rows[0].password)
         const isPasswordValid = userData.rows[0].password === password;
         if (!isPasswordValid) {
             response.push({

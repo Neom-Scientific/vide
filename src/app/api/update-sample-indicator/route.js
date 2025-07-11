@@ -25,9 +25,9 @@ export async function POST(request) {
             });
         }
 
-        console.log('rows', rows);
-        console.log('hospital_name', hospital_name);
-        console.log('testName', testName);
+        // console.log('rows', rows);
+        // console.log('hospital_name', hospital_name);
+        // console.log('testName', testName);
 
         if (testName === "Myeloid") {
 
@@ -108,10 +108,10 @@ export async function POST(request) {
             }
         }
         else if (testName === "WES" ||
-            testName === "CS" ||
+            testName === "Carrier Screening" ||
             testName === "CES" ||
-            testName === "Cardio Comprehensive (Screening Test)" ||
-            testName === "Cardio Metabolic Syndrome (Screening Test)" ||
+            testName === "Cardio Comprehensive (Screening)" ||
+            testName === "Cardio Metabolic Syndrome (Screening)" ||
             testName === "WES + Mito" ||
             testName === "CES + Mito" ||
             testName === "HRR" ||
@@ -254,7 +254,7 @@ export async function POST(request) {
 export async function PUT(request) {
     const body = await request.json();
     const { sample_id, sample_indicator, indicator_status } = body.data;
-    console.log('body', body);
+    // console.log('body', body);
     try {
         const response = [];
 
