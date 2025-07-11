@@ -8,9 +8,15 @@ export async function POST(request) {
     try {
         let response = [];
         let hospital_id = '101';
-        const { rows } = await pool.query('SELECT * FROM request_form WHERE email = $1', [email]);
-        let username = getUsername(rows.length);
+        const today = new Date().toISOString().slice(0, 10);
+        const countResult = await pool.query(
+            "SELECT COUNT(*) FROM request_form WHERE to_char(now(), 'YYYY-MM-DD') = $1",
+            [today]
+        );
+        const todayCount = parseInt(countResult.rows[0].count, 10);
+        let username = getUsername(todayCount + 1);
 
+        // Check if email exists
         if (rows.length > 0) {
             response.push({
                 status: 400,
@@ -19,6 +25,7 @@ export async function POST(request) {
             return NextResponse.json(response);
         }
 
+        // Check required fields
         if (!name || !hospital_name || !email || !phone_no || !password) {
             response.push({
                 status: 400,
@@ -27,15 +34,15 @@ export async function POST(request) {
             return NextResponse.json(response);
         }
 
-        if (rows.length > 0) {
-            const existingHospitalRows = await pool.query('SELECT hospital_name FROM request_form WHERE hospital_name = $1', [hospital_name]);
-            if (existingHospitalRows.rows.length > 0) {
-                hospital_id = existingHospitalRows.rows[0].hospital_id
-            }
-            else {
-                hospital_id = rows[0].hospital_id; // Use the existing hospital_id if it exists
-                hospital_id = (parseInt(hospital_id) + 1).toString(); // Increment the hospital_id}
-            }
+        // Check if hospital_name exists and assign hospital_id
+        const existingHospitalRows = await pool.query('SELECT hospital_id FROM request_form WHERE hospital_name = $1', [hospital_name]);
+        if (existingHospitalRows.rows.length > 0) {
+            hospital_id = existingHospitalRows.rows[0].hospital_id;
+        } else {
+            // Get the max hospital_id and increment it
+            const maxIdRows = await pool.query('SELECT MAX(CAST(hospital_id AS INTEGER)) as max_id FROM request_form');
+            const maxId = maxIdRows.rows[0].max_id || 100;
+            hospital_id = (parseInt(maxId) + 1).toString();
         }
 
         const result = await pool.query(
@@ -201,9 +208,9 @@ export async function PUT(request) {
     }
 }
 
-function getUsername(count){
+function getUsername(count) {
     const date = new Date();
-    if(count === 0){
+    if (count === 0) {
         count = 1; // Start with 1 if no previous entries
     }
     const yyyymmdd = date.toISOString().slice(0, 10).replace(/-/g, ''); // "20250616"

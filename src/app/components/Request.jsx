@@ -39,7 +39,6 @@ const Request = () => {
         setProcessing(true);
 
         const password = Math.random().toString(36).slice(-8); // Generate a random password
-        data.username = userName;
         data.password = password;
         console.log('data', data);
         try {
