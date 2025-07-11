@@ -20,6 +20,8 @@ export async function GET(request) {
     const from_dates = parseList('from_date');
     const to_dates = parseList('to_date');
     const hospital_names = parseList('hospital_name');
+    const forParam = searchParams.get('for')
+    let query;
 
     // Validate input
     if (
@@ -97,7 +99,12 @@ export async function GET(request) {
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
-    const query = `SELECT * FROM master_sheet ${whereClause} order by registration_date `;
+    if (forParam === 'process') {
+       query = `SELECT * FROM master_sheet ${whereClause} ORDER BY registration_date`;
+    } else if (forParam === 'report') {
+       const reportWhereClause = whereClause ? `${whereClause} AND seq_run_date IS NOT NULL` : `WHERE seq_run_date IS NOT NULL`;
+       query = `SELECT * FROM master_sheet ${reportWhereClause} ORDER BY registration_date`;
+    }
 
     const data = await pool.query(query, values);
 

@@ -1550,6 +1550,7 @@ export const SampleRegistration = () => {
                           className="hidden"
                           onChange={e => {
                             uploadTrf(e.target.files[0]);
+                            e.target.value = ""; // Reset input value
                           }}
                         />
                         {/* {trfUrl && ( */}

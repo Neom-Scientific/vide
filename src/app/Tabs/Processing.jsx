@@ -149,6 +149,7 @@ const Processing = () => {
     { key: 'batch_id', label: 'Batch ID' },
     { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
+    { key: 'run_remarks', label: 'Run Remarks' },
   ];
 
   const allTests = [
@@ -170,6 +171,17 @@ const Processing = () => {
 
   let rows = [];
 
+  const [filters, setFilters] = useState({
+    sample_id: "",
+    sample_status: "",
+    sample_indicator: "",
+    from_date: "",
+    to_date: "",
+    doctor_name: "",
+    dept_name: "",
+    run_id: "",
+    selectedTestNames: [],
+  });
   const [tableRows, setTableRows] = useState(rows);
   const [selectedTestNames, setSelectedTestNames] = useState([]);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
@@ -218,14 +230,14 @@ const Processing = () => {
             const isChecked = info.getValue() === "Yes";
             const rowIdx = info.row.index;
             const rowData = info.row.original;
-      
+
             // Disable logic
             let disabled = false;
             if (col.key === "dna_isolation" && rowData.lib_prep === "Yes") disabled = true;
             if (col.key === "lib_prep" && (rowData.under_seq === "Yes" || rowData.seq_completed === "Yes")) disabled = true;
             if (col.key === "dna_isolation" && (rowData.under_seq === "Yes" || rowData.seq_completed === "Yes")) disabled = true;
             if (col.key === "under_seq" && rowData.seq_completed === "Yes") disabled = true;
-      
+
             return (
               <Checkbox
                 checked={isChecked}
@@ -369,15 +381,16 @@ const Processing = () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
-      sample_id: getValue("sample_id"),
-      test_name: selectedTestNames.join(","),
-      sample_status: getValue("sample_status"),
-      sample_indicator: getValue("sample_indicator"),
-      from_date: getValue("from_date"),
-      to_date: getValue("to_date"),
-      doctor_name: getValue("doctor_name"),
-      dept_name: getValue("dept_name"),
-      run_id: getValue("run_id"),
+      sample_id: filters.sample_id,
+      test_name: filters.selectedTestNames.join(","),
+      sample_status: filters.sample_status,
+      sample_indicator: filters.sample_indicator,
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+      doctor_name: filters.doctor_name,
+      dept_name: filters.dept_name,
+      run_id: filters.run_id,
+      for:'process'
     };
     if (user && user.role !== "SuperAdmin") {
       data.hospital_name = user.hospital_name; // Add hospital_name from user data
@@ -436,7 +449,7 @@ const Processing = () => {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
-  
+
     // Group new rows by main test name (strip " + Mito" if present)
     const newGroupedData = checkedRows.reduce((acc, row) => {
       // Extract main test name (before " + Mito")
@@ -546,6 +559,83 @@ const Processing = () => {
     }
   };
 
+  useEffect(() => {
+    const savedFilters = JSON.parse(localStorage.getItem("processingFilters") || "{}");
+    setFilters({
+      sample_id: savedFilters.sample_id || "",
+      sample_status: savedFilters.sample_status || "",
+      sample_indicator: savedFilters.sample_indicator || "",
+      from_date: savedFilters.from_date || "",
+      to_date: savedFilters.to_date || "",
+      doctor_name: savedFilters.doctor_name || "",
+      dept_name: savedFilters.dept_name || "",
+      run_id: savedFilters.run_id || "",
+      selectedTestNames: savedFilters.selectedTestNames || [],
+    });
+    setSelectedTestNames(savedFilters.selectedTestNames || []);
+  }, []);
+
+  const handleFilterChange = (name, value) => {
+    const updated = { ...filters, [name]: value };
+    setFilters(updated);
+    localStorage.setItem("processingFilters", JSON.stringify(updated));
+    if (name === "selectedTestNames") setSelectedTestNames(value);
+  };
+
+  useEffect(() => {
+    const fetchInUseEffect = async () => {
+      setProcessing(true);
+      const filters = JSON.parse(localStorage.getItem("processingFilters") || "{}");
+      console.log('filters:', filters); // Debugging filters
+      const data = {
+        sample_id: filters.sample_id,
+        test_name: filters.selectedTestNames.join(","),
+        sample_status: filters.sample_status,
+        sample_indicator: filters.sample_indicator,
+        from_date: filters.from_date,
+        to_date: filters.to_date,
+        doctor_name: filters.doctor_name,
+        dept_name: filters.dept_name,
+        run_id: filters.run_id,
+        for: 'process',
+      };
+      if (user && user.role !== "SuperAdmin") {
+        data.hospital_name = user.hospital_name; // Add hospital_name from user data
+      }
+
+      try {
+        const response = await axios.get(`/api/search`, { params: data });
+
+        if (response.data[0].status === 200) {
+          // Map the data to ensure checkbox fields are "Yes"/"No"
+          const mappedData = response.data[0].data.map((row) => ({
+            ...row,
+            dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+            lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+            under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+            seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+          }));
+          setProcessing(false);
+          console.log('mappedData:', mappedData); // Debugging mapped data
+          setTableRows(mappedData); // Update the tableRows state with the mapped data
+          localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
+        } else if (response.data[0].status === 400 || response.data[0].status === 404) {
+          toast.error(response.data[0].message || "No data found for the given filters.");
+          setProcessing(false);
+          setTableRows([]);
+        }
+      } catch (error) {
+        if (error.response) {
+          setTableRows([]);
+          setProcessing(false);
+          toast.error(error.response.data.message || "An error occurred while fetching the data.");
+        }
+        console.error("Error fetching data:", error);
+      }
+    }
+    fetchInUseEffect();
+  }, [])
+
   return (
     <div className="p-4">
 
@@ -558,6 +648,8 @@ const Processing = () => {
             <Input
               name='sample_id'
               placeholder="Sample id"
+              value={filters.sample_id}
+              onChange={(e) => handleFilterChange('sample_id', e.target.value)}
               className="w-full border-2 border-orange-300"
             />
           </div>
@@ -582,8 +674,8 @@ const Processing = () => {
                         if (selectedTestNames.includes(test)) {
                           return;
                         }
-                        const updated = [...selectedTestNames, test];
-                        setSelectedTestNames(updated);
+                        const updated = [...filters.selectedTestNames, test];
+                        handleFilterChange('selectedTestNames', updated);
                       }}
                     >
                       <span className="text-sm">{test}</span>
@@ -608,8 +700,8 @@ const Processing = () => {
                     type="button"
                     className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
                     onClick={() => {
-                      const updated = selectedTestNames.filter(t => t !== test);
-                      setSelectedTestNames(updated);
+                      const updated = filters.selectedTestNames.filter(t => t !== test);
+                      handleFilterChange('selectedTestNames', updated);
                     }}
                     aria-label={`Remove ${test}`}
                   >
@@ -623,6 +715,8 @@ const Processing = () => {
             <label className="block font-semibold mb-1">Sample Status</label>
             <select
               name='sample_status'
+              value={filters.sample_status}
+              onChange={(e) => handleFilterChange('sample_status', e.target.value)}
               className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
@@ -652,6 +746,8 @@ const Processing = () => {
             <Input
               name='from_date'
               type="date"
+              value={filters.from_date}
+              onChange={(e) => handleFilterChange('from_date', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -660,6 +756,8 @@ const Processing = () => {
             <Input
               name='to_date'
               type="date"
+              value={filters.to_date}
+              onChange={(e) => handleFilterChange('to_date', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -668,6 +766,8 @@ const Processing = () => {
             <Input
               name='doctor_name'
               placeholder="Doctor's Name"
+              value={filters.doctor_name}
+              onChange={(e) => handleFilterChange('doctor_name', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -676,6 +776,8 @@ const Processing = () => {
             <Input
               name='dept_name'
               placeholder="Dept. Name"
+              value={filters.dept_name}
+              onChange={(e) => handleFilterChange('dept_name', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -684,6 +786,8 @@ const Processing = () => {
             <Input
               name='run_id'
               placeholder="Run id"
+              value={filters.run_id}
+              onChange={(e) => handleFilterChange('run_id', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>

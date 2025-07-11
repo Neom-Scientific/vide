@@ -16,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { zodResolver } from '@hookform/resolvers/zod'
-import React, { useEffect, useState } from 'react'
+import React, { use, useEffect, useState } from 'react'
 import { set, useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { ChevronDown } from "lucide-react";
@@ -44,6 +44,17 @@ const Reports = () => {
   const [tableRows, setTableRows] = useState(rows);
   const [processing, setProcessing] = useState(false);
   const [user, setUser] = useState(null);
+  const [filters, setFilters] = useState({
+    sample_id: "",
+    test_name: "",
+    from_date: "",
+    to_date: "",
+    status: "",
+    run_id: "",
+    doctor_name: "",
+    dept_name: "",
+    selectedTestNames: [],
+  });
   useEffect(() => {
     const CookieUser = Cookies.get('user');
     if (CookieUser) {
@@ -457,14 +468,15 @@ const Reports = () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
-      sample_id: getValue("sample_id"),
-      test_name: selectedTestNames.join(","),
-      sample_status: getValue("sample_status"),
-      from_date: getValue("from_date"),
-      to_date: getValue("to_date"),
-      doctor_name: getValue("doctor_name"),
-      dept_name: getValue("dept_name"),
-      run_id: getValue("run_id"),
+     sample_id: filters.sample_id,
+        test_name: filters.selectedTestNames.join(","),
+        sample_status: filters.sample_status,
+        from_date: filters.from_date,
+        to_date: filters.to_date,
+        doctor_name: filters.doctor_name,
+        dept_name: filters.dept_name,
+        run_id: filters.run_id,
+        for: "report",
     };
     if (user && user.role !== 'SuperAdmin') {
       data.hospital_name = user.hospital_name;
@@ -485,6 +497,7 @@ const Reports = () => {
           });
           setProcessing(false);
           setTableRows(updatedRows);
+          localStorage.setItem('reportsData', JSON.stringify(updatedRows));
         } else {
           setTableRows([]);
           console.warn("No data found for the given filters.");
@@ -540,6 +553,39 @@ const Reports = () => {
       toast.error('An error occurred while saving the data.');
     }
   }
+
+  useEffect(() => {
+    const savedFilters = JSON.parse(localStorage.getItem("reportsFilters") || "{}");
+    setFilters({
+      sample_id: savedFilters.sample_id || "",
+      test_name: savedFilters.test_name || "",
+      from_date: savedFilters.from_date || "",
+      to_date: savedFilters.to_date || "",
+      status: savedFilters.status || "",
+      run_id: savedFilters.run_id || "",
+      doctor_name: savedFilters.doctor_name || "",
+      dept_name: savedFilters.dept_name || "",
+      selectedTestNames: savedFilters.selectedTestNames || [],
+    });
+    setSelectedTestNames(savedFilters.selectedTestNames || []);
+  }, []);
+
+  const handleFilterChange = (name, value) => {
+    const updated = { ...filters, [name]: value };
+    setFilters(updated);
+    localStorage.setItem("reportsFilters", JSON.stringify(updated));
+    if (name === "selectedTestNames") setSelectedTestNames(value);
+  };
+
+  useEffect(() => {
+    const savedData = localStorage.getItem('reportsData');
+    if (savedData) {
+      setTableRows(JSON.parse(savedData));
+    } else {
+      setTableRows([]);
+    }
+  },[]);
+
   return (
     <div className="p-4">
 
@@ -551,6 +597,8 @@ const Reports = () => {
             <Input
               name='sample_id'
               placeholder="Sample id"
+              value={filters.sample_id}
+              onChange={(e) => handleFilterChange('sample_id', e.target.value)}
               className="w-full border-2 border-orange-300"
             />
           </div>
@@ -575,8 +623,8 @@ const Reports = () => {
                         if (selectedTestNames.includes(test)) {
                           return;
                         }
-                        const updated = [...selectedTestNames, test];
-                        setSelectedTestNames(updated);
+                        const updated = [...filters.selectedTestNames, test];
+                        handleFilterChange('selectedTestNames', updated);
                       }}
                     >
                       <span className="text-sm">{test}</span>
@@ -601,8 +649,8 @@ const Reports = () => {
                     type="button"
                     className="ml-2 text-orange-700 hover:text-red-600 focus:outline-none"
                     onClick={() => {
-                      const updated = selectedTestNames.filter(t => t !== test);
-                      setSelectedTestNames(updated);
+                      const updated = filters.selectedTestNames.filter(t => t !== test);
+                      handleFilterChange('selectedTestNames', updated);
                     }}
                     aria-label={`Remove ${test}`}
                   >
@@ -616,6 +664,8 @@ const Reports = () => {
             <label className="block font-semibold mb-1">Sample Status</label>
             <select
               name='sample_status'
+              value={filters.status}
+              onChange={(e) => handleFilterChange('status', e.target.value)}
               className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
@@ -628,9 +678,11 @@ const Reports = () => {
             <select
               name='sample_indicator'
               className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              value={filters.sample_indicator || ""}
               onChange={e => {
                 const options = Array.from(e.target.selectedOptions, option => option.value);
                 setSelectedSampleIndicator(options);
+                handleFilterChange('sample_indicator', options);
               }}
             >
               <option value="">Select the Sample Indicator</option>
@@ -645,6 +697,8 @@ const Reports = () => {
             <Input
               name='from_date'
               type="date"
+              value={filters.from_date}
+              onChange={(e) => handleFilterChange('from_date', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -653,6 +707,8 @@ const Reports = () => {
             <Input
               name='to_date'
               type="date"
+              value={filters.to_date}
+              onChange={(e) => handleFilterChange('to_date', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -660,6 +716,8 @@ const Reports = () => {
             <label className="block font-semibold mb-1">Doctor's Name</label>
             <Input
               name='doctor_name'
+              value={filters.doctor_name}
+              onChange={(e) => handleFilterChange('doctor_name', e.target.value)}
               placeholder="Doctor's Name"
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
@@ -669,6 +727,8 @@ const Reports = () => {
             <Input
               name='dept_name'
               placeholder="Dept. Name"
+              value={filters.dept_name}
+              onChange={(e) => handleFilterChange('dept_name', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>
@@ -677,6 +737,8 @@ const Reports = () => {
             <Input
               name='run_id'
               placeholder="Run id"
+              value={filters.run_id}
+              onChange={(e) => handleFilterChange('run_id', e.target.value)}
               className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800 w-full"
             />
           </div>

@@ -17,6 +17,7 @@ const defaultAvatars = [
 const Header = ({ activeTab, setActiveTab }) => {
   const router = useRouter();
   const [user, setUser] = useState(null); // State to hold user data
+  const menuRef = useRef(null); // Reference for the menu
   const [darkMode, setDarkMode] = useState(
     typeof window !== "undefined"
       ? document.documentElement.classList.contains("dark")
@@ -31,6 +32,8 @@ const Header = ({ activeTab, setActiveTab }) => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
       setUser(JSON.parse(cookieUser));
+      const savedPhoto = localStorage.getItem('profilePhoto');
+      if (savedPhoto) setProfilePhoto(savedPhoto); // Load saved profile photo from local storage
     }
     else {
       router.push('/login'); // Redirect to login if no user cookie found
@@ -51,14 +54,19 @@ const Header = ({ activeTab, setActiveTab }) => {
     if (file) {
       const reader = new FileReader();
       reader.onload = (e) => {
-        setProfilePhoto(e.target.result); // Update the profile photo
+        setProfilePhoto(e.target.result);
+        localStorage.setItem('profilePhoto', e.target.result);
+        event.target.value = ""; // <-- Reset the input value here!
       };
       reader.readAsDataURL(file);
+    } else {
+      event.target.value = ""; // Also reset if no file selected
     }
   };
 
   const handleChooseAvatar = (avatar) => {
     setProfilePhoto(avatar); // Set the selected avatar
+    localStorage.setItem('profilePhoto', avatar); // Save to local storage
     setShowMenu(false); // Close the menu
   };
 
@@ -67,6 +75,24 @@ const Header = ({ activeTab, setActiveTab }) => {
       fileInputRef.current.click(); // Trigger the file input click
     }
   };
+
+  useEffect(() => {
+    if (!showMenu) return;
+
+    const handleClickOutside = (event) => {
+      if (
+        menuRef.current &&
+        !menuRef.current.contains(event.target) &&
+        // Also check the avatar image/div
+        !event.target.closest('.avatar-trigger')
+      ) {
+        setShowMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showMenu]);
 
   return (
     <header className="max-w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md transition-colors duration-300">
@@ -83,10 +109,15 @@ const Header = ({ activeTab, setActiveTab }) => {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-white dark:bg-gray-900 flex items-center space-x-4 transition-colors duration-300">
               <TabsTrigger value="dashboard" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Dashboard</TabsTrigger>
+
               <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
+
               <TabsTrigger value="processing" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
+
               <TabsTrigger value="library-prepration" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
+
               <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
+
               <TabsTrigger value="reports" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
             </TabsList>
           </Tabs>
@@ -101,17 +132,33 @@ const Header = ({ activeTab, setActiveTab }) => {
           <div className="relative flex-shrink-0">
             <input type="file" accept="image/*" ref={fileInputRef} className="hidden" onChange={handlePhotoChange} />
             {profilePhoto ? (
-              <img src={profilePhoto} alt="Profile" className="w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300" onClick={handleAvatarClick} title="Click to change profile photo" />
+              <img
+                src={profilePhoto}
+                alt="Profile"
+                className="avatar-trigger w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300"
+                onClick={handleAvatarClick}
+                title="Click to change profile photo"
+              />
             ) : user && user.username ? (
-              <div className="w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300" onClick={handleAvatarClick} title="Click to change profile photo">
+              <div
+                className="avatar-trigger w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300"
+                onClick={handleAvatarClick}
+                title="Click to change profile photo"
+              >
                 {user.username.charAt(0).toUpperCase()}
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300" onClick={handleAvatarClick} title="Click to change profile photo">?</div>
+              <div
+                className="avatar-trigger w-10 h-10 rounded-full bg-gray-400 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300"
+                onClick={handleAvatarClick}
+                title="Click to change profile photo"
+              >?</div>
             )}
 
             {showMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 p-2 transition-colors duration-300">
+              <div 
+              ref = {menuRef}
+              className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 p-2 transition-colors duration-300">
                 <div className="grid grid-cols-3 gap-2">
                   {defaultAvatars.map((avatar, idx) => (
                     <img key={idx} src={avatar} alt={`Avatar ${idx}`} className="w-10 h-10 rounded-full cursor-pointer border-2 border-transparent hover:border-blue-500 transition-colors duration-300" onClick={() => handleChooseAvatar(avatar)} />
@@ -120,6 +167,17 @@ const Header = ({ activeTab, setActiveTab }) => {
                 <div className="border-t border-gray-200 dark:border-gray-700 my-2"></div>
                 <button onClick={handleUploadClick} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors duration-300">
                   Upload from device
+                </button>
+
+                <button
+                  onClick={() => {
+                    setProfilePhoto(undefined);
+                    localStorage.removeItem('profilePhoto');
+                    setShowMenu(false);
+                  }}
+                  className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors duration-300 text-red-500"
+                >
+                  Remove photo
                 </button>
               </div>
             )}
@@ -133,6 +191,10 @@ const Header = ({ activeTab, setActiveTab }) => {
               localStorage.removeItem('runSetupForm');
               localStorage.removeItem('sampleRegistrationForm');
               localStorage.removeItem('editRowData');
+              localStorage.removeItem('runSetupForm');
+              localStorage.removeItem('reportsFilters');
+              localStorage.removeItem('reportsData')
+              localStorage.removeItem('processingFilters');
               router.push('/login');
             }}
             className="p-2 bg-red-500 text-white font-bold rounded-lg cursor-pointer transition-colors duration-300"
@@ -181,10 +243,15 @@ const Header = ({ activeTab, setActiveTab }) => {
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="flex flex-col w-full flex-1 space-y-2 bg-white dark:bg-gray-900">
                 <TabsTrigger value="dashboard" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Dashboard</TabsTrigger>
+
                 <TabsTrigger value="sample-register" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
+
                 <TabsTrigger value="processing" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
+
                 <TabsTrigger value="library-prepration" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
-                <TabsTrigger value="run-setup" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Runs</TabsTrigger>
+
+                <TabsTrigger value="run-setup" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
+
                 <TabsTrigger value="reports" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
               </TabsList>
             </Tabs>
