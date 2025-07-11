@@ -90,14 +90,7 @@ export async function POST(request) {
         }
 
 
-        const data = await pool.query('SELECT sample_id FROM master_sheet WHERE sample_id = $1', [sample_id]);
-        // if (data.rows.length > 0) {
-        //     response.push({
-        //         status: 400,
-        //         message: "Sample ID already exists"
-        //     });
-        //     return NextResponse.json(response);
-        // }
+        const data = await pool.query('SELECT sample_id FROM master_sheet WHERE sample_id = $1', [sample_id])
 
         let internal_id;
         const date = new Date(registration_date || Date.now());
@@ -198,7 +191,8 @@ export async function POST(request) {
                 hpo_status,
                 annotation,
                 project_id,
-                patient_email
+                patient_email,
+                sample_status
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
@@ -207,7 +201,7 @@ export async function POST(request) {
                 $26, $27, $28, $29, $30,
                 $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                 $41, $42, $43, $44, $45, $46,$47, $48,
-                $49, $50, $51, $52, $53, $54, $55, $56
+                $49, $50, $51, $52, $53, $54, $55, $56, $57
             )
             RETURNING *
         `;
@@ -267,7 +261,8 @@ export async function POST(request) {
             "No", // hpo_status
             "No", // annotaion
             project_id,
-            patient_email
+            patient_email,
+            "processing"
         ];
         const result = await pool.query(query, values);
         const insertedData = result.rows[0];
