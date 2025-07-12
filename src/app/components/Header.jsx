@@ -96,7 +96,7 @@ const Header = ({ activeTab, setActiveTab }) => {
 
   return (
     <header className="max-w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md transition-colors duration-300">
-      <div className="container mx-auto flex justify-between items-center px-2">
+      <div className="container mx-auto flex justify-between items-center px-2 max-w-full">
         {/* Title */}
         <a
           href="/"
@@ -136,6 +136,7 @@ const Header = ({ activeTab, setActiveTab }) => {
                 src={profilePhoto}
                 alt="Profile"
                 className="avatar-trigger w-10 h-10 rounded-full object-cover cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300"
+                style={{ maxWidth: '40px', maxHeight: '40px' }}
                 onClick={handleAvatarClick}
                 title="Click to change profile photo"
               />
