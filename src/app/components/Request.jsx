@@ -50,7 +50,7 @@ const Request = () => {
                 setProcessing(false);
                 form.reset();
             } else {
-                toast.error(response.data[0].message || "Failed to submit request.");
+                toast.error(response.data[0].message || "Failed to SignUp.");
                 setProcessing(false);
             }
         } catch (error) {
@@ -61,7 +61,7 @@ const Request = () => {
 
     return (
         <div className="max-w-md mt-10">
-            <h1 className="text-2xl font-bold mb-6">Request Form</h1>
+            <h1 className="text-2xl font-bold mb-6">SIGNUP</h1>
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit(handleUsernamePassword)}
@@ -137,7 +137,7 @@ const Request = () => {
                         type="submit"
                         className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
                     >
-                        Submit Request
+                        SignUp
                     </Button>
                 </form>
             </Form>

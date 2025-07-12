@@ -286,34 +286,34 @@ export const SampleRegistration = () => {
 
   const onFormSubmit = async () => {
     setProcessing(true);
-  
+
     // Set registration_date to current date-time string
     const now = new Date();
     const pad = n => n.toString().padStart(2, '0');
     const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
     form.setValue('registration_date', currentDate);
-  
+
     // Get all form data
     const allData = form.getValues();
-  
+
     // Prepare FormData for file + data
     const formData = new FormData();
     Object.entries(allData).forEach(([key, value]) => {
       formData.append(key, value ?? '');
     });
-  
+
     // Attach the TRF file if present
     if (trfFile) {
       formData.append('file', trfFile);
     }
-  
+
     try {
       const res = await axios.post('/api/store', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
         }
       });
-  
+
       if (res.data[0].status === 200) {
         toast.success('Sample registered successfully');
         form.reset();
@@ -379,6 +379,8 @@ export const SampleRegistration = () => {
       return;
     }
 
+    const originalData = JSON.parse(localStorage.getItem('editRowData') || '{}');
+
     const updates = { ...allData }; // Prepare updates object
     delete updates.selectedTestName; // Exclude selectedTestName
     updates.test_name = selectedTests.join(', '); // Join selected tests
@@ -394,13 +396,45 @@ export const SampleRegistration = () => {
       }
     });
 
+    const changes = [];
+    Object.keys(updates).forEach(key => {
+      const oldValue = originalData[key] ?? '';
+      const newValue = updates[key] ?? '';
+
+      // Ignore changes from 0/null/undefined to ''
+      if ((oldValue === 0 || oldValue === null || oldValue === undefined) && newValue === '') return;
+
+      // Ignore array fields if both are empty or have same content
+      if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+        if (JSON.stringify(oldValue) === JSON.stringify(newValue)) return;
+      }
+
+      // Ignore fields you don't want to track (add more as needed)
+      const ignoreFields = ['table_data', /* add more fields here */];
+      if (ignoreFields.includes(key)) return;
+
+      if (oldValue !== newValue) {
+        changes.push({ field: key, oldValue, newValue });
+      }
+    });
+
+    // Prepare audit log
+    const auditLog = {
+      sample_id: sampleId,
+      changed_by: user?.email || '',
+      changed_at: new Date().toISOString(),
+      changes
+    };
+
+    console.log('changes', changes);
+
     try {
       const res = await axios.put('/api/store', {
         sample_id: sampleId,
         updates,
+        auditLog // <-- send audit log
       });
 
-      console.log('res', res);
       if (res.status === 200) {
         toast.success('Sample updated successfully');
         form.reset();

@@ -38,7 +38,7 @@ const page = () => {
       <div className="hidden md:block md:col-span-8">
         <Image
           src={SideImage}
-          className="w-full h-full"
+          className="mt-[200px]"
           alt="side image"
         />
       </div>
@@ -74,7 +74,7 @@ const page = () => {
                 value="request"
                 className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
               >
-                Request
+                SignUp
               </TabsTrigger>
               {user && user.role === 'SuperAdmin' && (
                 <TabsTrigger
@@ -108,7 +108,7 @@ const page = () => {
                 setActiveTab('request');
               }}
             >
-              Request for Username and Password.
+              SignUp for Username and Password.
             </span>
           </p>
         )}

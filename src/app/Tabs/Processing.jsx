@@ -289,7 +289,7 @@ const Processing = () => {
             console.log('value:', value); // Debugging TRF value
             return (
               <a className="underline text-blue-500" href={`https://drive.google.com/file/d/${value}/view?usp=sharing`} target="_blank" rel="noopener noreferrer">
-              View TRF
+                View TRF
               </a>
             );
           },
@@ -322,7 +322,6 @@ const Processing = () => {
     }] : []),
   ], [allColumns, user, tableRows]);
 
-  // Only these columns are visible by default
   const defaultVisible = [
     "sno",
     "sample_id",
@@ -603,7 +602,6 @@ const Processing = () => {
     const fetchInUseEffect = async () => {
       setProcessing(true);
       const filters = JSON.parse(localStorage.getItem("processingFilters") || "{}");
-      console.log('filters:', filters); // Debugging filters
       const data = {
         sample_id: filters.sample_id,
         test_name: (filters.selectedTestNames || []).join(","),
@@ -620,32 +618,48 @@ const Processing = () => {
         data.hospital_name = user.hospital_name; // Add hospital_name from user data
       }
 
-      try {
-        const response = await axios.get(`/api/search`, { params: data });
+      const filterFields = [
+        data.sample_id || "",
+        data.test_name || "",
+        data.sample_status || "",
+        data.sample_indicator || "",
+        data.from_date || "",
+        data.to_date || "",
+        data.doctor_name || "",
+        data.dept_name || "",
+        data.run_id || "",
+      ];
 
-        if (response.data[0].status === 200) {
-          // Map the data to ensure checkbox fields are "Yes"/"No"
-          const mappedData = response.data[0].data.map((row) => ({
-            ...row,
-            dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
-            lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
-            under_seq: row.under_seq === "Yes" ? "Yes" : "No",
-            seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
-          }));
-          setProcessing(false);
-          console.log('mappedData:', mappedData); // Debugging mapped data
-          setTableRows(mappedData); // Update the tableRows state with the mapped data
-          localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
-        } else if (response.data[0].status === 400 || response.data[0].status === 404) {
-          setProcessing(false);
-          setTableRows([]);
+      const allEmpty = filterFields.every(val => val === "");
+      if (!allEmpty) {
+        try {
+          const response = await axios.get(`/api/search`, { params: data });
+
+          if (response.data[0].status === 200) {
+            // Map the data to ensure checkbox fields are "Yes"/"No"
+            const mappedData = response.data[0].data.map((row) => ({
+              ...row,
+              dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+              lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+              under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+              seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+            }));
+            setProcessing(false);
+            console.log('mappedData:', mappedData); // Debugging mapped data
+            setTableRows(mappedData); // Update the tableRows state with the mapped data
+            localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
+          } else if (response.data[0].status === 400 || response.data[0].status === 404) {
+            setProcessing(false);
+            setTableRows([]);
+          }
+        } catch (error) {
+          if (error.response) {
+            setTableRows([]);
+            setProcessing(false);
+          }
+          console.error("Error fetching data:", error);
         }
-      } catch (error) {
-        if (error.response) {
-          setTableRows([]);
-          setProcessing(false);
-        }
-        console.error("Error fetching data:", error);
+
       }
     }
     fetchInUseEffect();

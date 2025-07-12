@@ -1,7 +1,7 @@
 import { pool } from "@/lib/db";
 import { google } from "googleapis";
 import { NextResponse } from "next/server";
-import { Readable } from "stream"; 
+import { Readable } from "stream";
 
 export const config = {
     api: {
@@ -150,24 +150,24 @@ export async function POST(request) {
         if (file && typeof file.arrayBuffer === "function") {
             const fileBuffer = Buffer.from(await file.arrayBuffer());
             const auth = new google.auth.GoogleAuth({
-              credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
-              scopes: ["https://www.googleapis.com/auth/drive"],
+                credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
+                scopes: ["https://www.googleapis.com/auth/drive"],
             });
             const drive = google.drive({ version: "v3", auth });
             const response = await drive.files.create({
-              requestBody: {
-                name: internal_id, // Use internal_id as file name
-                parents: ["1xzTkB-k3PxEbGpvj4yoHXxBFgAtCLz1p"], // Your folder ID
-              },
-              media: {
-                mimeType: file.type,
-                body: Readable.from(fileBuffer),
-              },
-              supportsAllDrives: true,
-              driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
+                requestBody: {
+                    name: internal_id, // Use internal_id as file name
+                    parents: ["1xzTkB-k3PxEbGpvj4yoHXxBFgAtCLz1p"], // Your folder ID
+                },
+                media: {
+                    mimeType: file.type,
+                    body: Readable.from(fileBuffer),
+                },
+                supportsAllDrives: true,
+                driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
             });
             trf_file_id = response.data.id;
-          }
+        }
 
         const query = `
             INSERT INTO master_sheet (
@@ -377,7 +377,7 @@ export async function GET(request) {
 
 export async function PUT(request) {
     const body = await request.json();
-    const { sample_id, updates } = body;
+    const { sample_id, updates, auditLog } = body;
     try {
         const response = [];
         if (!sample_id || !updates || typeof updates !== "object") {
@@ -388,18 +388,18 @@ export async function PUT(request) {
             return NextResponse.json(response, { status: 400 });
         }
 
-        // Only update fields that are present in the updates object (safe partial update)
         const updatesCleanedLower = {};
         Object.keys(updates).forEach(key => {
-            // Only include fields that are not empty string or undefined
-            if (updates[key] !== "" && updates[key] !== undefined) {
-                updatesCleanedLower[key.toLowerCase()] = updates[key];
-            } else if (updates[key] === null) {
-                // Allow explicit nulling if frontend sends null
-                // updatesCleanedLower[key.toLowerCase()] = null;
+            const val = updates[key];
+            if (val !== "" && val !== undefined) {
+                // Convert object or array to JSON string
+                if (typeof val === 'object' && val !== null) {
+                    updatesCleanedLower[key.toLowerCase()] = JSON.stringify(val);
+                } else {
+                    updatesCleanedLower[key.toLowerCase()] = val;
+                }
             }
         });
-
         const columns = Object.keys(updatesCleanedLower);
         const values = Object.values(updatesCleanedLower);
         values.push(sample_id);
@@ -428,6 +428,27 @@ export async function PUT(request) {
                 message: "Sample ID not found or no updates made.",
             });
         } else {
+            const safeChanges = Array.isArray(auditLog.changes)
+                ? auditLog.changes.map(change => ({
+                    field: String(change.field ?? ''),
+                    oldValue: String(change.oldValue ?? ''),
+                    newValue: String(change.newValue ?? '')
+                }))
+                : [];
+
+            const auditQuery = `
+                 INSERT INTO audit_logs (sample_id, changed_by, changes, changed_at)
+                 VALUES ($1, $2, $3::jsonb, $4)
+                `;
+
+            const auditValues = [
+                auditLog.sample_id,
+                auditLog.changed_by,
+                JSON.stringify(safeChanges),  // ✅ must be stringified
+                auditLog.changed_at           // ✅ make sure this is valid date string or object
+            ];
+            await pool.query(auditQuery, auditValues);
+
             response.push({
                 status: 200,
                 message: "Data updated successfully.",
