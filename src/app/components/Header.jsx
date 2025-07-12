@@ -139,13 +139,13 @@ const Header = ({ activeTab, setActiveTab }) => {
                 onClick={handleAvatarClick}
                 title="Click to change profile photo"
               />
-            ) : user && user.username ? (
+            ) : user && user.name ? (
               <div
                 className="avatar-trigger w-10 h-10 rounded-full bg-orange-500 flex items-center justify-center text-white text-xl font-bold cursor-pointer border-2 border-gray-300 dark:border-white transition-colors duration-300"
                 onClick={handleAvatarClick}
                 title="Click to change profile photo"
               >
-                {user.username.charAt(0).toUpperCase()}
+                {user.name.charAt(0).toUpperCase()}
               </div>
             ) : (
               <div

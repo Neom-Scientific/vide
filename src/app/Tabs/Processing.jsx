@@ -278,6 +278,23 @@ const Processing = () => {
           },
         };
       }
+      if (col.key === "trf") {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const value = info.getValue();
+            if (!value) return "";
+            console.log('value:', value); // Debugging TRF value
+            return (
+              <a className="underline text-blue-500" href={`https://drive.google.com/file/d/${value}/view?usp=sharing`} target="_blank" rel="noopener noreferrer">
+              View TRF
+              </a>
+            );
+          },
+        };
+      }
       return {
         accessorKey: col.key,
         header: col.label,

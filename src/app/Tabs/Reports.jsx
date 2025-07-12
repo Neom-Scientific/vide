@@ -320,6 +320,25 @@ const Reports = () => {
             },
           };
         }
+
+        if (col.key === "trf") {
+          return {
+            accessorKey: col.key,
+            header: col.label,
+            enableSorting: true,
+            cell: (info) => {
+              const value = info.getValue();
+              if (!value) return "";
+              console.log('value:', value); // Debugging TRF value
+              return (
+                <a className="underline text-blue-500" href={`https://drive.google.com/file/d/${value}/view?usp=sharing`} target="_blank" rel="noopener noreferrer">
+                  View TRF
+                </a>
+              );
+            },
+          };
+        }
+
         // Checkboxes
         if (col.key === "hpo_status" || col.key === "annotation") {
           return {
@@ -468,15 +487,15 @@ const Reports = () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
 
     const data = {
-     sample_id: filters.sample_id,
-        test_name: filters.selectedTestNames.join(","),
-        sample_status: filters.sample_status,
-        from_date: filters.from_date,
-        to_date: filters.to_date,
-        doctor_name: filters.doctor_name,
-        dept_name: filters.dept_name,
-        run_id: filters.run_id,
-        for: "report",
+      sample_id: filters.sample_id,
+      test_name: filters.selectedTestNames.join(","),
+      sample_status: filters.sample_status,
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+      doctor_name: filters.doctor_name,
+      dept_name: filters.dept_name,
+      run_id: filters.run_id,
+      for: "report",
     };
     if (user && user.role !== 'SuperAdmin') {
       data.hospital_name = user.hospital_name;
@@ -584,7 +603,7 @@ const Reports = () => {
     } else {
       setTableRows([]);
     }
-  },[]);
+  }, []);
 
   return (
     <div className="p-4">

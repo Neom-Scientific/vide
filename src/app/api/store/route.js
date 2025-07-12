@@ -1,9 +1,21 @@
 import { pool } from "@/lib/db";
+import { google } from "googleapis";
 import { NextResponse } from "next/server";
+import { Readable } from "stream"; 
 
+export const config = {
+    api: {
+        bodyParser: false
+    }
+}
 
 export async function POST(request) {
-    const body = await request.json();
+    const formData = await request.formData();
+    const fields = {};
+    for (const [key, value] of formData.entries()) {
+        if (key !== "file") fields[key] = value;
+    }
+    const file = formData.get("file");
     try {
         let response = [];
         const {
@@ -55,7 +67,7 @@ export async function POST(request) {
             aspirin_therapy,
             tantive_report_date,
             patient_email,
-        } = body;
+        } = fields;
 
         const today = new Date(registration_date || Date.now());
         const todayStr = today.toISOString().slice(0, 10);
@@ -95,14 +107,14 @@ export async function POST(request) {
         let internal_id;
         const date = new Date(registration_date || Date.now());
         const year = date.getFullYear();
-        
+
         if (selectedTestName === "Myeloid") {
             // Check if this sample_id already exists for Myeloid
             const existing = await pool.query(
                 `SELECT internal_id FROM master_sheet WHERE sample_id = $1 AND test_name = $2`,
                 [sample_id, "Myeloid"]
             );
-        
+
             if (existing.rows.length > 0) {
                 // Use the same numeric part, but change the suffix to the new sample_type
                 const existingInternalId = existing.rows[0].internal_id;
@@ -133,6 +145,29 @@ export async function POST(request) {
             const nextSeq = maxSeq + 1;
             internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
         }
+
+        let trf_file_id = null;
+        if (file && typeof file.arrayBuffer === "function") {
+            const fileBuffer = Buffer.from(await file.arrayBuffer());
+            const auth = new google.auth.GoogleAuth({
+              credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
+              scopes: ["https://www.googleapis.com/auth/drive"],
+            });
+            const drive = google.drive({ version: "v3", auth });
+            const response = await drive.files.create({
+              requestBody: {
+                name: internal_id, // Use internal_id as file name
+                parents: ["1xzTkB-k3PxEbGpvj4yoHXxBFgAtCLz1p"], // Your folder ID
+              },
+              media: {
+                mimeType: file.type,
+                body: Readable.from(fileBuffer),
+              },
+              supportsAllDrives: true,
+              driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
+            });
+            trf_file_id = response.data.id;
+          }
 
         const query = `
             INSERT INTO master_sheet (
@@ -213,7 +248,7 @@ export async function POST(request) {
             registration_date || null,
             sample_date || null,
             sample_type,
-            trf,
+            trf_file_id || null,
             collection_date_time || null,
             storage_condition,
             prority,

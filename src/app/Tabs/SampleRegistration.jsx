@@ -230,70 +230,52 @@ export const SampleRegistration = () => {
         form.setValue('trf', '');
         form.setValue('trf_file', '');
       }
-      // if(file){
-      //   const formData = new FormData();
-      //   formData.append('file', file);
-      //   const response = await axios.post('/api/upload', formData,{
-      //     headers:{
-      //      'Content-Type': 'multipart/form-data'
-      //     }
-      //   })
-      //   console.log('response', response);
-      // }
     }
     catch (error) {
       console.error('Error uploading TRF:', error);
     }
   }
+
   // const uploadTrf = async (file) => {
   //   setTrfFile(file);
-  //   const allData = form.getValues();
-  //   console.log('allData', allData);
-
   //   try {
   //     if (file) {
-  //       const reader = new FileReader();
-  //       reader.onload = async () => {
-  //         const base64 = reader.result.split(",")[1]; // clean base64
-  //         const formData = new URLSearchParams();
+  //       const formData = new FormData();
+  //       formData.append('file', file);
+  //       formData.append('fileName', file.name);
 
-  //         formData.append('file', base64);
-  //         // formData.append('filename', file.name);
-  //         formData.append('sample_id', allData.sample_id); // ensure this exists
-
-  //         try {
-  //           const response = await axios.post(
-  //             'https://script.google.com/macros/s/AKfycbywSuLQifi0bW7p99KacM5A7IEieqfZSuSX3RMXYMfFDBFdJlplkoEIAX3pfSyYrtBT/exec',
-  //             formData.toString(),
-  //             {
-  //               mode:'no-cors',
-  //               headers: {
-  //                 "Content-Type": "application/x-www-form-urlencoded",
-  //               },
-  //             }
-  //           );
-
-  //           console.log('response', response.data);
-  //           toast.success('TRF uploaded successfully');
-
-  //           // Optional: if your Apps Script returns the file ID
-  //           const fileId = response.data.id; // You may need to log and verify this
-  //           const url = `https://drive.google.com/uc?export=view&id=${fileId}`;
-  //           setTrfUrl(url);
-
-  //           form.setValue('trf', file.name);
-  //           form.setValue('trf_file', url);
-  //         } catch (error) {
-  //           console.error('Upload error:', error);
-  //           toast.error('TRF upload failed');
+  //       const response = await axios.post('/api/upload', formData, {
+  //         headers: {
+  //           'Content-Type': 'multipart/form-data'
   //         }
-  //       };
-  //       reader.readAsDataURL(file); // start reading
+  //       });
+
+  //       if (response.data && response.data.status === 200) {
+  //         const fileId = response.data.fileId;
+  //         // Optionally, you can generate a Google Drive preview URL
+  //         const url = `https://drive.google.com/file/d/${fileId}/preview`;
+  //         setTrfUrl(url);
+  //         form.setValue('trf', file.name);
+  //         form.setValue('trf_file', fileId); // Store fileId for reference
+  //       } else {
+  //         setTrfUrl('');
+  //         form.setValue('trf', '');
+  //         form.setValue('trf_file', '');
+  //         toast.error('Failed to upload TRF');
+  //       }
+  //     } else {
+  //       setTrfUrl('');
+  //       form.setValue('trf', '');
+  //       form.setValue('trf_file', '');
   //     }
   //   } catch (error) {
-  //     console.error('General error uploading TRF:', error);
+  //     setTrfUrl('');
+  //     form.setValue('trf', '');
+  //     form.setValue('trf_file', '');
+  //     console.error('Error uploading TRF:', error);
+  //     toast.error('Error uploading TRF');
   //   }
-  // };
+  // }
 
 
   useEffect(() => {
@@ -304,36 +286,53 @@ export const SampleRegistration = () => {
 
   const onFormSubmit = async () => {
     setProcessing(true);
+  
     // Set registration_date to current date-time string
     const now = new Date();
     const pad = n => n.toString().padStart(2, '0');
     const currentDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
-
-    // Update the form value before getting all data
     form.setValue('registration_date', currentDate);
-
-    // Now get all form data (including updated registration_date)
+  
+    // Get all form data
     const allData = form.getValues();
-
-    const res = await axios.post('/api/store', allData);
-    console.log('res', res);
-    if (res.data[0].status === 200) {
-      toast.success('Sample registered successfully');
-      form.reset();
-      setProcessing(false);
-      selectedTests.length = 0; // Clear selected tests
-      setTrfFile(null); // Reset TRF file
-      setTrfUrl(''); // Reset TRF URL
-      form.setValue('trf-upload', null); // Reset TRF upload input
-      form.setValue('trf', ''); // Reset TRF name
-      form.setValue('trf_file', ''); // Reset TRF file field
-      localStorage.removeItem('sampleRegistrationForm'); // Clear localStorage
+  
+    // Prepare FormData for file + data
+    const formData = new FormData();
+    Object.entries(allData).forEach(([key, value]) => {
+      formData.append(key, value ?? '');
+    });
+  
+    // Attach the TRF file if present
+    if (trfFile) {
+      formData.append('file', trfFile);
     }
-    else if (res.data[0].status === 400) {
-      toast.error(res.data[0].message);
-      setProcessing(false);
-    }
-    else {
+  
+    try {
+      const res = await axios.post('/api/store', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+  
+      if (res.data[0].status === 200) {
+        toast.success('Sample registered successfully');
+        form.reset();
+        setProcessing(false);
+        selectedTests.length = 0;
+        setTrfFile(null);
+        setTrfUrl('');
+        form.setValue('trf-upload', null);
+        form.setValue('trf', '');
+        form.setValue('trf_file', '');
+        localStorage.removeItem('sampleRegistrationForm');
+      } else if (res.data[0].status === 400) {
+        toast.error(res.data[0].message);
+        setProcessing(false);
+      } else {
+        toast.error('Sample registration failed');
+        setProcessing(false);
+      }
+    } catch (error) {
       toast.error('Sample registration failed');
       setProcessing(false);
     }
