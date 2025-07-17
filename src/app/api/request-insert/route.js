@@ -46,9 +46,10 @@ export async function POST(request) {
         }
 
         const result = await pool.query(
-            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status, role, user_login) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status, role, user_login,created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())',
             [name, hospital_name, hospital_id, username, password, phone_no, email, "disable", "NormalUser", 0]
         );
+
 
         if (result.rowCount > 0) {
             response.push({
@@ -113,9 +114,8 @@ export async function POST(request) {
 
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
-    const role = searchParams.get('role'); // Default to 'NormalUser' if not provided
-    const username = searchParams.get('username'); // Get username from query params 
-    // console.log('first', role, username);
+    const role = searchParams.get('role'); 
+    const username = searchParams.get('username'); 
     try {
         let response = [];
         if (role === 'SuperAdmin') {
@@ -156,15 +156,15 @@ export async function GET(request) {
 
 export async function PUT(request) {
     const body = await request.json();
-    const { id, status, role } = body; // Accept both status and role
+    const { username, status, role } = body; // Accept both status and role
     try {
         let response = [];
 
         // Validate the input
-        if (!id) {
+        if (!username) {
             response.push({
                 status: 400,
-                message: 'ID is required',
+                message: 'username is required',
             });
             return NextResponse.json(response);
         }
@@ -172,13 +172,13 @@ export async function PUT(request) {
         // Handle status update
         if (status) {
             if (status === 'disable') {
-                await pool.query('UPDATE request_form SET status = $1 WHERE id = $2', ['enable', id]);
+                await pool.query('UPDATE request_form SET status = $1 WHERE username = $2', ['enable', username]);
                 response.push({
                     status: 200,
                     message: 'Status updated successfully',
                 });
             } else if (status === 'enable') {
-                await pool.query('UPDATE request_form SET status = $1 WHERE id = $2', ['disable', id]);
+                await pool.query('UPDATE request_form SET status = $1 WHERE username = $2', ['disable', username]);
                 response.push({
                     status: 200,
                     message: 'Status updated successfully',
@@ -193,7 +193,7 @@ export async function PUT(request) {
 
         // Handle role update
         if (role) {
-            await pool.query('UPDATE request_form SET role = $1 WHERE id = $2', [role, id]);
+            await pool.query('UPDATE request_form SET role = $1 WHERE username = $2', [role, username]);
             response.push({
                 status: 200,
                 message: 'Role updated successfully',

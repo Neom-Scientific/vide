@@ -50,6 +50,7 @@ export async function POST(request) {
                     role: userData.rows[0].role,
                     user_login: userData.rows[0].user_login,
                     name : userData.rows[0].name,
+                    created_at: userData.rows[0].created_at,
                 },
                 message: 'Login successful',
             });

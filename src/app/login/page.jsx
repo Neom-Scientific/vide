@@ -25,7 +25,7 @@ const page = () => {
       if (parsedUser.role !== 'SuperAdmin') {
         router.push('/');
       }
-      if(parsedUser.role === 'SuperAdmin') {
+      if (parsedUser.role === 'SuperAdmin') {
         setActiveTab('Assign-User');
       }
     }
@@ -64,37 +64,43 @@ const page = () => {
             className="w-full max-w-sm"
           >
             <TabsList className="flex justify-center mb-4 border-none rounded-lg ">
-              <TabsTrigger
-                value="login"
-                className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
-              >
-                Login
-              </TabsTrigger>
-              <TabsTrigger
-                value="request"
-                className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
-              >
-                SignUp
-              </TabsTrigger>
-              {user && user.role === 'SuperAdmin' && (
+              {user && user.role === 'SuperAdmin' ? (
                 <TabsTrigger
                   value="Assign-User"
                   className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
                 >
                   Assign User
                 </TabsTrigger>
+              ) : (
+                <>
+                  <TabsTrigger
+                    value="login"
+                    className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
+                  >
+                    Login
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="request"
+                    className="p-2 data-[state=active]:bg-orange-500 data-[state=active]:text-white cursor-pointer font-bold border border-white rounded-lg"
+                  >
+                    SignUp
+                  </TabsTrigger>
+                </>
               )}
             </TabsList>
-            <TabsContent value="login">
-              <Login />
-            </TabsContent>
-            <TabsContent value="request">
-              <Request />
-            </TabsContent>
-            {user && user.role === 'SuperAdmin' && (
+            {user && user.role === 'SuperAdmin' ? (
               <TabsContent value="Assign-User">
                 <AssignUser />
               </TabsContent>
+            ) : (
+              <>
+                <TabsContent value="login">
+                  <Login />
+                </TabsContent>
+                <TabsContent value="request">
+                  <Request />
+                </TabsContent>
+              </>
             )}
           </Tabs>
         )}

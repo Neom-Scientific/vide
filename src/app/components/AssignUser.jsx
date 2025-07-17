@@ -33,15 +33,15 @@ const AssignUser = () => {
     fetchData();
   }, []);
 
-  const handleStatus = async (id, status) => {
+  const handleStatus = async (username, status) => {
     try {
-      const response = await axios.put('/api/request-insert', { id, status });
+      const response = await axios.put('/api/request-insert', { username, status });
       if (response.data[0].status === 200) {
         console.log('data', response.data[0]);
         toast.success('User status changed successfully');
         setUsers((prevUsers) =>
           prevUsers.map((user) =>
-            user.id === id ? { ...user, status: status === 'disable' ? 'enable' : 'disable' } : user
+            user.username === username ? { ...user, status: status === 'disable' ? 'enable' : 'disable' } : user
           )
         );
       }
@@ -55,16 +55,16 @@ const AssignUser = () => {
     }
   }
 
-  const handleRole = async (id, role) => {
-    console.log('id and role', id, role);
+  const handleRole = async (username, role) => {
+    console.log('username and role', username, role);
     try {
-      const response = await axios.put('/api/request-insert', { id, role });
+      const response = await axios.put('/api/request-insert', { username, role });
       if (response.data[0].status === 200) {
         console.log('data', response.data[0]);
         toast.success('User role changed successfully');
         setUsers((prevUsers) =>
           prevUsers.map((user) =>
-            user.id === id ? { ...user, role: role } : user
+            user.username === username ? { ...user, role: role } : user
           )
         );
       }
@@ -143,10 +143,13 @@ const AssignUser = () => {
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <select className='bg-gray-50 border border-black text-gray-900 text-sm rounded-lg p-2'
-                        onChange={(e) => handleRole(user.id, e.target.value)}
+                        onChange={(e) => handleRole(user.username, e.target.value)}
                       >
-                        <option value="NormalUser">NormalUser</option>
-                        <option value="AdminUser">AdminUser</option>
+                        {/* <option value="NormalUser">NormalUser</option>
+                        <option value="AdminUser">AdminUser</option> */}
+                        <option value='technician'>Lab Technician</option>
+                        <option value='manager'>Lab Manager</option>
+                        <option value='management'>Management</option>
                       </select>
                     </TableCell>
 
@@ -157,7 +160,7 @@ const AssignUser = () => {
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <Button
                         className={`text-white ${user.status === 'disable' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'}`}
-                        onClick={() => handleStatus(user.id, user.status)}
+                        onClick={() => handleStatus(user.username, user.status)}
                       >
                         {user.status === 'disable' ? 'Enable' : 'Disable'}
                       </Button>
