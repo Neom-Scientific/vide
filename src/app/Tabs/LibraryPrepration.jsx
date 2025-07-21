@@ -16,10 +16,9 @@ import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
-import { CldOgImage } from "next-cloudinary";
 import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ChevronDown } from "lucide-react";
-import { isEqual } from "lodash";
+import { isEqual, remove } from "lodash";
 
 
 const LibraryPrepration = () => {
@@ -39,10 +38,14 @@ const LibraryPrepration = () => {
   const [processing, setProcessing] = useState(false);
   const [pooledRowData, setPooledRowData] = useState([]);
   const [currentSelection, setCurrentSelection] = useState([]);
-  const [createdBatchIds, setCreatedBatchIds] = useState([]);
+  // const [createdBatchIds, setCreatedBatchIds] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
   const user = JSON.parse(Cookies.get('user') || '{}');
   const testNameRef = useRef(testName);
+  const [manualPlateRows, setManualPlateRows] = useState(new Set());
+  const [manualWellRows, setManualWellRows] = useState(new Set());
+  const [syncFirstRow, setSyncFirstRow] = useState(true);
+  const [dialogRowInfo, setDialogRowInfo] = useState(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
@@ -51,7 +54,7 @@ const LibraryPrepration = () => {
 
 
   const allColumns = [
-    { key: 'sno', label: 'S.No.' },
+    { key: 'id', label: 'S.No.' },
     { key: 'batch_id', label: 'Batch ID' },
     { key: 'pool_no', label: 'Pool No.' },
     { key: 'sample_id', label: 'Sample ID' },
@@ -63,11 +66,12 @@ const LibraryPrepration = () => {
     { key: 'client_name', label: 'Client Name' },
     { key: 'patient_name', label: 'Patient Name' },
     { key: 'age', label: 'Age' },
-    { key: 'sex', label: 'Gender' },
+    { key: 'gender', label: 'Gender' },
     { key: 'father_husband_name', label: 'Father/Mother Name' },
     { key: 'docter_name', label: 'Doctor Name' },
     { key: 'email', label: 'Doctor Email' },
-    { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
+    // { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
+    { key: 'qubit_dna', label: 'Input Quant (ng/ul)' },
     { key: 'conc_rxn', label: 'conc/rxn (ng/rxn)' },
     { key: 'barcode', label: 'Barcode' },
     { key: 'per_rxn_gdna', label: 'Per Rxn gDNA (ng/rxn)' },
@@ -89,6 +93,7 @@ const LibraryPrepration = () => {
     { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 20nM' },
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
+    { key: 'pool_dna_rna_10ul', label: 'Pool DNA/RNA 10ul' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'sample_volume', label: 'Sample Volume (ul)' },
     { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
@@ -137,7 +142,7 @@ const LibraryPrepration = () => {
     let baseCols = [];
     if (testName === "Myeloid") {
       baseCols = [
-        "sno",
+        "id",
         "sample_id",
         "registration_date",
         "internal_id",
@@ -156,8 +161,11 @@ const LibraryPrepration = () => {
         "total_vol_for_2nm",
         "lib_vol_for_2nm",
         "nfw_volu_for_2nm",
-        "data_required",
+        "pool_dna_rna_10ul",
+        // "data_required",
+        // Do NOT include pool_conc or finalPoolingColumns here
       ];
+      return baseCols;
     } else if (
       testName === "WES" ||
       testName === "Carrier Screening" ||
@@ -172,7 +180,7 @@ const LibraryPrepration = () => {
     ) {
       baseCols = [
         "select",
-        "sno",
+        "id",
         "batch_id",
         "pool_no",
         "sample_id",
@@ -193,10 +201,11 @@ const LibraryPrepration = () => {
         "lib_vol_for_hyb",
         "data_required",
       ];
+      return insertFinalPoolingColumns(insertPooledColumns(baseCols));
     } else if (testName === "SGS" || testName === "HLA") {
       baseCols = [
         "select",
-        "sno",
+        "id",
         "batch_id",
         "pool_no",
         "sample_id",
@@ -212,6 +221,7 @@ const LibraryPrepration = () => {
         "pooling_volume",
         "data_required",
       ];
+      return insertFinalPoolingColumns(insertPooledColumns(baseCols));
     }
     return insertFinalPoolingColumns(insertPooledColumns(baseCols));
   };
@@ -243,13 +253,13 @@ const LibraryPrepration = () => {
     const fetchPoolInfo = async () => {
       try {
         const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-        // Fix: handle both array and object format for allSampleIds
-        const allSampleIds = Object.values(storedData)
+        // Fix: handle both array and object format for allInternalIds
+        const allInternalIds = Object.values(storedData)
           .flatMap(val => {
             if (Array.isArray(val)) {
-              return val.map(row => row.sample_id);
+              return val.map(row => row.internal_id);
             } else if (val && Array.isArray(val.rows)) {
-              return val.rows.map(row => row.sample_id);
+              return val.rows.map(row => row.internal_id);
             }
             return [];
           })
@@ -275,7 +285,7 @@ const LibraryPrepration = () => {
           params: {
             hospital_name: user.hospital_name,
             application: testName,
-            sample_id: allSampleIds.join(','), // Join sample IDs into a comma-separated string
+            internal_id: allInternalIds.join(','), // Join sample IDs into a comma-separated string
           },
         });
         if (response.data[0].status === 200) {
@@ -321,6 +331,19 @@ const LibraryPrepration = () => {
     fetchPoolInfo();
   }, []);
 
+  const plateOptions = [
+    "NeoAmp-A", "NeoAmp-B", "NeoAmp-C", "NeoAmp-D",
+    "1-NDI", "2-NDI", "3-NDI", "4-NDI",
+    "HLA-1", "HLA-2", "HLA-3", "HLA-4"
+  ];
+
+  // A01 - H12
+  const wellNumberOptions = Array.from({ length: 96 }, (_, i) => {
+    const row = String.fromCharCode(65 + Math.floor(i / 12)); // Convert to A-H
+    const col = (i % 12 + 1).toString().padStart(2, '0'); // Convert to 01-12
+    return `${row}${col}`;
+  });
+
   const columns = useMemo(() => {
     const cols = [];
     // Add checkbox column
@@ -343,62 +366,153 @@ const LibraryPrepration = () => {
 
     // Add S. No. column
     cols.push({
-      accessorKey: "sno",
+      accessorKey: "id",
       header: "S. No.",
       cell: ({ row }) => row.index + 1,
-      enableSorting: false,
-      enableHiding: true, // allow hiding via column selector
-    });
+      enableSorting: true,
+      enableHiding: false,
+    }),
 
-    // Add all other columns
-    cols.push(
-      ...allColumns
-        .filter(col => col.key !== "select" && col.key !== "sno")
-        .map((column) => ({
-          accessorKey: column.key,
-          header: column.label,
-          cell: (info) => {
-            const value = typeof info.getValue === "function"
-              ? info.getValue()
-              : (info.row && info.row.original ? info.row.original[column.key] : "");
-            if (column.key === 'registration_date') {
-              return <span>{new Date(value).toLocaleDateString()}</span> || "";
-            }
-            if (
-              column.key === "sample_id" ||
-              column.key === "test_name" ||
-              column.key === "patient_name" ||
-              column.key === "sample_type" ||
-              column.key === "pool_no" ||
-              column.key === "internal_id" ||
-              column.key === "batch_id" ||
-              column.key === "registration_date" ||
-              column.key === "client_id" ||
-              column.key === "client_name" ||
-              column.key === "docter_name" ||
-              column.key === "email" ||
-              column.key === "remarks" ||
-              column.key === "clinical_history" ||
-              column.key === "father_husband_name" ||
-              column.key === "age" ||
-              column.key === "sex"
-            ) {
-              return <span>{value}</span> || "";
-            }
-            if (!info.row) return null;
-            return (
-              <InputCell
-                value={value || ""}
-                rowIndex={info.row.index}
-                columnId={column.key}
-                updateData={table.options.meta.updateData}
-              />
-            );
-          },
-          enableSorting: false,
-          enableHiding: true,
-        }))
-    );
+      // Add all other columns
+      cols.push(
+        ...allColumns
+          .filter(col => col.key !== "select" && col.key !== "id")
+          .map((column) => ({
+            accessorKey: column.key,
+            header: column.label,
+            cell: (info) => {
+              const value = typeof info.getValue === "function"
+                ? info.getValue()
+                : (info.row && info.row.original ? info.row.original[column.key] : "");
+              if (column.key === 'registration_date') {
+                const formattedDate = new Date(value).toLocaleDateString("en-GB", {
+                  day: "2-digit",
+                  month: "2-digit",
+                  year: "numeric",
+                }); // Format as dd-mm-yyyy
+                return <span>{formattedDate}</span> || "";
+              }
+
+              if (column.key === 'well' || column.key === 'plate_designation') {
+                return (
+                  <select
+                    className="border-2 border-orange-300 rounded-lg p-2"
+                    value={value || ""}
+                    onChange={e => {
+                      const newValue = e.target.value;
+                      if (!newValue) return;
+
+                      setTableRows(prevRows => {
+                        if (info.row.index === 0) {
+                          if (syncFirstRow) {
+                            // Sync logic (as before)
+                            if (column.key === 'well') {
+                              const startIdx = wellNumberOptions.indexOf(newValue);
+                              return prevRows.map((row, idx) => {
+                                if (idx === 0 || (!manualWellRows.has(idx) && wellNumberOptions[startIdx + idx])) {
+                                  return { ...row, well: wellNumberOptions[startIdx + idx] };
+                                }
+                                return row;
+                              });
+                            }
+                            if (column.key === 'plate_designation') {
+                              const oldPlate = prevRows[0].plate_designation;
+                              return prevRows.map((row, idx) => {
+                                if (idx === 0 || (!manualPlateRows.has(idx) && row.plate_designation === oldPlate)) {
+                                  return { ...row, plate_designation: newValue };
+                                }
+                                return row;
+                              });
+                            }
+                          } else {
+                            // Only update first row
+                            return prevRows.map((row, idx) =>
+                              idx === 0 ? { ...row, [column.key]: newValue } : row
+                            );
+                          }
+                        } else {
+                          if (column.key === 'well') {
+                            setManualWellRows(prev => {
+                              const next = new Set(prev);
+                              // If matches expected sequence, unmark as manual
+                              const firstWell = prevRows[0].well;
+                              const startIdx = wellNumberOptions.indexOf(firstWell);
+                              const expectedWell = wellNumberOptions[startIdx + info.row.index];
+                              if (newValue === expectedWell) {
+                                next.delete(info.row.index);
+                              } else {
+                                next.add(info.row.index);
+                              }
+                              return next;
+                            });
+                            return prevRows.map((row, idx) =>
+                              idx === info.row.index ? { ...row, well: newValue } : row
+                            );
+                          }
+                          if (column.key === 'plate_designation') {
+                            setManualPlateRows(prev => {
+                              const next = new Set(prev);
+                              // If matches expected plate, unmark as manual
+                              const firstPlate = prevRows[0].plate_designation;
+                              if (newValue === firstPlate) {
+                                next.delete(info.row.index);
+                              } else {
+                                next.add(info.row.index);
+                              }
+                              return next;
+                            });
+                            return prevRows.map((row, idx) =>
+                              idx === info.row.index ? { ...row, plate_designation: newValue } : row
+                            );
+                          }
+                        }
+                      });
+                    }}
+                  >
+                    <option value="">Select {column.key === 'well' ? 'Well' : 'Plate Designation'}</option>
+                    {(column.key === 'well' ? wellNumberOptions : plateOptions).map(opt => (
+                      <option key={opt} value={opt}>{opt}</option>
+                    ))}
+                  </select>
+                );
+              }
+
+              if (
+                column.key === "sample_id" ||
+                column.key === "test_name" ||
+                column.key === "patient_name" ||
+                column.key === "sample_type" ||
+                column.key === "pool_no" ||
+                column.key === "internal_id" ||
+                column.key === "batch_id" ||
+                column.key === "registration_date" ||
+                column.key === "client_id" ||
+                column.key === "client_name" ||
+                column.key === "docter_name" ||
+                column.key === "email" ||
+                column.key === "remarks" ||
+                column.key === "clinical_history" ||
+                column.key === "father_husband_name" ||
+                column.key === "age" ||
+                column.key === "gender"
+              ) {
+                return <span>{value}</span> || "";
+              }
+              if (!info.row) return null;
+              return (
+                <InputCell
+                  value={value || ""}
+                  rowIndex={info.row.index}
+                  columnId={column.key}
+                  columnLabel={column.label}
+                  updateData={table.options.meta.updateData}
+                />
+              );
+            },
+            enableSorting: false,
+            enableHiding: true,
+          }))
+      );
 
     return cols;
   }, [allColumns, rowSelection]);
@@ -412,8 +526,8 @@ const LibraryPrepration = () => {
       return acc;
     }, {});
 
-    // Ensure "select" and "sno" are included if present in defaultVisible
-    ["select", "sno"].forEach(key => {
+    // Ensure "select" and "id" are included if present in defaultVisible
+    ["select", "id"].forEach(key => {
       if (defaultVisible.includes(key)) {
         visibility[key] = true;
       } else {
@@ -459,25 +573,35 @@ const LibraryPrepration = () => {
             const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
             const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
 
-            if (columnId === "lib_qubit") {
+            if (columnId === "lib_qubit" || columnId === "size") {
               const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
               const size = parseFloat(updatedRow.size) || 0;
               const nm_conc = lib_qubit > 0 ? (lib_qubit / (size * 660)) * 1000 : 0;
 
               updatedRow.nm_conc = parseFloat(nm_conc.toFixed(2));
 
-              const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+              // const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
 
-              if (nm_conc > 0 && total_vol_for_2nm > 0) {
-                updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
-                if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
-                  updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
-                }
-                updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
-              } else {
-                updatedRow.lib_vol_for_2nm = 0;
-                updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
+              // if (nm_conc > 0 && total_vol_for_2nm > 0) {
+              //   updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+              //   console.log('lib_vol_for_2nm:', updatedRow.lib_vol_for_2nm);
+              //   if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
+              //     updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
+              //   }
+              //   updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+              // } else {
+              //   updatedRow.lib_vol_for_2nm = 0;
+              //   updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
+              // }
+              return updatedRow;
+            }
+
+            if (columnId === "total_vol_for_2nm") {
+              updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+              if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
+                updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
               }
+              updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
               return updatedRow;
             }
 
@@ -488,11 +612,7 @@ const LibraryPrepration = () => {
               const percent = columnId === "vol_for_40nm_percent_pooling"
                 ? parseFloat(value) || 0
                 : parseFloat(updatedRow.vol_for_40nm_percent_pooling) || 0;
-
-              console.log('totalvol:', totalVol)
-              console.log('percent:', percent)
               updatedRow.volume_from_40nm_for_total_25ul_pool = ((totalVol * percent) / 100).toFixed(2);
-              console.log('volume_from_40nm_for_total_25ul_pool:', updatedRow.volume_from_40nm_for_total_25ul_pool)
 
               // If you have other logic for total_vol_for_2nm, keep it here:
               if (columnId === "total_vol_for_2nm") {
@@ -507,7 +627,7 @@ const LibraryPrepration = () => {
 
             if (columnId === 'pool_conc' || columnId === 'size') {
               const poolConc = parseFloat(updatedRow.pool_conc) || 0;
-              updatedRow.nm_conc = size > 0 ? ((poolConc / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+              updatedRow.nm_conc = size > 0 ? Math.round(((poolConc / (size * 660)) * Math.pow(10, 6))) : "";
             }
 
             if (qubit_lib_qc_ng_ul) {
@@ -543,8 +663,6 @@ const LibraryPrepration = () => {
             if (columnId === 'pool_conc' || columnId === 'size') {
               updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
             }
-
-            console.log('updateData called:', rowIndex, columnId, value);
             return updatedRow;
 
           })
@@ -570,120 +688,125 @@ const LibraryPrepration = () => {
     },
   });
 
-
+  function getNextPoolNo() {
+    const lastPoolNo = localStorage.getItem('lastPoolNo');
+    let nextNumber = 1;
+    if (lastPoolNo && /^P_\d+$/.test(lastPoolNo)) {
+      nextNumber = parseInt(lastPoolNo.split('_')[1], 10) + 1;
+    }
+    const nextPoolNo = `P_${nextNumber.toString().padStart(3, '0')}`;
+    localStorage.setItem('lastPoolNo', nextPoolNo);
+    return nextPoolNo;
+  }
 
   const handleCreatePool = async () => {
     if (Array.isArray(currentSelection) && currentSelection.length > 0) {
-      try {
-        const response = await axios.get('/api/pool-no?id=pool_no');
-        if (response.data[0].status === 200) {
-          const poolNo = response.data[0].pool_no;
-          const firstIdx = currentSelection[0];
-          const firstRow = tableRows[firstIdx] || {};
-          const mergedPooledValues = {
-            ...firstRow,
-            ...pooledValues,
-            total_vol_for_2nm: pooledValues.total_vol_for_2nm ?? firstRow.total_vol_for_2nm ?? "",
-          };
-          setTableRows(prevRows =>
-            prevRows.map((row, idx) =>
-              currentSelection.includes(idx)
-                ? { ...row, pool_no: poolNo }
-                : row
-            )
-          );
-          setPooledRowData(prev => [
-            ...prev,
-            { sampleIndexes: [...currentSelection], values: mergedPooledValues }
-          ]);
-          setPooledValues({});
-          setCurrentSelection([]);
-          setShowPooledFields(false);
-          setRowSelection({});
-        } else {
-          toast.error(response.data[0].message);
-        }
-      } catch (error) {
-        console.log('something went wrong:', error);
-      }
+      // Use local logic to generate next pool number
+      const poolNo = getNextPoolNo();
+      const firstIdx = currentSelection[0];
+      const firstRow = tableRows[firstIdx] || {};
+      const mergedPooledValues = {
+        ...firstRow,
+        ...pooledValues,
+        total_vol_for_2nm: pooledValues.total_vol_for_2nm ?? firstRow.total_vol_for_2nm ?? "",
+      };
+      setTableRows(prevRows =>
+        prevRows.map((row, idx) =>
+          currentSelection.includes(idx)
+            ? { ...row, pool_no: poolNo }
+            : row
+        )
+      );
+      setPooledRowData(prev => [
+        ...prev,
+        { sampleIndexes: [...currentSelection], values: mergedPooledValues }
+      ]);
+      setPooledValues({});
+      setCurrentSelection([]);
+      setShowPooledFields(false);
+      setRowSelection({});
     }
   };
 
   const handleCreateBatch = async () => {
-    if (Array.isArray(currentSelection) && currentSelection.length > 0) {
+    // Find all pools that have any selected row
+    const selectedPoolIndexes = pooledRowData
+      .filter(pool => pool.sampleIndexes.some(idx => currentSelection.includes(idx)))
+      .map(pool => pool.sampleIndexes)
+      .flat();
+
+    // Combine all selected indexes (from pools and direct selection)
+    const batchIndexes = Array.from(new Set([...currentSelection, ...selectedPoolIndexes]));
+
+    if (batchIndexes.length > 0) {
+      // Check if selection is consecutive
+      const sorted = [...batchIndexes].sort((a, b) => a - b);
+      const isConsecutive = sorted.every((val, idx, arr) => idx === 0 || val === arr[idx - 1] + 1);
+      if (!isConsecutive) {
+        toast.error("Please select consecutive rows to create a batch.");
+        return;
+      }
       try {
-        const response = await axios.get('/api/pool-no?id=batch_id');
+        const response = await axios.get(`/api/pool-no?id=batch_id&hospital_name=${user.hospital_name}`);
         if (response.data[0].status === 200) {
-          const batchId = response.data[0].batch_id;
-          setTableRows(prevRows =>
-            prevRows.map((row, idx) =>
-              currentSelection.includes(idx)
-                ? { ...row, batch_id: batchId }
+          const batchNo = response.data[0].batch_no || response.data[0].id || response.data[0].batch_id;
+          setTableRows(prevRows => {
+            let updatedRows = prevRows.map((row, idx) =>
+              sorted.includes(idx)
+                ? { ...row, batch_id: batchNo }
                 : row
-            )
-          );
-          setPooledRowData(prev => {
-            const newPools = [
-              ...prev,
-              { sampleIndexes: [...currentSelection], values: pooledValues }
-            ];
-
-            // --- Calculate percent and volume for all pools in this batch ---
-            const poolsInBatch = newPools.filter(pool => {
-              const firstIdx = pool.sampleIndexes[0];
-              return tableRows[firstIdx]?.batch_id === batchId;
-            });
-
-            const batchRows = tableRows.filter(row => row.batch_id === batchId);
-            const batchSum = batchRows.reduce(
-              (sum, row) => sum + (parseFloat(row.data_required) || 0),
-              0
             );
-
-            poolsInBatch.forEach(pool => {
-              const poolSum = pool.sampleIndexes.reduce(
-                (sum, idx) => sum + (parseFloat(tableRows[idx]?.data_required) || 0),
-                0
-              );
-              const percent = batchSum > 0 ? ((poolSum / batchSum) * 100).toFixed(2) : "";
-              pool.values.vol_for_40nm_percent_pooling = percent;
-
-              // Use fallback for totalVolFor2nm
-              const totalVolFor2nm =
-                parseFloat(pool.values.total_vol_for_2nm) ||
-                parseFloat(tableRows[pool.sampleIndexes[0]]?.total_vol_for_2nm) ||
-                0;
-              const percentPooling = parseFloat(percent) || 0;
-              pool.values.volume_from_40nm_for_total_25ul_pool =
-                totalVolFor2nm && percentPooling
-                  ? ((totalVolFor2nm * percentPooling) / 100).toFixed(2)
-                  : "";
+            // Update batch_id for all pools that have any selected row
+            setPooledRowData(prevPools => {
+              const updated = prevPools.map(pool => ({
+                ...pool,
+                batch_id: pool.sampleIndexes.some(idx => sorted.includes(idx)) ? batchNo : pool.batch_id
+              }));
+              return updated;
             });
-
-            console.log('pool.value.total_vol_for_2nm:', pooledValues.total_vol_for_2nm);
-            console.log('pool.value.vol_for_40nm_percent_pooling:', pooledValues.vol_for_40nm_percent_pooling);
-            console.log('pool.value.volume_from_40nm_for_total_25ul_pool:', pooledValues.volume_from_40nm_for_total_25ul_pool);
-
-            return newPools;
+            // Update localStorage
+            const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+            if (storedData[testName]) {
+              if (Array.isArray(storedData[testName])) {
+                storedData[testName] = updatedRows;
+              } else {
+                storedData[testName].rows = updatedRows;
+              }
+              localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+            }
+            return updatedRows;
           });
-          setPooledValues({});
           setCurrentSelection([]);
-          setShowPooledFields(false);
           setRowSelection({});
-          setCreatedBatchIds(prev => [...prev, batchId]);
+          setShowPooledFields(false);
         } else {
-          toast.error(response.data[0].message);
+          toast.error(response.data[0].message || "Failed to create batch.");
         }
       } catch (error) {
-        console.log('something went wrong:', error);
+        toast.error("Batch creation failed.");
       }
     }
+  };
+
+  function calculateLibVolFor2nm(row, testName) {
+    const total_vol_for_2nm = parseFloat(row.total_vol_for_2nm) || 0;
+    const nm_conc = parseFloat(row.nm_conc) || 0;
+    let lib_vol_for_2nm = "";
+    let nfw_volu_for_2nm = "";
+
+    if (nm_conc > 0 && total_vol_for_2nm > 0) {
+      const multiplier = testName === "Myeloid" ? 2.5 : 20;
+      lib_vol_for_2nm = parseFloat(((multiplier * total_vol_for_2nm) / nm_conc).toFixed(2));
+      if (lib_vol_for_2nm > total_vol_for_2nm) lib_vol_for_2nm = total_vol_for_2nm;
+      nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - lib_vol_for_2nm).toFixed(2));
+    }
+    return { lib_vol_for_2nm, nfw_volu_for_2nm };
   }
 
   const editableColumns = allColumns
     .map(col => col.key)
     .filter(key =>
-      !["sno", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
+      !["id", "select", "sample_id", "test_name", "patient_name", "sample_type", "pool_no", "internal_id"].includes(key)
     );
 
   useEffect(() => {
@@ -707,7 +830,7 @@ const LibraryPrepration = () => {
     });
   }, [pooledRowData]);
 
-  const InputCell = ({ value: initialValue, rowIndex, columnId, updateData }) => {
+  const InputCell = ({ value: initialValue, rowIndex, columnId, updateData, columnLabel }) => {
     const [value, setValue] = useState(initialValue || "");
     const inputRef = useRef(null);
 
@@ -813,7 +936,7 @@ const LibraryPrepration = () => {
         className={`border border-orange-300 rounded p-1 text-xs w-[200px] ${isSelected ? "ring-2 ring-orange-500 bg-orange-50" : ""}`}
         value={value}
         type="text"
-        placeholder={`Enter ${columnId}`}
+        placeholder={`${columnLabel}...`}
         onChange={handleChange}
         onBlur={handleBlur}
         onMouseDown={handleMouseDown}
@@ -822,6 +945,17 @@ const LibraryPrepration = () => {
       />
     );
   };
+
+  useEffect(() => {
+    async function syncLastPoolNo() {
+      const response = await axios.get(`/api/pool-no?id=pool_no&count=1&hospital_name=${user.hospital_name}`);
+      if (response.data[0]?.pool_no) {
+        console.log('response.data[0]', response.data[0]);
+        localStorage.setItem('lastPoolNo', response.data[0].pool_no);
+      }
+    }
+    syncLastPoolNo();
+  }, []);
 
 
   useEffect(() => {
@@ -865,7 +999,7 @@ const LibraryPrepration = () => {
               // --- Apply your formulas here (copy from updateData) ---
               // Example (add all your formula logic here):
               const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-              const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+              // const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
               const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
               const volume = parseFloat(updatedRow.volume) || 0;
               const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
@@ -918,7 +1052,7 @@ const LibraryPrepration = () => {
 
               if (columnId === 'pool_conc' || columnId === 'size') {
                 const poolConc = parseFloat(updatedRow.pool_conc) || 0;
-                updatedRow.nm_conc = size > 0 ? ((poolConc / (size * 660)) * Math.pow(10, 6)).toFixed(2) : "";
+                updatedRow.nm_conc = size > 0 ? Math.round(((poolConc / (size * 660)) * Math.pow(10, 6))) : "";
               }
 
               if (qubit_lib_qc_ng_ul) {
@@ -954,6 +1088,10 @@ const LibraryPrepration = () => {
               if (columnId === 'pool_conc' || columnId === 'size') {
                 updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
               }
+
+              const { lib_vol_for_2nm, nfw_volu_for_2nm } = calculateLibVolFor2nm(updatedRow, testName);
+              updatedRow.lib_vol_for_2nm = lib_vol_for_2nm;
+              updatedRow.nfw_volu_for_2nm = nfw_volu_for_2nm;
 
               updatedRows[rowIndex] = updatedRow;
             }
@@ -1073,14 +1211,14 @@ const LibraryPrepration = () => {
 
     // If no local data, fetch from API
     try {
-      const allSampleIds = Object.values(storedData)
-        .flatMap(arr => arr.map(row => row.sample_id))
+      const allInternalIds = Object.values(storedData)
+        .flatMap(arr => arr.map(row => row.internal_id))
         .filter(Boolean);
       const response = await axios.get(`/api/pool-data`, {
         params: {
           hospital_name: user.hospital_name,
           application: selectedTestName,
-          sample_id: allSampleIds.join(','),
+          internal_id: allInternalIds.join(','),
         },
       });
       if (response.data[0].status === 200) {
@@ -1345,14 +1483,170 @@ const LibraryPrepration = () => {
     // eslint-disable-next-line
   }, [tableRows, pooledRowData]);
 
+  const handleRemove = async (prevRows, rowIndex) => {
+    const updatedRows = prevRows.filter((_, idx) => idx !== rowIndex);
+
+    setPooledRowData(prevPools => {
+      const indexMap = {};
+      prevRows.forEach((_, idx) => {
+        if (idx < rowIndex) indexMap[idx] = idx;
+        else if (idx > rowIndex) indexMap[idx] = idx - 1;
+      });
+      return prevPools
+        .map(pool => ({
+          ...pool,
+          sampleIndexes: pool.sampleIndexes
+            .map(idx => indexMap[idx])
+            .filter(idx => idx !== undefined)
+        }))
+        .filter(pool => pool.sampleIndexes.length > 0);
+    });
+
+    // Update localStorage and UI
+    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+    if (storedData[testName]) {
+      if (Array.isArray(storedData[testName])) {
+        storedData[testName] = updatedRows;
+      } else {
+        storedData[testName].rows = updatedRows;
+      }
+      // Remove testName if both rows and pools are empty
+      const rowsLeft = Array.isArray(storedData[testName])
+        ? storedData[testName].length
+        : (storedData[testName].rows || []).length;
+      const poolsLeft = Array.isArray(storedData[testName])
+        ? 0
+        : (storedData[testName].pools || []).length;
+      if (rowsLeft === 0 && poolsLeft === 0) {
+        delete storedData[testName];
+        // Switch to next available test tab
+        const testNames = Object.keys(storedData);
+        if (testNames.length > 0) {
+          setTestName(testNames[0]);
+          if (Array.isArray(storedData[testNames[0]])) {
+            setTableRows(storedData[testNames[0]]);
+            setPooledRowData([]);
+          } else {
+            setTableRows(storedData[testNames[0]].rows || []);
+            setPooledRowData(storedData[testNames[0]].pools || []);
+          }
+        } else {
+          setTestName("");
+          setTableRows([]);
+          setPooledRowData([]);
+          setMessage(1); // Show "No data available"
+        }
+      }
+      localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
+    }
+
+    // Update backend location to "monitering"
+    const removedRow = prevRows[rowIndex];
+    if (removedRow && removedRow.internal_id) {
+      try {
+        await axios.put("/api/store", {
+          internal_id: removedRow.internal_id,
+          updates: { location: "monitering" },
+          auditLog: {
+            sample_id: removedRow.sample_id,
+            changed_by: user.email,
+            comments: "Sample removed from Library Preparation",
+            changed_at: new Date().toISOString(),
+          }
+        });
+      } catch {
+        toast.error("Failed to update sample location in backend.");
+      }
+    }
+
+    return updatedRows;
+  };
+
+  const filteredTestNames = getTheTestNames.filter(testName => {
+    const storedData = JSON.parse(localStorage.getItem("libraryPreparationData") || {});
+    const testData = storedData[testName];
+    if (!testData) return false;
+    if (Array.isArray(testData)) {
+      return testData.length > 0;
+    }
+    return (Array.isArray(testData.rows) && testData.rows.length > 0) ||
+      (Array.isArray(testData.pools) && testData.pools.length > 0);
+  });
+
+  useEffect(() => {
+    if (!tableRows.length) return;
+
+    function generateHex(str, salt = "") {
+      let hash = 0;
+      for (let i = 0; i < str.length; i++) {
+        hash = ((hash << 5) - hash) + str.charCodeAt(i);
+        hash |= 0;
+      }
+      return Math.abs(hash).toString(16).padStart(6, "0").slice(0, 6).toUpperCase();
+    }
+
+    const visibleIndexes = ["i5_index_forward", "i5_index_reverse", "i7_index"].filter(
+      key => columnVisibility[key]
+    );
+    if (visibleIndexes.length === 0) return;
+
+    let needsUpdate = false;
+    const newRows = tableRows.map((row, idx) => {
+      let updatedRow = { ...row };
+      visibleIndexes.forEach((key) => {
+        if (row.barcode) {
+          // Generate index based on barcode
+          const newHex = generateHex(row.barcode + "-" + key);
+          if (updatedRow[key] !== newHex) {
+            updatedRow[key] = newHex;
+            needsUpdate = true;
+          }
+        } else if (row.well && row.plate_designation) {
+          // Generate index based on well and plate
+          const newHex = generateHex(row.plate_designation + "-" + row.well + "-" + key);
+          if (updatedRow[key] !== newHex) {
+            updatedRow[key] = newHex;
+            needsUpdate = true;
+          }
+        } else {
+          // Clear value if neither is present
+          if (updatedRow[key]) {
+            updatedRow[key] = "";
+            needsUpdate = true;
+          }
+        }
+      });
+      return updatedRow;
+    });
+
+    if (needsUpdate) setTableRows(newRows);
+  }, [columnVisibility, tableRows]);
+
+  const sortSamplesByType = (rows) => {
+    // I want to check the test_name before sorting only sort if test_name is myeloid
+    if (testName === "Myeloid") {
+      return rows.sort((a, b) => {
+        if (a.sample_type === b.sample_type) return 0;
+        if (a.sample_type === "RNA") return -1;
+        if (b.sample_type === "RNA") return 1;
+        return 0; // Keep original order for other types
+      });
+    }
+    return rows; // No sorting for other test names
+  }
+
+  useEffect(() => {
+    setTableRows(prevRows => sortSamplesByType(prevRows));
+  }, [testName, tableRows]);
   return (
     <div className="p-4 ">
       {!message ?
         (<>
+
           <div className="mb-4 flex items-center gap-4 overflow-x-auto ">
             <Tabs value={testName} className="w-full rounded-lg ">
               <TabsList className="flex flex-nowrap bg-white dark:bg-gray-800 ">
-                {getTheTestNames.map((testName, index) => (
+                {filteredTestNames.map((testName, index) => (
                   <TabsTrigger
                     key={index}
                     value={testName}
@@ -1399,7 +1693,7 @@ const LibraryPrepration = () => {
                       // --- Formula logic (copy from updateData) ---
                       const updatedRow = { ...row };
                       const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-                      const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+                      // const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
                       const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
                       const volume = parseFloat(updatedRow.volume) || 0;
                       const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
@@ -1414,11 +1708,14 @@ const LibraryPrepration = () => {
                       updatedRow.nfw = volume > 0 ? volume - gdna_volume_3x : "";
 
                       // nfw_volu_for_2nm
-                      if (total_vol_for_2nm && lib_vol_for_2nm) {
+                      if (total_vol_for_2nm) {
+                        const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
                         updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - lib_vol_for_2nm).toFixed(2));
                       }
 
-                      // ...add any other formulas you want to auto-calculate here...
+                      const { lib_vol_for_2nm, nfw_volu_for_2nm } = calculateLibVolFor2nm(updatedRow, testName);
+                      updatedRow.lib_vol_for_2nm = lib_vol_for_2nm;
+                      updatedRow.nfw_volu_for_2nm = nfw_volu_for_2nm;
 
                       return updatedRow;
                     });
@@ -1481,6 +1778,15 @@ const LibraryPrepration = () => {
             </span>
           </div>
 
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              checked={syncFirstRow}
+              onCheckedChange={setSyncFirstRow}
+            />
+            <span>Sync all rows with first row</span>
+          </div>
+
           <div className="">
             {/* Table */}
             <div className="relative bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 60px)' }}>
@@ -1496,10 +1802,10 @@ const LibraryPrepration = () => {
                           if (colKey === "lib_vol_for_2nm") style = { maxWidth: "120px", minWidth: "100px" };
                           if (colKey === "volume_from_40nm_for_total_25ul_pool") style = { maxWidth: "120px", minWidth: "100px" };
 
-                          if (colKey === "sno") stickyClass = "sticky left-0 z-40 w-[60px]";
-                          if (colKey === "batch_id") stickyClass = "sticky left-[50px] z-40 w-[120px]";
-                          if (colKey === "pool_no") stickyClass = "sticky left-[120px] z-40 w-[100px]";
-                          if (colKey === "sample_id") stickyClass = "sticky left-[180px] z-40 w-[140px]";
+                          if (colKey === "id") stickyClass = "sticky left-0 z-40 w-[60px]";
+                          {/* if (colKey === "batch_id") stickyClass = "sticky left-[50px] z-40 w-[120px]";
+                          if (colKey === "pool_no") stickyClass = "sticky left-[120px] z-40 w-[100px]"; */}
+                          if (colKey === "sample_id") stickyClass = "sticky left-[40px] z-40 w-[140px]";
                           return (
                             <th
                               key={header.id}
@@ -1516,7 +1822,6 @@ const LibraryPrepration = () => {
                       </tr>
                     ))}
                   </thead>
-
                   <tbody>
                     {table.getRowModel().rows.map((row, rowIndex, arr) => {
                       const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(rowIndex));
@@ -1526,9 +1831,27 @@ const LibraryPrepration = () => {
                       const isFirstSelected = isSelected && rowIndex === Math.min(...currentSelection);
 
                       const currentBatchId = row.original.batch_id;
-                      const isLastOfBatch =
-                        rowIndex === arr.length - 1 ||
-                        arr[rowIndex + 1].original.batch_id !== currentBatchId;
+                      let batchStart = rowIndex;
+                      let batchEnd = rowIndex;
+
+                      // Find the start of the batch (move backward)
+                      while (
+                        batchStart > 0 &&
+                        arr[batchStart - 1].original.batch_id === currentBatchId &&
+                        currentBatchId
+                      ) {
+                        batchStart--;
+                      }
+                      // Find the end of the batch (move forward)
+                      while (
+                        batchEnd + 1 < arr.length &&
+                        arr[batchEnd + 1].original.batch_id === currentBatchId &&
+                        currentBatchId
+                      ) {
+                        batchEnd++;
+                      }
+                      const isFirstOfBatch = rowIndex === batchStart;
+                      const isLastOfBatch = rowIndex === batchEnd;
 
                       const batchRows = arr.filter(r => r.original.batch_id === currentBatchId);
                       const batchSum = batchRows.reduce(
@@ -1536,11 +1859,135 @@ const LibraryPrepration = () => {
                         0
                       );
 
+                      const firstBatchIndex = arr.findIndex(r => r.original.batch_id === currentBatchId);
+                      const isLastSelected = currentSelection.length > 0 &&
+                        showPooledFields &&
+                        rowIndex === Math.max(...currentSelection);
+
+                      const isLastOfPool = pool && rowIndex === Math.max(...pool.sampleIndexes);
+
+                      // Find the last selected index
+                      const lastSelectedIndex = currentSelection.length > 0 ? Math.max(...currentSelection) : null;
+
+                      // Find the pool for the last selected index
+                      const lastSelectedPool = pooledRowData.find(pool => pool.sampleIndexes.includes(lastSelectedIndex));
+
+                      // Is this the last row of the last selected pool?
+                      const isLastOfLastSelectedPool = lastSelectedPool && rowIndex === Math.max(...lastSelectedPool.sampleIndexes);
+
                       return (
                         <React.Fragment key={row.id}>
                           <tr>
                             {row.getVisibleCells().map((cell, colIdx) => {
                               // Pooled (existing) inputs
+                              if (cell.column.id === "pool_no" && pool) {
+                                if (isFirstOfPool) {
+                                  return (
+                                    <td
+                                      key={cell.column.id}
+                                      rowSpan={pool.sampleIndexes.length}
+                                      className="align-middle px-2 py-1 border border-gray-300 font-bold bg-orange-50"
+                                    >
+                                      {row.original.pool_no}
+                                    </td>
+                                  );
+                                }
+                                return null; // skip cell covered by rowspan
+                              }
+
+                              if (testName === "Myeloid" && cell.column.id === "pool_dna_rna_10ul") {
+                                // Find all RNA and DNA rows
+                                const rnaRows = arr.filter(r => r.original.sample_type === "RNA");
+                                const dnaRows = arr.filter(r => r.original.sample_type === "DNA");
+                                const isFirstRNA = row.original.sample_type === "RNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "RNA");
+                                const isFirstDNA = row.original.sample_type === "DNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "DNA");
+
+                                if (isFirstRNA) {
+                                  return (
+                                    <td
+                                      key={cell.column.id}
+                                      rowSpan={rnaRows.length}
+                                      className=" font-bold text-center align-middle"
+                                      style={{ verticalAlign: "middle" }}
+                                    >
+                                      RNA
+                                    </td>
+                                  );
+                                }
+                                if (isFirstDNA) {
+                                  return (
+                                    <td
+                                      key={cell.column.id}
+                                      rowSpan={dnaRows.length}
+                                      className=" font-bold text-center align-middle"
+                                      style={{ verticalAlign: "middle" }}
+                                    >
+                                      DNA
+                                    </td>
+                                  );
+                                }
+                                // Other RNA/DNA rows: skip cell (covered by rowspan)
+                                if (row.original.sample_type === "RNA" || row.original.sample_type === "DNA") {
+                                  return null;
+                                }
+                                // For other sample types, show empty cell
+                                return <td key={cell.column.id}></td>;
+                              }
+
+                              if (cell.column.id === "batch_id" && currentBatchId) {
+                                if (isFirstOfBatch) {
+                                  return (
+                                    <td
+                                      key={cell.column.id}
+                                      rowSpan={batchEnd - batchStart + 1}
+                                      className="align-middle px-2 py-1 border border-gray-300 font-bold bg-blue-50"
+                                    >
+                                      {currentBatchId}
+                                    </td>
+                                  );
+                                }
+                                return null; // skip cell covered by rowspan
+                              }
+
+                              if (cell.column.id === "select") {
+                                if (pool) {
+                                  if (isFirstOfPool) {
+                                    return (
+                                      <td
+                                        key={cell.column.id}
+                                        rowSpan={pool.sampleIndexes.length}
+                                        className="align-middle px-2 py-1 border border-gray-300"
+                                      >
+                                        <Checkbox
+                                          checked={rowSelection[row.id] || false}
+                                          onCheckedChange={(checked) => {
+                                            const newSelection = { ...rowSelection, [row.id]: checked };
+                                            if (!checked) delete newSelection[row.id];
+                                            setRowSelection(newSelection);
+                                            setShowPooledFields(Object.values(newSelection).some(Boolean)); // <-- Ensure this line is present!
+                                          }}
+                                        />
+                                      </td>
+                                    );
+                                  }
+                                  return null;
+                                } else {
+                                  return (
+                                    <td key={cell.column.id} className="align-middle px-2 py-1 border border-gray-300">
+                                      <Checkbox
+                                        checked={rowSelection[row.id] || false}
+                                        onCheckedChange={(checked) => {
+                                          const newSelection = { ...rowSelection, [row.id]: checked };
+                                          if (!checked) delete newSelection[row.id];
+                                          setRowSelection(newSelection);
+                                          setShowPooledFields(Object.values(newSelection).some(Boolean)); // <-- Ensure this line is present!
+                                        }}
+                                      />
+                                    </td>
+                                  );
+                                }
+                              }
+
                               if (pooledColumns.includes(cell.column.id) && pool) {
                                 if (isFirstOfPool) {
                                   return (
@@ -1603,7 +2050,10 @@ const LibraryPrepration = () => {
                               if (finalPoolingColumns.includes(cell.column.id) && pool) {
                                 if (isFirstOfPool) {
                                   // Calculate poolSum for this pool
-                                  const poolRows = pool.sampleIndexes.map(idx => arr[idx]);
+                                  const poolRows = pool.sampleIndexes
+                                    .map(idx => arr[idx])
+                                    .filter(r => r && r.original); // <-- Only keep defined rows
+
                                   const poolSum = poolRows.reduce(
                                     (sum, r) => sum + (parseFloat(r.original.data_required) || 0),
                                     0
@@ -1858,10 +2308,10 @@ const LibraryPrepration = () => {
                               }
                               // Default cell render
                               let stickyClass = "";
-                              if (cell.column.id === "sno") stickyClass = "sticky left-0 z-20 w-[60px] bg-white dark:bg-gray-900";
-                              if (cell.column.id === "batch_id") stickyClass = "sticky left-[50px] z-20 w-[120px] bg-white dark:bg-gray-900";
-                              if (cell.column.id === "pool_no") stickyClass = "sticky left-[120px] z-20 w-[100px] bg-white dark:bg-gray-900";
-                              if (cell.column.id === "sample_id") stickyClass = "sticky left-[180px] z-20 w-[140px] bg-white dark:bg-gray-900";
+                              if (cell.column.id === "id") stickyClass = "sticky left-0 z-20 w-[60px] bg-white dark:bg-gray-900";
+                              {/* if (cell.column.id === "batch_id") stickyClass = "sticky left-[50px] z-20 w-[120px] bg-white dark:bg-gray-900";
+                              if (cell.column.id === "pool_no") stickyClass = "sticky left-[120px] z-20 w-[100px] bg-white dark:bg-gray-900"; */}
+                              if (cell.column.id === "sample_id") stickyClass = "sticky left-[40px] z-20 w-[140px] bg-white dark:bg-gray-900";
                               return (
                                 <td
                                   key={cell.column.id}
@@ -1874,9 +2324,49 @@ const LibraryPrepration = () => {
                                 </td>
                               );
                             })}
+                            <td>
+                              {row.original.location !== 'repeat' && (
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => {
+                                    setDialogOpen(true);
+                                    setDialogRowInfo(row.original); // <-- Store row info for dialog
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              )}
+                            </td>
                           </tr>
 
-                          {isLastOfBatch && (
+                          {isLastSelected && !pool && showPooledFields && (
+                            <tr>
+                              <td colSpan={columns.length} className="py-2 px-4">
+                                <div className="w-[250px] flex justify-around">
+                                  <Button onClick={handleCreatePool} className="text-white text-sm px-4 py-1 rounded bg-black">
+                                    Create Pool
+                                  </Button>
+
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+
+
+                          {isLastOfLastSelectedPool && showPooledFields && (
+                            <tr>
+                              <td colSpan={columns.length} className="py-2 px-4">
+                                <div className="w-[250px] flex justify-around">
+                                  <Button onClick={handleCreateBatch} className="text-white text-sm px-4 py-1 rounded bg-black">
+                                    Create Batch
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          )
+                          }
+                          {isLastOfBatch && currentBatchId && (
                             <tr>
                               <td colSpan={columns.length} className="font-bold text-xl py-3 pe-[500px] text-right">
                                 Total Data: {batchSum}
@@ -1884,26 +2374,8 @@ const LibraryPrepration = () => {
                             </tr>
                           )}
 
-                          {rowIndex === Math.max(...currentSelection) && currentSelection.length > 0 && !showPooledFields && (
-                            <tr>
-                              <td colSpan={columns.length} className="py-2 px-4">
-                                <div className="w-[250px] flex justify-around">
-                                  <Button
-                                    onClick={handleCreatePool}
-                                    className="text-white text-sm px-4 py-1 rounded bg-black"
-                                  >
-                                    Create Pool
-                                  </Button>
-                                  <Button
-                                    onClick={handleCreateBatch}
-                                    className="text-white text-sm px-4 py-1 rounded bg-black"
-                                  >
-                                    Create Batch
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          )}
+
+
                         </React.Fragment>
                       );
                     })}
@@ -1926,13 +2398,6 @@ const LibraryPrepration = () => {
             className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12">
             Save
           </Button>
-          <Button
-            type="button"
-            onClick={() => { setDialogOpen(true); }}
-            className="bg-red-500 hover:bg-red-600 mt-5 text-white cursor-pointer ml-2 min-w-[120px] h-12"
-          >
-            Remove
-          </Button>
         </>
         )
         :
@@ -1948,15 +2413,150 @@ const LibraryPrepration = () => {
 
 
       {/* Column Selector Dropdown */}
-      <DialogBox isOpen={DialogOpen} onClose={() => setDialogOpen(false)} selectedTestName={testName} />      <ToastContainer />
+      <DialogBox
+        isOpen={DialogOpen}
+        onClose={() => setDialogOpen(false)}
+        user_email={user?.email}
+        rowInfo={dialogRowInfo}
+        onRemove={(removedInternalId) => {
+          setTableRows(prevRows => prevRows.filter(r => r.internal_id !== removedInternalId));
+          setDialogRowInfo(null);
+        }}
+      />
+      <ToastContainer />
     </div>
   )
 }
 
 export default LibraryPrepration
 
-const DialogBox = ({ isOpen, onClose, selectedTestName }) => {
-  const dispatch = useDispatch();
+const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
+  const [repeatType, setRepeatType] = useState("");
+  const [comments, setComments] = useState("");
+
+  const removeInternalIdFromLocalStorage = (internal_id, testName) => {
+    const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
+    const updatedIds = selectedIds.filter(id => id !== internal_id);
+    localStorage.setItem("selectedLibraryPrepSamples", JSON.stringify(updatedIds));
+  };
+
+  const handleRepeat = async (type, comments) => {
+    if (!type) {
+      toast.error("Please select a repeat type.");
+      return;
+    }
+    if (!comments || comments.trim() === "") {
+      toast.error("Please enter a reason for the repeat.");
+      return;
+    }
+    try {
+      const res = await axios.post('/api/repeat-sample', {
+        repeat_type: type,
+        comments: comments,
+        sample_id: rowInfo.sample_id,
+        user_email: user_email,
+      });
+      if (res.data[0].status === 200) {
+        toast.success("Repeat sample created successfully!");
+        const row = res.data[0].data;
+
+        // Insert the new row into localStorage under the correct test_name
+        const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
+        const testName = row.test_name?.includes(" + Mito")
+          ? row.test_name.split(" + Mito")[0].trim()
+          : row.test_name;
+
+        removeInternalIdFromLocalStorage(row.internal_id, testName);
+
+        if (!libraryData[testName]) {
+          libraryData[testName] = { rows: [], pools: [] };
+        } else if (Array.isArray(libraryData[testName])) {
+          libraryData[testName] = { rows: libraryData[testName], pools: [] };
+        }
+
+        // Prevent duplicate sample_ids
+        const exists = (libraryData[testName].rows || []).some(r => r.internal_id === row.internal_id);
+        if (!exists) {
+          libraryData[testName].rows.push(row);
+        }
+
+        localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
+
+        await axios.put("/api/store", {
+          internal_id: rowInfo.internal_id,
+          updates: { location: "repeat" },
+        });
+
+        onClose();
+      } else {
+        toast.error(res.data[0].message || "Failed to create repeat sample.");
+      }
+    }
+    catch (error) {
+      console.error("Error handling repeat:", error);
+      // toast.error("An error occurred while processing the repeat request.");
+    }
+  }
+
+  const handleRemoveSample = async () => {
+    if (!rowInfo) return;
+    try {
+      // Remove from localStorage
+      const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
+    const testName = rowInfo.test_name?.includes(" + Mito")
+      ? rowInfo.test_name.split(" + Mito")[0].trim()
+      : rowInfo.test_name;
+
+      removeInternalIdFromLocalStorage(rowInfo.internal_id, testName);
+
+      if (libraryData[testName]) {
+        if (Array.isArray(libraryData[testName])) {
+          libraryData[testName] = libraryData[testName].filter(r => r.internal_id !== rowInfo.internal_id);
+        } else {
+          libraryData[testName].rows = (libraryData[testName].rows || []).filter(r => r.internal_id !== rowInfo.internal_id);
+          // Also remove from pools if needed
+          libraryData[testName].pools = (libraryData[testName].pools || []).filter(pool =>
+            pool.sampleIndexes.some(idx => {
+              const row = libraryData[testName].rows[idx];
+              return row && row.internal_id !== rowInfo.internal_id;
+            })
+          );
+        }
+  
+        // If no rows and no pools left, remove the testName key
+        const rowsLeft = Array.isArray(libraryData[testName])
+          ? libraryData[testName].length
+          : (libraryData[testName].rows || []).length;
+        const poolsLeft = Array.isArray(libraryData[testName])
+          ? 0
+          : (libraryData[testName].pools || []).length;
+        if (rowsLeft === 0 && poolsLeft === 0) {
+          delete libraryData[testName];
+        }
+  
+        localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
+      }
+
+      // Update backend location to "monitering"
+      await axios.put("/api/store", {
+        internal_id: rowInfo.internal_id,
+        updates: { location: "monitering" },
+        auditLog: {
+          sample_id: rowInfo.sample_id,
+          changed_by: user_email,
+          comments: "Sample removed from Library Preparation",
+          changed_at: new Date().toISOString(),
+        }
+      });
+
+      toast.success("Sample removed successfully!");
+      if (typeof onRemove === "function") onRemove(rowInfo.internal_id);
+      onClose();
+    } catch (error) {
+      toast.error("Failed to remove sample.");
+    }
+  };
+
   return (
     <Dialog
       open={isOpen}
@@ -1966,35 +2566,63 @@ const DialogBox = ({ isOpen, onClose, selectedTestName }) => {
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle className="text-lg font-semibold">Remove from Library Preparation?</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">Repeat or Remove Sample?</DialogTitle>
         </DialogHeader>
-        <DialogDescription>
-          <span className="text-normal text-black dark:text-white">
-            Do you want to remove the data of <span className="font-bold text-lg">{selectedTestName}</span> from Library Preparation? This action cannot be undone.
-          </span>
-        </DialogDescription>
+        <div>
+          <span className="font-bold">Do you want to repeat or remove this sample?</span>
+          <div className="flex gap-2 justify-start mt-2">
+            <select
+              className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              name='repeat_type'
+              value={repeatType}
+              onChange={e => {
+                setRepeatType(e.target.value);
+                setComments(""); // Reset comments on type change
+              }}
+            >
+              <option value="">Select</option>
+              <option value="repeat_from_library">Repeat From Library</option>
+              <option value="other">Other</option>
+            </select>
+            <div>
+              <input
+                type='text'
+                name='comments'
+                value={comments}
+                onChange={e => setComments(e.target.value)}
+                placeholder={
+                  repeatType === "repeat_from_library"
+                    ? "Enter repeat reason"
+                    : "Enter reason"
+                }
+                className="border-2 border-orange-300 rounded-md p-2"
+              />
+            </div>
+          </div>
+        </div>
         <DialogFooter>
+          {repeatType === "repeat_from_library" ? (
+            <Button
+              className='bg-green-400 text-white hover:bg-green-500 cursor-pointer'
+              onClick={() => handleRepeat(document.querySelector('select[name="repeat_type"]').value, document.querySelector('input[name="comments"]').value)}
+            >
+              Repeat
+            </Button>
+          ) : repeatType === "other" ? (
+            <Button
+              variant="destructive"
+              className="bg-red-500 text-white hover:bg-red-600 cursor-pointer"
+              onClick={handleRemoveSample}
+            >
+              Remove Sample
+            </Button>
+          ) : null}
           <Button
             variant="outline"
             onClick={onClose}
             className="bg-gray-200 hover:bg-gray-300 text-gray-700"
           >
             Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            onClick={() => {
-              const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-              if (storedData && selectedTestName && storedData[selectedTestName]) {
-                delete storedData[selectedTestName];
-                localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
-              }
-              dispatch(setActiveTab("processing"));
-              onClose();
-            }}
-            className="ml-2 bg-red-600 hover:bg-red-700 text-white"
-          >
-            Remove
           </Button>
         </DialogFooter>
       </DialogContent>

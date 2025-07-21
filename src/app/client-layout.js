@@ -11,23 +11,25 @@ import { SampleRegistration } from "./Tabs/SampleRegistration";
 import LibraryPrepration from "./Tabs/LibraryPrepration";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import RunSetup from "./Tabs/RunSetup";
+import Inventory from "./Tabs/Inventory";
+import MangementDashboard from "./components/MangementDashboard";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const showSidebar = pathname !== "/login" && pathname !== "/reset-password";
 
   return (
-      <div className="bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
-        <div className="flex min-h-screen">
-          <main className={`flex-grow transition-all duration-300`}>
-            <Provider store={store}>
-              <ReduxWrapper showSidebar={showSidebar} pathname={pathname}>
-                {children}
-              </ReduxWrapper>
-            </Provider>
-          </main>
-        </div>
+    <div className="bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
+      <div className="flex min-h-screen">
+        <main className={`flex-grow transition-all duration-300`}>
+          <Provider store={store}>
+            <ReduxWrapper showSidebar={showSidebar} pathname={pathname}>
+              {children}
+            </ReduxWrapper>
+          </Provider>
+        </main>
       </div>
+    </div>
   );
 }
 
@@ -38,7 +40,13 @@ function ReduxWrapper({ children, showSidebar, pathname }) {
   useEffect(() => {
     let title = "VIDE";
     switch (activeTab) {
-      case "dashboard":
+      case "management":
+        title = "VIDE";
+        break;
+      case "lab":
+        title = "VIDE";
+        break;
+      case "inventory":
         title = "VIDE";
         break;
       case "sample-register":
@@ -85,8 +93,12 @@ function ReduxWrapper({ children, showSidebar, pathname }) {
 
 function ReduxContent({ children, activeTab }) {
   switch (activeTab) {
-    case "dashboard":
+    case "lab":
       return <>{children}</>;
+    case "management":
+      return <MangementDashboard />;
+    case "inventory":
+      return <Inventory />;
     case "sample-register":
       return <SampleRegistration />;
     case "processing":

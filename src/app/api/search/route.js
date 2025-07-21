@@ -80,7 +80,17 @@ export async function GET(request) {
       where.push(`(${testNameConditions.join(' OR ')})`);
     }
     addFilter('run_id', run_ids);
-    addFilter('sample_status', sample_statuses);
+    if (sample_statuses.length) {
+      sample_statuses.forEach(status => {
+        if (status === 'Not Accepted') {
+          where.push(`specimen_quality = $${idx++}`);
+          values.push('Not Accepted');
+        } else {
+          where.push(`sample_status = $${idx++}`);
+          values.push(status);
+        }
+      });
+    }
     addFilter('doctor_name', doctor_names);
     addFilter('dept_name', dept_names);
     addFilter('hospital_name', hospital_names); // Add hospital_name filter
@@ -100,10 +110,10 @@ export async function GET(request) {
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     if (forParam === 'process') {
-       query = `SELECT * FROM master_sheet ${whereClause} ORDER BY registration_date`;
+      query = `SELECT * FROM master_sheet ${whereClause} ORDER BY registration_date`;
     } else if (forParam === 'report') {
-       const reportWhereClause = whereClause ? `${whereClause} AND seq_run_date IS NOT NULL` : `WHERE seq_run_date IS NOT NULL`;
-       query = `SELECT * FROM master_sheet ${reportWhereClause} ORDER BY registration_date`;
+      const reportWhereClause = whereClause ? `${whereClause} AND seq_run_date IS NOT NULL` : `WHERE seq_run_date IS NOT NULL`;
+      query = `SELECT * FROM master_sheet ${reportWhereClause} ORDER BY registration_date`;
     }
 
     const data = await pool.query(query, values);

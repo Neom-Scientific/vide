@@ -20,7 +20,6 @@ const formSchema = z.object({
   email: z.string()
     .min(1, 'Email is required')
     .email('Invalid email address'),
-  // test_name: z.string().min(1, 'Test Name is required'),
   selectedTestName: z.string().min(1, 'Add the test name to confirm'),
   hospital_id: z.string().min(1, 'Organization ID is required'),
   patient_name: z.string().min(1, 'Patient Name is required'),
@@ -28,23 +27,12 @@ const formSchema = z.object({
   specimen_quality: z.string().min(1, 'Specimen Quality is required'),
   age: z.string().min(1, 'Age is required'),
   clinical_history: z.string().min(1, 'Clinical History is required'),
-  systolic_bp: z.string().optional(),
-  diastolic_bp: z.string().optional(),
-  total_cholesterol: z.string().optional(),
-  hdl_cholesterol: z.string().optional(),
-  ldl_cholesterol: z.string().optional(),
-  diabetes: z.string().optional(),
-  smoker: z.string().optional(),
-  hypertension_treatment: z.string().optional(),
-  statin: z.string().optional(),
-  aspirin_therapy: z.string().optional(),
   sample_name: z.string().min(1, 'Sample Name is required'),
-  trf_file: z.string().optional(),
 })
 
 export const SampleRegistration = () => {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
-  const [trfFile, setTrfFile] = useState(null);
+  const [trfFiles, setTrfFiles] = useState([]);
   const [trfUrl, setTrfUrl] = useState('');
   const [selectedTests, setSelectedTests] = useState([]);
   const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
@@ -52,6 +40,10 @@ export const SampleRegistration = () => {
   const [user, setUser] = useState(null);
   const [editButton, setEditButton] = useState([]);
   const [processing, setProcessing] = useState(false);
+  const [sampleTypeOptions, setSampleTypeOptions] = useState([]);
+  const [customSampleType, setCustomSampleType] = useState('');
+  const [testNameOptions, setTestNameOptions] = useState([]);
+  const [customTestName, setCustomTestName] = useState('');
 
   const now = new Date();
   const pad = n => n.toString().padStart(2, '0');
@@ -73,7 +65,7 @@ export const SampleRegistration = () => {
       patient_name: '',
       DOB: '',
       age: '',
-      sex: '',
+      gender: '',
       patient_mobile: '',
       ethnicity: '',
       father_mother_name: '',
@@ -116,6 +108,9 @@ export const SampleRegistration = () => {
       repeat_reason: '',
       repeat_date: '',
       trf_file: '',
+      trf_checkbox: 'No',
+      opd_notes_checkbox: 'No',
+      consent_form_checkbox: 'No',
     }
   })
 
@@ -218,7 +213,7 @@ export const SampleRegistration = () => {
   }, [sample_name, form]);
 
   const uploadTrf = async (file) => {
-    setTrfFile(file);
+    setTrfFiles(file);
     try {
       if (file) {
         const url = URL.createObjectURL(file);
@@ -235,47 +230,6 @@ export const SampleRegistration = () => {
       console.error('Error uploading TRF:', error);
     }
   }
-
-  // const uploadTrf = async (file) => {
-  //   setTrfFile(file);
-  //   try {
-  //     if (file) {
-  //       const formData = new FormData();
-  //       formData.append('file', file);
-  //       formData.append('fileName', file.name);
-
-  //       const response = await axios.post('/api/upload', formData, {
-  //         headers: {
-  //           'Content-Type': 'multipart/form-data'
-  //         }
-  //       });
-
-  //       if (response.data && response.data.status === 200) {
-  //         const fileId = response.data.fileId;
-  //         // Optionally, you can generate a Google Drive preview URL
-  //         const url = `https://drive.google.com/file/d/${fileId}/preview`;
-  //         setTrfUrl(url);
-  //         form.setValue('trf', file.name);
-  //         form.setValue('trf_file', fileId); // Store fileId for reference
-  //       } else {
-  //         setTrfUrl('');
-  //         form.setValue('trf', '');
-  //         form.setValue('trf_file', '');
-  //         toast.error('Failed to upload TRF');
-  //       }
-  //     } else {
-  //       setTrfUrl('');
-  //       form.setValue('trf', '');
-  //       form.setValue('trf_file', '');
-  //     }
-  //   } catch (error) {
-  //     setTrfUrl('');
-  //     form.setValue('trf', '');
-  //     form.setValue('trf_file', '');
-  //     console.error('Error uploading TRF:', error);
-  //     toast.error('Error uploading TRF');
-  //   }
-  // }
 
 
   useEffect(() => {
@@ -295,23 +249,31 @@ export const SampleRegistration = () => {
 
     // Get all form data
     const allData = form.getValues();
+    console.log('allData', allData);
+
+    const trimmedData = Object.fromEntries(
+      Object.entries(allData).map(([key, value]) => [
+        key,
+        typeof value === "string" ? value.trim() : value
+      ])
+    );
 
     // Prepare FormData for file + data
     const formData = new FormData();
-    Object.entries(allData).forEach(([key, value]) => {
+    Object.entries(trimmedData).forEach(([key, value]) => {
       formData.append(key, value ?? '');
     });
 
     // Attach the TRF file if present
-    if (trfFile) {
-      formData.append('file', trfFile);
+    if (trfFiles && trfFiles.length > 0) {
+      trfFiles.forEach(file => {
+        formData.append('files', file); // Use 'files' as the key for multiple files
+      });
     }
 
     try {
       const res = await axios.post('/api/store', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+        headers: { 'Content-Type': 'multipart/form-data' }
       });
 
       if (res.data[0].status === 200) {
@@ -319,7 +281,7 @@ export const SampleRegistration = () => {
         form.reset();
         setProcessing(false);
         selectedTests.length = 0;
-        setTrfFile(null);
+        setTrfFiles(null);
         setTrfUrl('');
         form.setValue('trf-upload', null);
         form.setValue('trf', '');
@@ -373,6 +335,7 @@ export const SampleRegistration = () => {
     setProcessing(true);
     const allData = form.getValues();
     const sampleId = allData.sample_id;
+    const internal_id = allData.internal_id;
 
     if (!sampleId) {
       toast.error("Sample ID is required");
@@ -430,7 +393,7 @@ export const SampleRegistration = () => {
 
     try {
       const res = await axios.put('/api/store', {
-        sample_id: sampleId,
+        internal_id: internal_id,
         updates,
         auditLog // <-- send audit log
       });
@@ -450,13 +413,6 @@ export const SampleRegistration = () => {
     }
   };
 
-  // useEffect(() => {
-  //   // remove the searchData from localstorage
-  //   const searchData = localStorage.getItem('searchData');
-  //   if (searchData) {
-  //     localStorage.removeItem('searchData');
-  //   }
-  // }, []);
 
   useEffect(() => {
     // Don't auto-save if editing from Processing tab
@@ -508,17 +464,43 @@ export const SampleRegistration = () => {
         form.setValue('trf_file', parsedData.trf || '');
         form.setValue('father_mother_name', parsedData.father_mother_name || '');
         form.setValue('spouse_name', parsedData.spouse_name || '');
-        setSelectedTests(parsedData.test_name ? parsedData.test_name.split(', ') : []);
+        setSelectedTests(parsedData.selectedTestName ? parsedData.selectedTestName.split(', ') : []);
       }
     }
   }, [])
+
+  useEffect(() => {
+    const fetchSampleTypes = async () => {
+      const hospitalName = form.getValues('hospital_name') || 'default';
+      try {
+        const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=sample_type`);
+        setSampleTypeOptions(res.data[0]?.values || []);
+      } catch (e) {
+        setSampleTypeOptions([]);
+      }
+    };
+    fetchSampleTypes();
+  }, [user?.hospital_name]);
+
+  useEffect(() => {
+    const fetchTestNames = async () => {
+      const hospitalName = form.getValues('hospital_name') || 'default';
+      try {
+        const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);
+        setTestNameOptions(res.data[0]?.values || []);
+      } catch (e) {
+        setTestNameOptions([]);
+      }
+    };
+    fetchTestNames();
+  }, [user?.hospital_name]);
 
   return (
     <div className="flex justify-center min-h-screen bg-white dark:bg-gray-900">
       <div className="w-full max-w-3xl lg:max-w-5xl sm:max-w-2xl md:max-w-3xl mt-3">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onFormSubmit)}>
-            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 mb-4 dark:border dark:border-orange-50">
+            {/* <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 mb-4 dark:border dark:border-orange-50">
               <h1 className=' font-bold text-2xl text-orange-400 mb-2'>Organization Information</h1>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
                 <FormField
@@ -536,7 +518,7 @@ export const SampleRegistration = () => {
                   )}
                 />
 
-                {/* organization id */}
+                organization id
                 <FormField
                   control={form.control}
                   name='hospital_id'
@@ -559,7 +541,7 @@ export const SampleRegistration = () => {
                   )}
                 />
               </div>
-            </div>
+            </div> */}
 
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 mb-4 dark:border dark:border-orange-50">
               <h1 className=' font-bold text-2xl text-orange-400 mb-2'>Sample Information</h1>
@@ -572,7 +554,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2 flex-1'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Sample ID</FormLabel>
+                        <FormLabel>Sample ID<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.sample_id && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.sample_id.message}
@@ -594,7 +576,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Sample Name</FormLabel>
+                        <FormLabel>Sample Name<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.sample_name && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.sample_name.message}
@@ -633,7 +615,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Age</FormLabel>
+                        <FormLabel>Age<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.age && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.age.message}
@@ -651,7 +633,7 @@ export const SampleRegistration = () => {
                 {/* gender */}
                 <FormField
                   control={form.control}
-                  name='sex'
+                  name='gender'
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <FormLabel>Gender</FormLabel>
@@ -720,26 +702,84 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Sample Type</FormLabel>
+                        <FormLabel>Sample Type<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.sample_type && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.sample_type.message}
                           </p>
                         )}
                       </div>
-                      <select
-                        className='dark:bg-gray-800 my-2 border-2 border-orange-300 rounded-md p-2'
-                        {...field}
-                      >
-                        <option className='dark:text-white' value=''>Select Sample Type</option>
-                        <option className='dark:text-white' value='EDTA Blood'>EDTA Blood</option>
-                        <option className='dark:text-white' value='DNA'>DNA</option>
-                        <option className='dark:text-white' value='RNA'>RNA</option>
-                        <option className='dark:text-white' value='Plasma'>Plasma</option>
-                        <option className='dark:text-white' value='CF DNA'>CF DNA</option>
-                        <option className='dark:text-white' value='Tissue'>Tissue</option>
-                        <option className='dark:text-white' value='Buccal Swab'>Buccal Swab</option>
-                      </select>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            style={{ background: 'inherit' }}
+                            className="h-10 w-full bg-white dark:bg-gray-800 border-2 border-orange-300 rounded-md text-black dark:text-white justify-between"
+                          >
+                            {field.value || 'Select Sample Type'}
+                            <span className="ml-2">&#9662;</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="min-w-[250px] mx-10">
+                          {sampleTypeOptions.length === 0 && (
+                            <DropdownMenuItem disabled>
+                              <span className="text-sm text-gray-500">No sample types found</span>
+                            </DropdownMenuItem>
+                          )}
+                          {sampleTypeOptions
+                            .filter(opt => opt !== field.value)
+                            .map(opt => (
+                              <DropdownMenuItem
+                                key={opt}
+                                onClick={() => {
+                                  field.onChange(opt);
+                                  setCustomSampleType('');
+                                }}
+                              >
+                                <span className="text-sm">{opt}</span>
+                              </DropdownMenuItem>
+                            ))}
+                          {/* Divider */}
+                          <div className="border-b border-gray-200 my-1" />
+                          {/* Add Other Sample Type Option */}
+                          <div className="flex items-center gap-2 px-3 py-2">
+                            <Input
+                              placeholder="Add other sample type"
+                              value={customSampleType}
+                              onChange={e => setCustomSampleType(e.target.value)}
+                              className="border border-orange-300 rounded-md flex-1"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="bg-orange-400 text-white"
+                              disabled={!customSampleType.trim()}
+                              onClick={async () => {
+                                const hospitalName = form.getValues('hospital_name') || 'default';
+                                try {
+                                  const res = await axios.post('/api/default-values', {
+                                    hospital_name: hospitalName,
+                                    value: customSampleType.trim(),
+                                    type: 'sample_type'
+                                  });
+                                  if (res.data[0]?.status === 200) {
+                                    setSampleTypeOptions(prev => [...prev, customSampleType.trim()]);
+                                    form.setValue('sample_type', customSampleType.trim());
+                                    setCustomSampleType('');
+                                    toast.success(`${customSampleType.trim()} added`);
+                                  } else {
+                                    toast.error('Failed to add sample type');
+                                  }
+                                } catch (e) {
+                                  toast.error('Error adding sample type');
+                                }
+                              }}
+                            >
+                              Add
+                            </Button>
+                          </div>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </FormItem>
                   )}
                 />
@@ -751,7 +791,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Specimen Quality</FormLabel>
+                        <FormLabel>Specimen Quality<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.specimen_quality && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.specimen_quality.message}
@@ -800,7 +840,8 @@ export const SampleRegistration = () => {
                         className=' dark:bg-gray-800 my-2  rounded-md p-2 border-2 border-orange-300'
                         {...field}>
                         <option className='dark:text-white' value=''>Select Storage Condition</option>
-                        <option className='dark:text-white' value='refrigerated'>Refrigerated</option>
+                        <option className='dark:text-white' value='refrigerated'>Refrigerated (4°C to 8°C)</option>
+                        <option className='dark:text-white' value='frozen'>Frozen (-20°C)</option>
                         <option className='dark:text-white' value='ambient'>Ambient</option>
                       </select>
                     </FormItem>
@@ -889,7 +930,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Patient Name</FormLabel>
+                        <FormLabel>Patient Name<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.patient_name && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.patient_name.message}
@@ -1070,7 +1111,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Client Name</FormLabel>
+                        <FormLabel>Client Name<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.client_name && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.client_name.message}
@@ -1095,7 +1136,7 @@ export const SampleRegistration = () => {
                 render={({ field }) => (
                   <FormItem className='my-2'>
                     <div className="flex justify-between items-center">
-                      <FormLabel>Clinical History</FormLabel>
+                      <FormLabel>Clinical History<span className='text-red-500'>*</span></FormLabel>
                       {form.formState.errors.clinical_history && (
                         <p className='text-red-500 text-sm'>
                           {form.formState.errors.clinical_history.message}
@@ -1123,7 +1164,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Doctor Name</FormLabel>
+                        <FormLabel>Doctor Name<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.doctor_name && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.doctor_name.message}
@@ -1177,7 +1218,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Doctor's Email</FormLabel>
+                        <FormLabel>Doctor's Email<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.email && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.email.message}
@@ -1207,7 +1248,7 @@ export const SampleRegistration = () => {
                     name='test_name'
                     render={({ field }) => (
                       <FormItem className='flex-1'>
-                        <FormLabel>Add Test Name</FormLabel>
+                        <FormLabel>Add Test Name<span className='text-red-500'>*</span></FormLabel>
                         <div className="flex justify-between items-center">
                         </div>
                         <DropdownMenu>
@@ -1220,12 +1261,12 @@ export const SampleRegistration = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="min-w-[250px] mx-10">
-                            {selectedTests.length === allTests.length ? (
+                            {selectedTests.length === testNameOptions.length ? (
                               <DropdownMenuItem disabled>
                                 <span className="text-sm text-gray-500">All tests added</span>
                               </DropdownMenuItem>
                             ) : (
-                              allTests
+                              testNameOptions
                                 .filter(test => !selectedTests.includes(test))
                                 .map(test => (
                                   <DropdownMenuItem
@@ -1247,6 +1288,49 @@ export const SampleRegistration = () => {
                                   </DropdownMenuItem>
                                 ))
                             )}
+
+                            {/* Divider */}
+                            <div className="border-b border-gray-200 my-1" />
+
+                            {/* Add Other Test Option */}
+                            <div className="flex items-center gap-2 px-3 py-2">
+                              <Input
+                                placeholder="Add other test"
+                                value={customTestName}
+                                onChange={e => setCustomTestName(e.target.value)}
+                                className="border border-orange-300 rounded-md flex-1"
+                              />
+                              <Button
+                                type="button"
+                                size="sm"
+                                className="bg-orange-400 text-white"
+                                disabled={!customTestName.trim()}
+                                onClick={async () => {
+                                  const hospitalName = form.getValues('hospital_name') || 'default';
+                                  try {
+                                    const res = await axios.post('/api/default-values', {
+                                      hospital_name: hospitalName,
+                                      value: customTestName.trim(),
+                                      type: 'test_name'
+                                    });
+                                    if (res.data[0]?.status === 200) {
+                                      setTestNameOptions(prev => [...prev, customTestName.trim()]);
+                                      const updated = [...selectedTests, customTestName.trim()];
+                                      setSelectedTests(updated);
+                                      form.setValue('selectedTestName', updated.join(', '));
+                                      toast.success(`${customTestName.trim()} added`);
+                                      setCustomTestName('');
+                                    } else {
+                                      toast.error('Failed to add test');
+                                    }
+                                  } catch (e) {
+                                    toast.error('Error adding test');
+                                  }
+                                }}
+                              >
+                                Add
+                              </Button>
+                            </div>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </FormItem>
@@ -1548,59 +1632,85 @@ export const SampleRegistration = () => {
                     </>
                   )}
 
-                {/* upload trf */}
-                <FormField
-                  control={form.control}
-                  name='trf'
-                  render={({ field }) => (
-                    <FormItem className='mt-3'>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          className="bg-gray-700 hover:bg-gray-700 cursor-pointer text-white flex items-center gap-2"
-                          onClick={() => document.getElementById('trf-upload').click()}
-                        >
-                          <svg
-                            xmlns="http:www.w3.org/2000/svg"
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
+                <div>
+
+                  {/* upload trf */}
+                  <FormField
+                    control={form.control}
+                    name='trf'
+                    render={({ field }) => (
+                      <FormItem className='mt-3'>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            className="bg-gray-700 hover:bg-gray-700 cursor-pointer text-white flex items-center gap-2"
+                            onClick={() => document.getElementById('trf-upload').click()}
                           >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              d="M12 4v16m8-8H4"
-                            />
-                          </svg>
-                          Upload TRF
-                        </Button>
-                        <input
-                          id="trf-upload"
-                          type="file"
-                          accept=".pdf"
-                          className="hidden"
-                          onChange={e => {
-                            uploadTrf(e.target.files[0]);
-                            e.target.value = ""; // Reset input value
-                          }}
-                        />
-                        {/* {trfUrl && ( */}
-                        <Button
-                          type="button"
-                          className="ml-2"
-                          onClick={() => window.open(trfUrl, '_blank')}
-                          disabled={!trfUrl}
-                          variant="outline"
-                        >
-                          Preview TRF
-                        </Button>
-                        {/* )} */}
-                      </div>
-                    </FormItem>
-                  )}
-                />
+                            <svg
+                              xmlns="http:www.w3.org/2000/svg"
+                              className="h-5 w-5"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M12 4v16m8-8H4"
+                              />
+                            </svg>
+                            Upload TRF
+                          </Button>
+                          <input
+                            id="trf-upload"
+                            type="file"
+                            accept=".pdf"
+                            className="hidden"
+                            onChange={e => {
+                              uploadTrf(e.target.files[0]);
+                              e.target.value = ""; // Reset input value
+                            }}
+                          />
+                          {/* {trfUrl && ( */}
+                          <Button
+                            type="button"
+                            className="ml-2"
+                            onClick={() => window.open(trfUrl, '_blank')}
+                            disabled={!trfUrl}
+                            variant="outline"
+                          >
+                            Preview TRF
+                          </Button>
+                          {/* )} */}
+                        </div>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="mt-3 flex flex-wrap gap-2 justify-start text-sm">
+                    <input
+                      type='checkbox'
+                      name='trf_checkbox'
+                      className='cursor-pointer'
+                      checked={form.watch('trf_checkbox') === 'Yes'}
+                      onChange={e => form.setValue('trf_checkbox', e.target.checked ? 'Yes' : 'No')}
+                    /> TRF
+                    <input
+                      type='checkbox'
+                      name='opd_notes_checkbox'
+                      className='cursor-pointer'
+                      checked={form.watch('opd_notes_checkbox') === 'Yes'}
+                      onChange={e => form.setValue('opd_notes_checkbox', e.target.checked ? 'Yes' : 'No')}
+                    /> OPD Notes
+                    <input
+                      type='checkbox'
+                      name='consent_form_checkbox'
+                      className='cursor-pointer'
+                      checked={form.watch('consent_form_checkbox') === 'Yes'}
+                      onChange={e => form.setValue('consent_form_checkbox', e.target.checked ? 'Yes' : 'No')}
+                    /> Consent Form
+                  </div>
+                </div>
 
                 {/* trf file name */}
                 <FormField
@@ -1609,7 +1719,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>TRF File Name</FormLabel>
+                        <FormLabel>TRF File Name <span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.trf && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.trf.message}

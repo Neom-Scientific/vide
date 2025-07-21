@@ -4,20 +4,15 @@ import { NextResponse } from "next/server";
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
+    const hospital_name = searchParams.get('hospital_name');
     try {
         const response = [];
         if (id === 'pool_no') {
             let pool_no = 'P_001';
-            const poolData = await pool.query('SELECT pool_no FROM pool_info WHERE pool_no IS NOT NULL ORDER BY pool_no DESC LIMIT 1 FOR UPDATE');
+            const poolData = await pool.query('SELECT pool_no FROM pool_info WHERE pool_no IS NOT NULL and hospital_name = $1 ORDER BY pool_no DESC LIMIT 1 FOR UPDATE',[hospital_name]);
             // console.log('poolData:', poolData.rows);
             if (poolData.rows.length > 0) {
-                const lastPoolNo = poolData.rows[0].pool_no;
-                if (typeof lastPoolNo === "string" && lastPoolNo.includes("_")) {
-                    const lastNumber = parseInt(lastPoolNo.split('_')[1], 10);
-                    const newNumber = lastNumber + 1;
-                    // console.log('lastNumber:', lastNumber, 'newNumber:', newNumber);
-                    pool_no = `P_${newNumber.toString().padStart(3, '0')}`;
-                }
+                 pool_no = poolData.rows[0].pool_no;
             }
             response.push({
                 pool_no: pool_no,
@@ -29,7 +24,7 @@ export async function GET(request) {
         }
         if(id === 'batch_id'){
             let batch_id = 'SBB_01';
-            const batchData = await pool.query('SELECT batch_id FROM pool_info WHERE batch_id IS NOT NULL ORDER BY batch_id DESC LIMIT 1 FOR UPDATE');
+            const batchData = await pool.query('SELECT batch_id FROM pool_info WHERE batch_id IS NOT NULL and hospital_name = $1 ORDER BY batch_id DESC LIMIT 1 FOR UPDATE',[hospital_name]);
             // console.log('batchData:', batchData.rows);
             if (batchData.rows.length > 0) {
                 const lastBatchId = batchData.rows[0].batch_id;

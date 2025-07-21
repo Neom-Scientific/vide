@@ -14,9 +14,20 @@ export async function POST(request) {
             });
         }
         // console.log('table_data', setup.table_data);
-        const { rows } = await pool.query('SELECT nextval(\'run_id_seq\') AS next_id');
-        const id = rows[0].next_id;
-        run_id = `run_${id}`; // Generate the new run_id
+        const { rows } = await pool.query(
+            `SELECT run_id FROM run_setup WHERE hospital_name = $1 ORDER BY run_id DESC LIMIT 1`,
+            [setup.hospital_name]
+        );
+
+        let nextRunNumber = 1;
+        if (rows.length > 0 && rows[0].run_id) {
+            // Extract the number from run_id, e.g., "run_5" => 5
+            const match = rows[0].run_id.match(/^run_(\d+)$/);
+            if (match) {
+                nextRunNumber = parseInt(match[1], 10) + 1;
+            }
+        }
+        run_id = `run_${nextRunNumber}`;
         await pool.query(
             `INSERT INTO run_setup (
               run_id,
@@ -52,41 +63,41 @@ export async function POST(request) {
               $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28
             )`,
             [
-            run_id,
-            setup.selected_application,
-            setup.seq_run_date,
-            setup.total_gb_available,
-            setup.instument_type,
-            setup.pool_size,
-            setup.pool_conc_run_setup,
-            setup.nm_cal,
-            setup.total_required,
-            setup.dinatured_lib_next_seq_550,
-            setup.total_volume_next_seq_550,
-            setup.loading_conc_550,
-            setup.lib_required_next_seq_550,
-            setup.buffer_volume_next_seq_550,
-            setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
-            setup.rsbetween_vol_2nm_next_seq_1000_2000,
-            setup.total_volume_2nm_next_seq_1000_2000,
-            setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
-            setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
-            setup.total_volume_600pm_next_seq_1000_2000,
-            setup.loading_conc_1000_2000,
-            setup.hospital_name,
-            setup.total_volume_2nm_next_seq_550,
-            setup.final_pool_conc_vol_2nm_next_seq_550,
-            setup.nfw_vol_2nm_next_seq_550,
-            setup.sample_ids.length,
-            setup.table_data,
-            setup.ht_buffer_next_seq_1000_2000
+                run_id,
+                setup.selected_application,
+                setup.seq_run_date,
+                setup.total_gb_available,
+                setup.instument_type,
+                setup.pool_size,
+                setup.pool_conc_run_setup,
+                setup.nm_cal,
+                setup.total_required,
+                setup.dinatured_lib_next_seq_550,
+                setup.total_volume_next_seq_550,
+                setup.loading_conc_550,
+                setup.lib_required_next_seq_550,
+                setup.buffer_volume_next_seq_550,
+                setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
+                setup.rsbetween_vol_2nm_next_seq_1000_2000,
+                setup.total_volume_2nm_next_seq_1000_2000,
+                setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
+                setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
+                setup.total_volume_600pm_next_seq_1000_2000,
+                setup.loading_conc_1000_2000,
+                setup.hospital_name,
+                setup.total_volume_2nm_next_seq_550,
+                setup.final_pool_conc_vol_2nm_next_seq_550,
+                setup.nfw_vol_2nm_next_seq_550,
+                setup.internal_ids.length,
+                setup.table_data,
+                setup.ht_buffer_next_seq_1000_2000
             ]
         );
 
-        if (setup.sample_ids && setup.sample_ids.length > 0) {
-            for (const sampleId of setup.sample_ids) {
-            await pool.query(
-                `UPDATE master_sheet SET 
+        if (setup.internal_ids && setup.internal_ids.length > 0) {
+            for (const internalId of setup.internal_ids) {
+                await pool.query(
+                    `UPDATE master_sheet SET 
                   selected_application = $1,
                   seq_run_date = $2,
                   total_gb_available = $3,
@@ -115,50 +126,51 @@ export async function POST(request) {
                   table_data = $26,
                   ht_buffer_next_seq_1000_2000 = $27,
                   run_id = $28
-                WHERE sample_id = $29`,
-                [
-                setup.selected_application,
-                setup.seq_run_date,
-                setup.total_gb_available,
-                setup.instument_type,
-                setup.pool_size,
-                setup.pool_conc_run_setup,
-                setup.nm_cal,
-                setup.total_required,
-                setup.dinatured_lib_next_seq_550,
-                setup.total_volume_next_seq_550,
-                setup.loading_conc_550,
-                setup.lib_required_next_seq_550,
-                setup.buffer_volume_next_seq_550,
-                setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
-                setup.rsbetween_vol_2nm_next_seq_1000_2000,
-                setup.total_volume_2nm_next_seq_1000_2000,
-                setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
-                setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
-                setup.total_volume_600pm_next_seq_1000_2000,
-                setup.loading_conc_1000_2000,
-                setup.hospital_name,
-                setup.total_volume_2nm_next_seq_550,
-                setup.final_pool_conc_vol_2nm_next_seq_550,
-                setup.nfw_vol_2nm_next_seq_550,
-                setup.sample_ids.length,
-                setup.table_data,
-                setup.ht_buffer_next_seq_1000_2000,
-                run_id,
-                sampleId,
-                ]
-            );
+                WHERE internal_id = $29`,
+                    [
+                        setup.selected_application,
+                        setup.seq_run_date,
+                        setup.total_gb_available,
+                        setup.instument_type,
+                        setup.pool_size,
+                        setup.pool_conc_run_setup,
+                        setup.nm_cal,
+                        setup.total_required,
+                        setup.dinatured_lib_next_seq_550,
+                        setup.total_volume_next_seq_550,
+                        setup.loading_conc_550,
+                        setup.lib_required_next_seq_550,
+                        setup.buffer_volume_next_seq_550,
+                        setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
+                        setup.rsbetween_vol_2nm_next_seq_1000_2000,
+                        setup.total_volume_2nm_next_seq_1000_2000,
+                        setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
+                        setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
+                        setup.total_volume_600pm_next_seq_1000_2000,
+                        setup.loading_conc_1000_2000,
+                        setup.hospital_name,
+                        setup.total_volume_2nm_next_seq_550,
+                        setup.final_pool_conc_vol_2nm_next_seq_550,
+                        setup.nfw_vol_2nm_next_seq_550,
+                        setup.internal_ids.length,
+                        setup.table_data,
+                        setup.ht_buffer_next_seq_1000_2000,
+                        run_id,
+                        internalId,
+                    ]
+                );
             }
         }
 
         // I am passing the array of the sample_id with the name sample_ids
         // console.log('sample_ids', setup.sample_ids);
-        if (setup.sample_ids && setup.sample_ids.length > 0) {
-            const sampleIds = setup.sample_ids.map(id => id); // Trim and filter out empty strings
-            if (sampleIds.length > 0) {
-                for (const id of sampleIds) {
-                    await pool.query(`UPDATE pool_info SET run_id = $1 WHERE sample_id = $2`, [run_id, id]);
-                    await pool.query(`UPDATE master_sheet SET under_seq = $1 WHERE sample_id = $2`, ['Yes', id]);
+        if (setup.internal_ids && setup.internal_ids.length > 0) {
+            const internalIds = setup.internal_ids.map(id => id); // Trim and filter out empty strings
+            if (internalIds.length > 0) {
+                for (const id of internalIds) {
+                    await pool.query(`UPDATE pool_info SET run_id = $1 WHERE internal_id = $2`, [run_id, id]);
+                    await pool.query(`UPDATE master_sheet SET under_seq = $1 , location = $2 WHERE internal_id = $3`, ['Yes', 'under_seq' ,id]);
+                    await pool.query(`INSERT INTO audit_logs (sample_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [id, `Run setup created with run_id: ${run_id}`, setup.change_by]);
                 }
             }
         }
@@ -181,7 +193,7 @@ export async function POST(request) {
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const hospital_name = searchParams.get('hospital_name');
-    const  role  = searchParams.get('role')
+    const role = searchParams.get('role')
     try {
         // console.log('role', role);
         // console.log('hospital_name', hospital_name);
@@ -240,12 +252,12 @@ export async function GET(request) {
     }
 }
 
-export async function PUT(request){
-    try{
+export async function PUT(request) {
+    try {
         const body = await request.json();
-        const {run_id ,run_remarks} = body;
+        const { run_id, run_remarks } = body;
         const response = [];
-        if(!run_id || !run_remarks){
+        if (!run_id || !run_remarks) {
             response.push({
                 status: 400,
                 message: "Run ID and Remarks are required"
@@ -257,14 +269,14 @@ export async function PUT(request){
             [run_remarks, run_id]
         );
 
-        if(rows.length === 0){
+        if (rows.length === 0) {
             response.push({
                 status: 404,
                 message: "Run setup not found"
             });
         }
-        else{
-            await pool.query(`UPDATE master_sheet SET run_remarks = $1 WHERE run_id = $2`,[run_remarks, run_id]);
+        else {
+            await pool.query(`UPDATE master_sheet SET run_remarks = $1 WHERE run_id = $2`, [run_remarks, run_id]);
             response.push({
                 status: 200,
                 message: "Run remarks updated successfully",
@@ -273,7 +285,7 @@ export async function PUT(request){
         }
         return NextResponse.json(response);
     }
-    catch(error){
+    catch (error) {
         console.log('error', error);
         return NextResponse.json({
             status: 500,

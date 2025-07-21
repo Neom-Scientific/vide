@@ -56,6 +56,7 @@ const RunSetup = () => {
   const [InstrumentType, setInstrumentType] = useState('');
   const [runDetails, setRunDetails] = useState([]);
   const user = JSON.parse(Cookies.get('user') || '{}');
+  const [runDetailsWithSampleIds, setRunDetailsWithSampleIds] = useState([]);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -172,15 +173,15 @@ const RunSetup = () => {
       console.log('testNames', testNames);
       const testObj = testNames.find(t => t.test_name === selectedTestName);
       console.log('testObj', testObj);
-      const sampleIdsParam = testObj && testObj.sample_ids && testObj.sample_ids.length > 0
-        ? testObj.sample_ids.join(',')
+      const internalIdsParam = testObj && testObj.internal_ids && testObj.internal_ids.length > 0
+        ? testObj.internal_ids.join(',')
         : '';
 
-      console.log('sampleIdsParam', sampleIdsParam);
+      console.log('internalIdsParam', internalIdsParam);
 
       // Fetch pool data for the selected test name and sample_ids
       const response = await axios.get(
-        `/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}${sampleIdsParam ? `&sample_id=${sampleIdsParam}` : ''}`
+        `/api/pool-data?hospital_name=${user.hospital_name}&application=${selectedTestName}${internalIdsParam ? `&internal_id=${internalIdsParam}` : ''}`
       );
       // console.log('response', response.data);
       if (response.data[0].status === 200) {
@@ -215,13 +216,16 @@ const RunSetup = () => {
       );
 
       const selectedSampleIds = filteredPoolData.map((pool) => pool.sample_id);
+      const selectedInternalIds = filteredPoolData.map((pool) => pool.internal_id);
 
       const response = await axios.post('/api/run-setup', {
         setup: {
           ...data,
+          change_by: user.email,
           table_data: data.table_data, // Use table_data from form state
           sample_ids: selectedSampleIds,
           hospital_name: user.hospital_name,
+          internal_ids: selectedInternalIds,
         },
       });
 
@@ -515,6 +519,27 @@ const RunSetup = () => {
     setAvgSize(avg);
   }, [selectedCheckboxes, poolData]);
 
+  const handleRunDetail = async (runId) => {
+    try {
+      const response = await axios.get(`/api/run-ids-data?runId=${runId}&hospital_name=${user.hospital_name}`);
+      if (response.data[0].status === 200) {
+        console.log('response.data[0].data', response.data[0].data);
+        setRunDetailsWithSampleIds(response.data[0].data);
+      }
+      else if (response.data[0].status === 404) {
+        toast.error(response.data[0].message || "No data found for the provided run ID");
+      }
+    }
+    catch (error) {
+      console.log('error in handleRunDetail:', error);
+    }
+  }
+
+  const groupedByTest = runDetailsWithSampleIds.reduce((acc, item) => {
+    if (!acc[item.test_name]) acc[item.test_name] = [];
+    acc[item.test_name].push(item.sample_id);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -1186,98 +1211,105 @@ const RunSetup = () => {
             </form>
           </Form>
         </div>
-        <ToastContainer />
+
       </div>
-      <div className=' m-4 p-2'>
+      <div className="m-4 p-2">
         <h1 className='md:text-xl text-lg font-bold text-orange-400'>Run Details</h1>
         {runDetails && runDetails.length === 0 ? (
           <p className='text-center p-3 font-bold text-md md:text-lg'>No Run Details</p>
         ) : (
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap"
-            style={{ maxWidth: 'calc(100vw - 80px)' }}
-          >
-            <div className="h-[400px] overflow-y-auto w-full">
-              <table className="min-w-full border-collapse table-auto my-3">
-                <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-10">
-                  <tr>
-                    <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Run Name</th>
-                    <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Run Date</th>
-                    {testColumns && testColumns.map((col, idx) => (
-                      <th
-                        className="px-6 py-3 min-w-[180px] whitespace-nowrap"
-                        key={idx}
-                      >
-                        {col}
-                      </th>
-                    ))}
-                    <th className="px-6 py-3 min-w-[160px] whitespace-nowrap">Instrument Type</th>
-                    <th className="px-6 py-3 min-w-[160px] whitespace-nowrap">Run Sample Count</th>
-                    <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Remarks</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {runDetails && runDetails.map((run, index) => (
-
-                    <tr key={index} className="border-b text-center">
-                      <td className='p-3'>{run.run_id}</td>
-                      <td className='p-3'>
-                        {run.seq_run_date
-                          ? new Date(run.seq_run_date).toLocaleDateString('en-GB')
-                          : ''}
-                      </td>
-                      {testColumns.map((test, idx) => {
-                        // Find the data for this test in table_data
-                        const testData = run.table_data
-                          ? run.table_data.find((d) => d.test_name === test)
-                          : null;
-                        return (
-                          <td key={idx}>
-                            {testData ? testData.sample_count : 0}
-                          </td>
-                        );
-                      })}
-                      <td className='p-3'>
-                        {run.instument_type === 'NextSeq_550' ? 'NextSeq 550' : 'NextSeq 1000/2000'}
-                      </td>
-                      <td className='p-3'>
-                        {run.count}
-                      </td>
-                      <td className='p-3'>
-                        {run && run.run_remarks ? (
-                          run.run_remarks
-                        ) : (
-                          <input
-                            name='run_remarks'
-                            type='text'
-                            className='border-2 border-orange-300 rounded p-1 w-[150px] text-black dark:text-white'
-                            placeholder='Enter remarks'
-                            onBlur={async (e) => {
-                              const value = e.target.value;
-                              try {
-                                const response = await axios.put('/api/run-setup', {
-                                  run_id: run.run_id,
-                                  run_remarks: value,
-                                });
-                                if(response.data[0].status === 200){
-                                fetchRunDetails(); // Refresh run details after saving remarks
-                                }
-                              } catch (err) {
-                                console.log('error', err);
-                                toast.error("Failed to save remarks");
-                              }
-                            }}
-                          />
-                        )}
-                      </td>
+          <div className="flex flex-row gap-4 bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 80px)' }}>
+            {/* Left: Run Details Table */}
+            <div className="w-1/2 max-w-[50%]">
+              <div className="max-h-[70vh] overflow-y-auto w-full">
+                <table className="min-w-full border-collapse table-auto">
+                  <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Run Name</th>
+                      <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Run Date</th>
+                      <th className="px-6 py-3 min-w-[160px] whitespace-nowrap">Instrument Type</th>
+                      <th className="px-6 py-3 min-w-[160px] whitespace-nowrap">Run Sample Count</th>
+                      <th className="px-6 py-3 min-w-[120px] whitespace-nowrap">Remarks</th>
                     </tr>
-                  )
-                  )}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {runDetails && runDetails.map((run, index) => (
+                      <tr key={index} className="border-b text-center">
+                        <td
+                          className='p-3 underline cursor-pointer'
+                          onClick={e => handleRunDetail(run.run_id)}
+                        >{run.run_id}</td>
+                        <td className='p-3'>
+                          {run.seq_run_date
+                            ? new Date(run.seq_run_date).toLocaleDateString('en-GB')
+                            : ''}
+                        </td>
+                        <td className='p-3'>
+                          {run.instument_type === 'NextSeq_550' ? 'NextSeq 550' : 'NextSeq 1000/2000'}
+                        </td>
+                        <td className='p-3'>
+                          {run.count}
+                        </td>
+                        <td className='p-3'>
+                          {run && run.run_remarks ? (
+                            run.run_remarks
+                          ) : (
+                            <input
+                              name='run_remarks'
+                              type='text'
+                              className='border-2 border-orange-300 rounded p-1 w-[150px] text-black dark:text-white'
+                              placeholder='Enter remarks'
+                              onBlur={async (e) => {
+                                const value = e.target.value;
+                                try {
+                                  const response = await axios.put('/api/run-setup', {
+                                    run_id: run.run_id,
+                                    run_remarks: value,
+                                  });
+                                  if (response.data[0].status === 200) {
+                                    fetchRunDetails(); // Refresh run details after saving remarks
+                                  }
+                                } catch (err) {
+                                  console.log('error', err);
+                                  toast.error("Failed to save remarks");
+                                }
+                              }}
+                            />
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {/* Right: Run Samples Detail */}
+            <div className="w-full">
+              {runDetailsWithSampleIds && runDetailsWithSampleIds.length > 0 && (
+                <div className="p-4 bg-white dark:bg-gray-900 rounded shadow mt-4">
+                  <h2 className="font-bold text-orange-400 mb-2">Run Samples</h2>
+                  <div>
+                    <div className="font-bold mb-2">Run ID: {runDetailsWithSampleIds[0]?.run_id}</div>
+                    {Object.entries(groupedByTest).map(([testName, sampleIds]) => (
+                      <div key={testName} className="mb-4">
+                        <div className="font-semibold">{testName}</div>
+                        <ul className="ml-4 list-disc">
+                          {sampleIds.map((id, idx) => (
+                            <li key={id}>{id}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ))}
+                    <div className="font-bold mt-2">Count: {runDetailsWithSampleIds.length}</div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
+      <ToastContainer />
+
     </div>
   );
 };

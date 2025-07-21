@@ -1,10 +1,11 @@
 import { pool } from "@/lib/db";
+import { run } from "googleapis/build/src/apis/run";
 import { NextResponse } from "next/server";
 
 // List all fields from SampleRegistration.jsx here
 const sampleRegistrationFields = [
     "sample_id", "hospital_name", "hospital_id", "doctor_name", "dept_name", "doctor_mobile", "email",
-    "patient_name", "DOB", "age", "sex", "patient_mobile", "ethnicity", "father_mother_name", "address",
+    "patient_name", "DOB", "age", "gender", "patient_mobile", "ethnicity", "father_mother_name", "address",
     "city", "state", "country", "client_id", "client_name", "spouse_name", "patient_email", "registration_date", "sample_type", "collection_date_time", "sample_date",
     "specimen_quality", "prority", "storage_condition", "vial_received", "test_name",
     "systolic_bp", "diastolic_bp", "total_cholesterol", "hdl_cholesterol", "ldl_cholesterol", "diabetes",
@@ -22,15 +23,20 @@ const integerFields = [
 ];
 
 // List all pool_info and run_setup columns here
-const poolAndRunSetupFields = [
+const poolFields = [
     "conc_rxn", "i5_index_reverse", "i7_index", "lib_qubit", "nm_conc", "nfw_volu_for_2nm",
     "total_vol_for_2nm", "barcode", "lib_vol_for_2nm", "sample_id", "test_name", "qubit_dna",
     "per_rxn_gdna", "volume", "gdna_volume_3x", "nfw", "plate_designation", "well",
     "qubit_lib_qc_ng_ul", "stock_ng_ul", "lib_vol_for_hyb", "gb_per_sample", "pool_no", "size",
     "i5_index_forward", "sample_volume", "pooling_volume", "pool_conc", "one_tenth_of_nm_conc",
     "data_required", "hospital_name", "run_id", "lib_prep_date", "internal_id", "batch_id",
-    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by"
+    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by",
+
+    // Added run_setup fields below
+
 ];
+
+const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_550", "final_pool_conc_vol_2nm_next_seq_1000_2000", "instument_type", "lib_required_next_seq_550", "loading_conc_550", "loading_conc_1000_2000", "nm_cal", "pool_conc_run_setup", "pool_size", "rsbetween_vol_2nm_next_seq_1000_2000", "selected_application", "seq_run_date", "total_gb_available", "total_required", "total_volume_2nm_next_seq_1000_2000", "total_volume_600pm_next_seq_1000_2000", "total_volume_next_seq_550", "vol_of_2nm_for_600pm_next_seq_1000_2000", "vol_of_rs_between_for_600pm_next_seq_1000_2000", "total_volume_2nm_next_seq_550", "final_pool_conc_vol_2nm_next_seq_550", "nfw_vol_2nm_next_seq_550", "count", "final_pool_vol_ul", "table_data", "ht_buffer_next_seq_1000_2000", "run_remarks"]
 
 const floatFields = [
     "pool_conc", "one_tenth_of_nm_conc", "lib_vol_for_2nm", "nfw_volu_for_2nm",
@@ -77,7 +83,7 @@ async function generateInternalId() {
 
 export async function POST(request) {
     const body = await request.json();
-    const { sample_id, repeat_type, exceptional, user_email } = body;
+    const { sample_id, repeat_type, user_email, comments } = body;
     let response = [];
 
     try {
@@ -108,14 +114,19 @@ export async function POST(request) {
             }
         });
 
-        if (repeat_type === "less_qc") {
+        if (repeat_type === "repeat_from_library") {
             // Keep internal_id, pool_no, batch_id
             newSample.internal_id = await generateInternalId();
             newSample.reference_internal_id = original.internal_id;
-            newSample.pool_no = original.pool_no;
-            newSample.batch_id = original.batch_id;
+            newSample.dna_isolation = "Yes";
+            newSample.lib_prep = "Yes";
+            newSample.location = "repeat";
+            newSample.pool_no = null
+            newSample.batch_id = null;
+            newSample.run_id = null;
+            newSample.reference_id = original.id;
             // Reset all pool_info/run_setup fields except those above
-            poolAndRunSetupFields.forEach(field => {
+            poolFields.forEach(field => {
                 if (!["internal_id", "pool_no", "batch_id", "test_name", "sample_id"].includes(field)) {
                     if (floatFields.includes(field)) {
                         newSample[field] = null;
@@ -132,11 +143,27 @@ export async function POST(request) {
                     }
                 }
             });
-        } else if (repeat_type === "less_data" || exceptional) {
+
+            // Empty all runSetupFields
+            runSetupFields.forEach(field => {
+                if (floatFields.includes(field) || integerFields.includes(field) || dateFields.includes(field)) {
+                    newSample[field] = null;
+                } else {
+                    newSample[field] = "";
+                }
+            });
+            await pool.query(`UPDATE master_sheet SET is_repeated = 'True' WHERE internal_id = $1`, [original.internal_id]);
+        } else if (repeat_type === "repeat_from_sequencing") {
             // Generate new internal_id, pool_no, batch_id
             newSample.internal_id = await generateInternalId();
+            newSample.reference_internal_id = original.internal_id;
             newSample.pool_no = null;
             newSample.batch_id = null;
+            newSample.dna_isolation = "Yes";
+            newSample.lib_prep = "Yes";
+            newSample.location = "repeat";
+            newSample.run_id = null;
+            newSample.reference_id = original.id;
             console.log('newsample.internal_id', newSample.internal_id);
 
             // Only empty the specified columns, copy others from original
@@ -145,7 +172,7 @@ export async function POST(request) {
                 "one_tenth_of_nm_conc", "lib_vol_for_2nm", "nfw_volu_for_2nm", "total_vol_for_2nm"
             ];
 
-            poolAndRunSetupFields.forEach(field => {
+            poolFields.forEach(field => {
                 if (field === "internal_id") {
                     return; // 🔒 Don't overwrite generated internal_id
                 }
@@ -153,7 +180,25 @@ export async function POST(request) {
                     newSample[field] = null;
                     return;
                 }
-                if (repeat_type === "less_data" && !exceptional) {
+                if (emptyFields.includes(field)) {
+                    if (floatFields.includes(field) || integerFields.includes(field) || dateFields.includes(field)) {
+                        newSample[field] = null;
+                    } else {
+                        newSample[field] = "";
+                    }
+                } else {
+                    let value = original[field];
+                    if (dateFields.includes(field)) {
+                        newSample[field] = value ? value : null;
+                    } else if (integerFields.includes(field)) {
+                        newSample[field] = (value === "" || value === null || value === undefined) ? null : Number(value);
+                    } else if (floatFields.includes(field)) {
+                        newSample[field] = (value === "" || value === null || value === undefined) ? null : parseFloat(value);
+                    } else {
+                        newSample[field] = value ?? "";
+                    }
+                }
+                if (repeat_type === "repeat_from_sequencing") {
                     if (emptyFields.includes(field)) {
                         if (floatFields.includes(field) || integerFields.includes(field) || dateFields.includes(field)) {
                             newSample[field] = null;
@@ -172,19 +217,19 @@ export async function POST(request) {
                             newSample[field] = value ?? "";
                         }
                     }
-                } else {
-                    if (sampleRegistrationFields.includes(field) || field === "internal_id") {
-                        // Already copied above, skip
-                        return;
-                    }
-                    // For exceptional, empty all pool/run fields
-                    if (floatFields.includes(field) || integerFields.includes(field) || dateFields.includes(field)) {
-                        newSample[field] = null;
-                    } else {
-                        newSample[field] = "";
-                    }
                 }
             });
+
+            // Empty all runSetupFields
+            runSetupFields.forEach(field => {
+                if (floatFields.includes(field) || integerFields.includes(field) || dateFields.includes(field)) {
+                    newSample[field] = null;
+                } else {
+                    newSample[field] = "";
+                }
+            });
+            await pool.query(`UPDATE master_sheet SET dna_isolation = 'Yes' , lib_prep = 'Yes' , location = 'repeat' WHERE internal_id = $1`, [newSample.internal_id]);
+            await pool.query(`UPDATE master_sheet SET is_repeated = 'True' WHERE internal_id = $1`, [original.internal_id]);
         } else {
             response.push({ status: 400, message: "Invalid repeat type" });
             return NextResponse.json(response);
@@ -200,11 +245,6 @@ export async function POST(request) {
         const values = columns.map((col) => newSample[col]);
         const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(", ");
 
-        console.log('columns', columns);
-        console.log('columns.internal_id', columns.includes('internal_id'));
-        console.log('values', values);
-        console.log('values.internal_id', values.includes(newSample.internal_id));
-
         const insertQuery = `
       INSERT INTO master_sheet (${columns.join(", ")})
       VALUES (${placeholders})
@@ -217,7 +257,7 @@ export async function POST(request) {
             `INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`,
             [
                 newSample.sample_id,
-                `Repeat sample created (${repeat_type}${exceptional ? " - exceptional" : ""})`,
+                `Repeat sample created because of ${comments}`,
                 user_email,
                 new Date(),
             ]
@@ -226,6 +266,7 @@ export async function POST(request) {
         response.push({
             status: 200,
             message: "Repeat sample created",
+            internal_id: newSample.internal_id,
             data: insertResult.rows[0],
         });
         return NextResponse.json(response);

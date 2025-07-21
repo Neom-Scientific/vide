@@ -112,7 +112,7 @@ const Reports = () => {
     { key: 'client_id', label: 'Client ID' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
-    { key: 'sex', label: 'Gender' },
+    { key: 'gender', label: 'Gender' },
     { key: 'ethnicity', label: 'Ethnicity' },
     { key: 'father_mother_name', label: 'Father/Mother Name' },
     // { key: 'spouse_name', label: 'Spouse Name' },
@@ -160,10 +160,10 @@ const Reports = () => {
     }
   })
 
-  const handleChangeCheckbox = async (e, columnKey, sampleId) => {
+  const handleChangeCheckbox = async (e, columnKey, InternalId) => {
     const isChecked = e.target.checked;
     try {
-      console.log('Updating:', sampleId, columnKey, isChecked);
+      console.log('Updating:', InternalId, columnKey, isChecked);
 
       // Prepare the updates object
       const updates = {
@@ -172,7 +172,7 @@ const Reports = () => {
 
       // Send the PUT request with the correct structure
       const response = await axios.put('/api/store', {
-        sample_id: sampleId, // Pass the sample_id
+        internal_id: InternalId, // Pass the sample_id
         updates, // Pass the updates object
       });
 
@@ -182,7 +182,7 @@ const Reports = () => {
         // Update the tableRows state to reflect the change
         setTableRows(prevRows =>
           prevRows.map(row =>
-            row.sample_id === sampleId
+            row.internal_id === InternalId
               ? { ...row, [columnKey]: isChecked ? "Yes" : "No" }
               : row
           )
@@ -225,6 +225,7 @@ const Reports = () => {
       const updates = {
         report_releasing_date: reportReleasingDate,
         sample_status: "Reported",
+        location:'reported',
         tat_days: tatDays,
       };
 
@@ -240,7 +241,14 @@ const Reports = () => {
       });
 
       if (response.data[0].status === 200) {
-        toast.success(`Report (${isMito ? 'Mito' : 'Main'}) uploaded successfully!`);
+        toast.success(`Report (${isMito ? 'Mito' : 'Main'}) uploaded`);
+        const data= {
+          sample_id: sampleId,
+          comments: `Report ${isMito ? 'Mito' : 'Main'} uploaded`,
+          changed_by: user.email,
+          changed_at: new Date().toISOString(),
+        }
+        const res = await axios.post('/api/audit-logs',data);
         setTableRows((prevRows) =>
           prevRows.map((row) => {
             if (row.sample_id === sampleId) {
@@ -347,13 +355,13 @@ const Reports = () => {
             header: col.label,
             cell: info => {
               const value = info.getValue();
-              const sampleId = info.row.original.sample_id;
+              const InternalId = info.row.original.internal_id;
               return (
                 <input
                   type="checkbox"
                   className='border border-orange-400'
                   checked={value === "Yes"}
-                  onChange={e => handleChangeCheckbox(e, col.key, sampleId)}
+                  onChange={e => handleChangeCheckbox(e, col.key, InternalId)}
                 />
               );
             },
@@ -688,7 +696,7 @@ const Reports = () => {
               className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
             >
               <option value="">Select Sample Status</option>
-              <option value="reporting">Ready for Reporting</option>
+              <option value="reporting">Under Reporting</option>
               <option value="reported">Reported</option>
             </select>
           </div>
@@ -826,7 +834,7 @@ const Reports = () => {
           {/* Table */}
           <div className="">
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap" style={{ maxWidth: 'calc(100vw - 60px)' }}>
-              <div className="h-[500px] overflow-y-auto w-full">
+              <div className="max-h-[70vh] overflow-y-auto w-full">
                 <table className="min-w-full border-collapse table-auto">
                   <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-50">
                     {table.getHeaderGroups().map((headerGroup) => (

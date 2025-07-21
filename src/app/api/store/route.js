@@ -16,6 +16,7 @@ export async function POST(request) {
         if (key !== "file") fields[key] = value;
     }
     const file = formData.get("file");
+
     try {
         let response = [];
         const {
@@ -37,7 +38,7 @@ export async function POST(request) {
             patient_name,
             DOB,
             age,
-            sex,
+            gender,
             ethnicity,
             father_mother_name,
             spouse_name,
@@ -67,7 +68,12 @@ export async function POST(request) {
             aspirin_therapy,
             tantive_report_date,
             patient_email,
+            trf_checkbox,
+            opd_notes_checkbox,
+            consent_form_checkbox,
         } = fields;
+
+        console.log('fields.dept_name', dept_name);
 
         const today = new Date(registration_date || Date.now());
         const todayStr = today.toISOString().slice(0, 10);
@@ -189,7 +195,7 @@ export async function POST(request) {
                 patient_name,
                 DOB,
                 age,
-                sex,
+                gender,
                 ethnicity,
                 father_mother_name,
                 spouse_name,
@@ -227,7 +233,11 @@ export async function POST(request) {
                 annotation,
                 project_id,
                 patient_email,
-                sample_status
+                sample_status,
+                location,
+                trf_checkbox,
+                opd_notes_checkbox,
+                consent_form_checkbox
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
@@ -236,7 +246,7 @@ export async function POST(request) {
                 $26, $27, $28, $29, $30,
                 $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                 $41, $42, $43, $44, $45, $46,$47, $48,
-                $49, $50, $51, $52, $53, $54, $55, $56, $57
+                $49, $50, $51, $52, $53, $54, $55, $56, $57,$58, $59,$60,$61
             )
             RETURNING *
         `;
@@ -248,7 +258,7 @@ export async function POST(request) {
             registration_date || null,
             sample_date || null,
             sample_type,
-            trf_file_id || null,
+            JSON.stringify(trf_file_id) || null,
             collection_date_time || null,
             storage_condition,
             prority,
@@ -259,7 +269,7 @@ export async function POST(request) {
             patient_name,
             DOB || null,
             age,
-            sex,
+            gender,
             ethnicity,
             father_mother_name,
             spouse_name,
@@ -297,7 +307,11 @@ export async function POST(request) {
             "No", // annotaion
             project_id,
             patient_email,
-            "processing"
+            "processing",
+            "monitering",
+            trf_checkbox || 'No',
+            opd_notes_checkbox || 'No',
+            consent_form_checkbox || 'No'
         ];
         const result = await pool.query(query, values);
         const insertedData = result.rows[0];
@@ -377,13 +391,13 @@ export async function GET(request) {
 
 export async function PUT(request) {
     const body = await request.json();
-    const { sample_id, updates, auditLog } = body;
+    const { internal_id, updates, auditLog } = body;
     try {
         const response = [];
-        if (!sample_id || !updates || typeof updates !== "object") {
+        if (!internal_id || !updates || typeof updates !== "object") {
             response.push({
                 status: 400,
-                message: "Sample ID and updates are required.",
+                message: "Internal ID and updates are required.",
             });
             return NextResponse.json(response, { status: 400 });
         }
@@ -402,7 +416,7 @@ export async function PUT(request) {
         });
         const columns = Object.keys(updatesCleanedLower);
         const values = Object.values(updatesCleanedLower);
-        values.push(sample_id);
+        values.push(internal_id);
 
         if (columns.length === 0) {
             response.push({
@@ -416,7 +430,7 @@ export async function PUT(request) {
         const query = `
             UPDATE master_sheet
             SET ${setClause}
-            WHERE sample_id = $${columns.length + 1}
+            WHERE internal_id = $${columns.length + 1}
             RETURNING *
         `;
 
@@ -425,29 +439,32 @@ export async function PUT(request) {
         if (result.rowCount === 0) {
             response.push({
                 status: 404,
-                message: "Sample ID not found or no updates made.",
+                message: "Internal ID not found or no updates made.",
             });
         } else {
-            const safeChanges = Array.isArray(auditLog.changes)
-                ? auditLog.changes.map(change => ({
-                    field: String(change.field ?? ''),
-                    oldValue: String(change.oldValue ?? ''),
-                    newValue: String(change.newValue ?? '')
-                }))
-                : [];
+            if (auditLog) {
+                const safeChanges = auditLog && Array.isArray(auditLog.changes)
+                    ? auditLog.changes.map(change => ({
+                        field: String(change.field ?? ''),
+                        oldValue: String(change.oldValue ?? ''),
+                        newValue: String(change.newValue ?? '')
+                    }))
+                    : [];
 
-            const auditQuery = `
-                 INSERT INTO audit_logs (sample_id, changed_by, changes, changed_at)
-                 VALUES ($1, $2, $3::jsonb, $4)
-                `;
+                const auditQuery = `
+                     INSERT INTO audit_logs (sample_id, changed_by, changes, changed_at, comments)
+                     VALUES ($1, $2, $3::jsonb, $4, $5)
+                    `;
 
-            const auditValues = [
-                auditLog.sample_id,
-                auditLog.changed_by,
-                JSON.stringify(safeChanges),  // ✅ must be stringified
-                auditLog.changed_at           // ✅ make sure this is valid date string or object
-            ];
-            await pool.query(auditQuery, auditValues);
+                const auditValues = [
+                    auditLog.sample_id,
+                    auditLog.changed_by,
+                    JSON.stringify(safeChanges) || null,
+                    auditLog.changed_at,
+                    auditLog.comments || null
+                ];
+                await pool.query(auditQuery, auditValues);
+            }
 
             response.push({
                 status: 200,

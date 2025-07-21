@@ -18,7 +18,7 @@ export async function GET(request) {
              WHEN test_name ILIKE '%+%mito' THEN TRIM(SPLIT_PART(test_name, '+', 1))
              ELSE test_name
              END AS base_test_name,
-             array_agg(sample_id) AS sample_ids
+             array_agg(internal_id) AS internal_ids
              FROM pool_info
              WHERE hospital_name = $1 AND run_id IS NULL
              GROUP BY base_test_name
@@ -35,7 +35,7 @@ export async function GET(request) {
         else {
             const data = rows.map(row => ({
                 test_name: row.base_test_name,
-                sample_ids: row.sample_ids || []
+                internal_ids: row.internal_ids || []
             }));
             response.push({
                 status: 200,

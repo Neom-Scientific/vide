@@ -9,8 +9,8 @@ export async function GET(request) {
         return val ? val.split(',').map(v => v.trim()).filter(Boolean) : [];
     };
     const testNames = parseList('application'); // Parse test names from query parameters
-    const sample_ids = parseList('sample_id').filter(id => typeof id === 'string' && id.trim().length > 0); // Ensure sample_ids are non-empty strings
-    // console.log('sample_ids', sample_ids);
+    const internal_ids = parseList('internal_id').filter(id => typeof id === 'string' && id.trim().length > 0); // Ensure internal_ids are non-empty strings
+    console.log('internal_ids', internal_ids);
 
     try {
         const response = [];
@@ -32,11 +32,11 @@ export async function GET(request) {
             });
         }
 
-        // Query by sample_ids if provided
-        if (sample_ids.length > 0) {
+        // Query by internal_ids if provided
+        if (internal_ids.length > 0) {
             const { rows } = await pool.query(
-                `SELECT * FROM master_sheet WHERE sample_id = ANY($1::text[]) ORDER BY registration_date;`,
-                [sample_ids]
+                `SELECT * FROM master_sheet WHERE internal_id = ANY($1::text[]) ORDER BY registration_date;`,
+                [internal_ids]
             );
 
             if (rows.length === 0) {
@@ -49,8 +49,8 @@ export async function GET(request) {
             }
         }
 
-        // If no sample_ids provided, query by hospital_name and testNames
-        if (sample_ids.length === 0 && hospital_name && testNames.length > 0) {
+        // If no internal_ids provided, query by hospital_name and testNames
+        if (internal_ids.length === 0 && hospital_name && testNames.length > 0) {
             for (const testName of testNames) {
                 const { rows } = await pool.query(
                     `SELECT * FROM pool_info WHERE hospital_name = $1 AND test_name = $2 ;`,
@@ -69,7 +69,7 @@ export async function GET(request) {
         }
 
         // Remove duplicate rows from poolData
-        const uniquePoolData = Array.from(new Map(poolData.map(item => [item.sample_id, item])).values());
+        const uniquePoolData = Array.from(new Map(poolData.map(item => [item.internal_id, item])).values());
 
         // Return successful response
         response.push({
@@ -90,13 +90,14 @@ export async function GET(request) {
 
 export async function PUT(request) {
     const body = await request.json();
-    const { sample_id, sample_indicator, indicator_status } = body.data;
+    const { sample_id, sample_indicator, indicator_status ,changed_by , internal_id} = body.data;
     // console.log('body', body);
     try {
         const response = [];
 
         if (sample_indicator === 'dna_isolation') {
-            await pool.query(`UPDATE master_sheet SET dna_isolation = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
+            await pool.query(`UPDATE master_sheet SET dna_isolation = $2 WHERE internal_id = $1`, [internal_id, indicator_status]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'DNA Isolation status updated', changed_by, new Date()]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 indicator_status: indicator_status,
@@ -104,7 +105,8 @@ export async function PUT(request) {
             });
         }
         else if (sample_indicator === 'lib_prep') {
-            await pool.query(`UPDATE master_sheet SET lib_prep = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
+            await pool.query(`UPDATE master_sheet SET lib_prep = $2 WHERE internal_id = $1`, [internal_id, indicator_status]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'Library Preparation status updated', changed_by, new Date()]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 indicator_status: indicator_status,
@@ -112,14 +114,16 @@ export async function PUT(request) {
             });
         }
         else if (sample_indicator === 'under_seq') {
-            await pool.query(`UPDATE master_sheet SET under_seq = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
+            await pool.query(`UPDATE master_sheet SET under_seq = $2 WHERE internal_id = $1`, [internal_id, indicator_status]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'Under Sequencing status updated', changed_by, new Date()]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 status: 200
             });
         }
         else if (sample_indicator === 'seq_completed') {
-            await pool.query(`UPDATE master_sheet SET seq_completed = $2 WHERE sample_id = $1`, [sample_id, indicator_status]);
+            await pool.query(`UPDATE master_sheet SET seq_completed = $2,location = $3 WHERE internal_id = $1`, [internal_id, indicator_status, 'seq_completed']);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'Sequencing Completed status updated', changed_by, new Date()]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 status: 200
@@ -191,13 +195,6 @@ export async function POST(request) {
                     lib_prep_date: new Date().toISOString(),
                 };
 
-                // await pool.query(
-                //     `INSERT INTO pool_info (qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size, test_name, hospital_name, lib_prep_date)
-                //      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-                //     [sanitized.qubit_dna, sanitized.data_required, sanitized.conc_rxn, sanitized.barcode, sanitized.i5_index_reverse, sanitized.i7_index,
-                //     sanitized.lib_qubit, sanitized.nm_conc, sanitized.lib_vol_for_2nm, sanitized.nfw_volu_for_2nm, sanitized.total_vol_for_2nm,
-                //     sanitized.size, testName, hospital_name, lib_prep_date]
-                // );
                 await pool.query(`INSERT INTO pool_info (qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size, test_name, hospital_name, lib_prep_date,sample_id, internal_id, batch_id , vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool)
                      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) 
                      ON CONFLICT (internal_id) 

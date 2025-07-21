@@ -1,16 +1,12 @@
 import React, { use, useEffect, useState } from "react";
 import {
-  ColumnDef,
-  SortingState,
-  VisibilityState,
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Hand } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,13 +22,20 @@ import { toast, ToastContainer } from "react-toastify";
 import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
-
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Processing = () => {
   const user = JSON.parse(Cookies.get("user") || "{}");
   const [processing, setProcessing] = useState(false);
+  const [showAuditSidebar, setShowAuditSidebar] = useState(false);
+  const [auditSampleId, setAuditSampleId] = useState("");
+  const [auditData, setAuditData] = useState([]);
+  const [showRepeatDialog, setShowRepeatDialog] = useState(false);
+  const [repeatRow, setRepeatRow] = useState(null);
+  const indicatorKeys = ["dna_isolation", "lib_prep", "under_seq", "seq_completed"];
 
   const allColumns = [
+    // { key: 'id', label: 'Serial No.' },
     { key: 'hospital_name', label: 'Organization Name' },
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
@@ -53,7 +56,7 @@ const Processing = () => {
     { key: 'patient_name', label: 'Patient Name' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
-    { key: 'sex', label: 'Gender' },
+    { key: 'gender', label: 'Gender' },
     { key: 'ethnicity', label: 'Ethnicity' },
     { key: 'father_mother_name', label: 'Father/Mother Name' },
     // { key: 'spouse_name', label: 'Spouse Name' },
@@ -185,6 +188,12 @@ const Processing = () => {
   const [tableRows, setTableRows] = useState(rows);
   const [selectedTestNames, setSelectedTestNames] = useState([]);
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
+  const [columnSearch, setColumnSearch] = useState("")
+  const [sorting, setSorting] = useState([]);
+  const [rowSelection, setRowSelection] = useState(() => {
+    const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
+    return {};
+  });
   const dispatch = useDispatch();
 
   const handleEditRow = (rowData) => {
@@ -197,15 +206,89 @@ const Processing = () => {
   };
 
   const isPrivilegedUser = user?.role === "AdminUser" || user?.role === "SuperAdmin";
+
   const columns = React.useMemo(() => [
+
     {
-      accessorKey: "sno",
+      id: 'select',
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllRowsSelected()}
+          onCheckedChange={value => {
+            // Only select rows that are eligible for Library Preparation
+            table.getRowModel().rows.forEach(row => {
+              const rowData = row.original;
+              if (rowData.location === "monitering") {
+                const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.lib_prep !== "Yes";
+                if (!disabled) {
+                  row.toggleSelected(!!value);
+                }
+              }
+            });
+            // After toggling, collect all selected internal_ids and store in localStorage
+            // Use a timeout to ensure selection state is updated
+            setTimeout(() => {
+              const selectedIds = table.getSelectedRowModel().rows.map(r => r.original.internal_id);
+              localStorage.setItem("selectedLibraryPrepSamples", JSON.stringify(selectedIds));
+            }, 0);
+          }}
+          className="border border-orange-400"
+        />
+      ),
+      cell: ({ row }) => {
+        const rowData = row.original;
+        const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.lib_prep !== "Yes";
+        return disabled
+          ? (
+            <Checkbox
+              checked={false}
+              disabled={true}
+              className="border border-orange-400"
+            />
+          )
+          : (
+            <Checkbox
+              checked={row.getIsSelected()}
+              onCheckedChange={value => {
+                if (value && rowData.location && rowData.under_seq === "Yes" && rowData.seq_completed === 'No') {
+                  setRepeatRow(rowData);
+                  setShowRepeatDialog(true);
+                  // Optionally, do not select the row until dialog is handled
+                  return;
+                }
+                row.toggleSelected(!!value);
+
+              }}
+              className="border border-orange-400"
+            />
+          );
+      },
+      enableSorting: false,
+      enableHiding: false,
+    },
+
+    {
+      accessorKey: "id",
       header: "S. No.",
       cell: ({ row }) => row.index + 1,
       enableSorting: true,
       enableHiding: false,
     },
+
+
     ...allColumns.map((col) => {
+
+      if (col.key === "internal_id") {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const row = info.row.original;
+            return row.reference_internal_id ? row.reference_internal_id : row.internal_id || "";
+          },
+        };
+      }
       if (col.key === "registration_date" || col.key === "sample_date" || col.key === "repeat_date" || col.key === "seq_run_date" || col.key === "report_releasing_date" || col.key === "lib_prep_date" || col.key === "collection_date_time") {
         return {
           accessorKey: col.key,
@@ -217,7 +300,30 @@ const Processing = () => {
             const date = new Date(value);
             if (isNaN(date)) return value;
             // Format: YYYY-MM-DD HH:mm
-            return <span>{new Date(value).toLocaleDateString()}</span> || "";
+            const formattedDate = new Date(value).toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            }); // Format as dd-mm-yyyy
+            return <span>{formattedDate}</span> || "";
+          },
+        };
+      }
+      if (col.key === 'sample_id') {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const value = info.getValue();
+            return (
+              <button
+                className="cursor-pointer"
+                onClick={() => handleShowAudit(value)}
+              >
+                <abbr className="underline [text-decoration-style:solid]" title="Click to display the Comments & History">{value}</abbr>
+              </button>
+            );
           },
         };
       }
@@ -227,20 +333,49 @@ const Processing = () => {
           header: col.label,
           enableSorting: true,
           cell: (info) => {
-            const isChecked = info.getValue() === "Yes";
             const rowIdx = info.row.index;
             const rowData = info.row.original;
+            const indicators = [
+              rowData.dna_isolation === "Yes",
+              rowData.lib_prep === "Yes",
+              rowData.under_seq === "Yes",
+              rowData.seq_completed === "Yes"
+            ];
+            const indicatorKeys = ["dna_isolation", "lib_prep", "under_seq", "seq_completed"];
+            const idx = indicatorKeys.indexOf(col.key);
 
-            // Disable logic
+            // If seq_completed is checked, disable all
+            if (rowData.seq_completed === "Yes") {
+              return (
+                <Checkbox
+                  checked={rowData[col.key] === "Yes"}
+                  className="border border-orange-400"
+                  disabled={true}
+                />
+              );
+            }
+
+            // If any later indicator is checked, disable previous ones
+            const laterChecked = indicators.slice(idx + 1).some(Boolean);
+            if (laterChecked) {
+              return (
+                <Checkbox
+                  checked={rowData[col.key] === "Yes"}
+                  className="border border-orange-400"
+                  disabled={true}
+                />
+              );
+            }
+
+            // Enable only if previous is checked (except for the first)
             let disabled = false;
-            if (col.key === "dna_isolation" && rowData.lib_prep === "Yes") disabled = true;
-            if (col.key === "lib_prep" && (rowData.under_seq === "Yes" || rowData.seq_completed === "Yes")) disabled = true;
-            if (col.key === "dna_isolation" && (rowData.under_seq === "Yes" || rowData.seq_completed === "Yes")) disabled = true;
-            if (col.key === "under_seq" && rowData.seq_completed === "Yes") disabled = true;
+            if (idx > 0 && !indicators[idx - 1]) {
+              disabled = true;
+            }
 
             return (
               <Checkbox
-                checked={isChecked}
+                checked={rowData[col.key] === "Yes"}
                 className="border border-orange-400"
                 disabled={disabled}
                 onCheckedChange={async (checked) => {
@@ -250,18 +385,20 @@ const Processing = () => {
                     [col.key]: checked ? "Yes" : "No",
                   };
                   setTableRows((prev) =>
-                    prev.map((row, idx) => (idx === rowIdx ? updatedRow : row))
+                    prev.map((row, i) => (i === rowIdx ? updatedRow : row))
                   );
                   const payload = {
                     sample_id: updatedRow.sample_id,
+                    internal_id: updatedRow.internal_id,
                     sample_indicator: col.key,
                     indicator_status: checked ? "Yes" : "No",
+                    changed_by: user.email
                   };
                   try {
                     const response = await axios.put("/api/pool-data", { data: payload });
                     if (response.data[0].status === 200) {
-                      const updatedRows = tableRows.map((row, idx) =>
-                        idx === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
+                      const updatedRows = tableRows.map((row, i) =>
+                        i === rowIdx ? { ...row, [col.key]: checked ? "Yes" : "No" } : row
                       );
                       setTableRows(updatedRows);
                       localStorage.setItem("searchData", JSON.stringify(updatedRows));
@@ -302,6 +439,8 @@ const Processing = () => {
         cell: (info) => info.getValue() || "",
       };
     }),
+
+
     ...(isPrivilegedUser ? [{
       accessorKey: "actions",
       header: "Actions",
@@ -312,7 +451,7 @@ const Processing = () => {
         return (
           <Button
             variant="outline"
-            className="text-sm"
+            className="text-sm cursor-pointer text-black dark:text-white"
             onClick={() => handleEditRow(rowData)}
           >
             Edit
@@ -320,10 +459,11 @@ const Processing = () => {
         );
       },
     }] : []),
+
   ], [allColumns, user, tableRows]);
 
   const defaultVisible = [
-    "sno",
+    "id",
     "sample_id",
     "internal_id",
     "registration_date",
@@ -344,14 +484,10 @@ const Processing = () => {
     }, {})
   );
 
-  // Dynamically update column visibility when `showLibPrepColumns` changes
-
-  const [sorting, setSorting] = useState([]);
-  const [rowSelection, setRowSelection] = useState({});
-
   const table = useReactTable({
     data: tableRows,
     columns,
+    rowSelection,
     state: {
       sorting,
       columnVisibility,
@@ -381,16 +517,30 @@ const Processing = () => {
     if (savedData) {
       const parsedData = JSON.parse(savedData);
       // Map the data to ensure checkbox fields are "Yes"/"No"
-      const mappedData = parsedData.map((row) => ({
-        ...row,
-        dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
-        lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
-        under_seq: row.under_seq === "Yes" ? "Yes" : "No",
-        seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
-      }));
+      const mappedData = parsedData
+        .filter(row => row.is_repeated !== "True")
+        .map((row) => ({
+          ...row,
+          dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+          lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+          under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+          seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+        }));
       setTableRows(mappedData); // Update the tableRows state with the mapped data
     }
   }, []);
+
+  useEffect(() => {
+    const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
+    // Find row indices for selected internal_ids
+    const selection = {};
+    tableRows.forEach((row, idx) => {
+      if (selectedIds.includes(row.internal_id)) {
+        selection[idx] = true;
+      }
+    });
+    setRowSelection(selection);
+  }, [tableRows]);
 
   const handlesubmit = async () => {
     setProcessing(true);
@@ -418,17 +568,31 @@ const Processing = () => {
 
       if (response.data[0].status === 200) {
         // Map the data to ensure checkbox fields are "Yes"/"No"
-        const mappedData = response.data[0].data.map((row) => ({
-          ...row,
-          dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
-          lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
-          under_seq: row.under_seq === "Yes" ? "Yes" : "No",
-          seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
-        }));
+        const mappedData = response.data[0].data
+          .map((row) => ({
+            ...row,
+            dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+            lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+            under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+            seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+          }));
+
+        // Deduplicate: keep only the latest occurrence (repeat if exists)
+        const latestRows = Object.values(
+          mappedData.reduce((acc, row) => {
+            // Use sample_id or internal_id as key
+            const key = row.sample_id || row.internal_id;
+            // If repeated, always prefer it
+            if (!acc[key] || row.is_repeated === "True") {
+              acc[key] = row;
+            }
+            return acc;
+          }, {})
+        );
         setProcessing(false);
-        console.log('mappedData:', mappedData); // Debugging mapped data
-        setTableRows(mappedData); // Update the tableRows state with the mapped data
-        localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
+        console.log('latestRows:', latestRows); // Debugging mapped data
+        setTableRows(latestRows); // Update the tableRows state with the mapped data
+        localStorage.setItem("searchData", JSON.stringify(latestRows)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the given filters.");
         setProcessing(false);
@@ -445,7 +609,7 @@ const Processing = () => {
 
   };
 
-  const isAnyLibPrepChecked = tableRows.some(row => row.lib_prep === "Yes");
+  const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
 
   const pooledColumns = [
     "pool_conc",
@@ -459,15 +623,33 @@ const Processing = () => {
     "volume_from_40nm_for_total_25ul_pool",
   ];
 
-  const handleSendForLibraryPreparation = () => {
-    const checkedRows = tableRows.filter(row => row.lib_prep === "Yes");
-    if (checkedRows.length === 0) {
+  const handleSendForLibraryPreparation = async () => {
+    const validRows = selectedRows.filter(row => row.specimen_quality !== 'Not Accepted');
+    if (validRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
       return;
     }
 
+    for (const row of validRows) {
+      try {
+        const auditLog = {
+          sample_id: row.sample_id,
+          changed_by: user.email,
+          comments: `Sample moved to Library Preparation`,
+          changed_at: new Date().toISOString()
+        };
+        await axios.put("/api/store", {
+          internal_id: row.internal_id,
+          updates: { location: "lib_prep" },
+          auditLog
+        });
+      } catch (err) {
+        // toast.error(`Failed to update location for sample ${row.sample_id}`);
+      }
+    }
+
     // Group new rows by main test name (strip " + Mito" if present)
-    const newGroupedData = checkedRows.reduce((acc, row) => {
+    const newGroupedData = validRows.reduce((acc, row) => {
       // Extract main test name (before " + Mito")
       const mainTestName = row.test_name.includes(" + Mito")
         ? row.test_name.split(" + Mito")[0].trim()
@@ -637,13 +819,18 @@ const Processing = () => {
 
           if (response.data[0].status === 200) {
             // Map the data to ensure checkbox fields are "Yes"/"No"
-            const mappedData = response.data[0].data.map((row) => ({
-              ...row,
-              dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
-              lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
-              under_seq: row.under_seq === "Yes" ? "Yes" : "No",
-              seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
-            }));
+            const mappedData = response.data[0].data
+              .map((row) => ({
+                ...row,
+                dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
+                lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
+                under_seq: row.under_seq === "Yes" ? "Yes" : "No",
+                seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
+              }))
+              .filter(row => {
+                if (!filters.run_id) return true;
+                return row.run_id === filters.run_id;
+              });
             setProcessing(false);
             console.log('mappedData:', mappedData); // Debugging mapped data
             setTableRows(mappedData); // Update the tableRows state with the mapped data
@@ -665,6 +852,37 @@ const Processing = () => {
     fetchInUseEffect();
   }, [])
 
+  const handleShowAudit = async (sampleId) => {
+    setAuditSampleId(sampleId);
+    setShowAuditSidebar(true);
+    try {
+      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}`);
+      setAuditData(res.data[0]?.logs || []);
+    } catch (e) {
+      setAuditData([]);
+      toast.error("Failed to fetch audit data.");
+    }
+  };
+
+
+  useEffect(() => {
+    setColumnVisibility(prev => {
+      const updated = { ...prev };
+      if (!filters.sample_indicator) {
+        // Show all indicator columns if none selected
+        indicatorKeys.forEach(key => {
+          updated[key] = true;
+        });
+      } else {
+        // Show only the selected indicator column
+        indicatorKeys.forEach(key => {
+          updated[key] = key === filters.sample_indicator;
+        });
+      }
+      return updated;
+    });
+  }, [filters.sample_indicator]);
+
   return (
     <div className="p-4">
 
@@ -672,6 +890,7 @@ const Processing = () => {
       {/* Top Filters */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4 items-end ">
+
           <div>
             <label className="block font-semibold mb-1">Sample id</label>
             <Input
@@ -682,6 +901,7 @@ const Processing = () => {
               className="w-full border-2 border-orange-300"
             />
           </div>
+
           <div>
             <label className="block font-semibold mb-1 whitespace-nowrap">Test name</label>
             <DropdownMenu>
@@ -694,15 +914,34 @@ const Processing = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="min-w-[250px]">
+                {/* Select All Option */}
+                <DropdownMenuItem
+                  onClick={() => {
+                    handleFilterChange('selectedTestNames', allTests);
+                  }}
+                  disabled={selectedTestNames.length === allTests.length}
+                >
+                  <span className="text-sm font-semibold">Select All</span>
+                </DropdownMenuItem>
+                {/* Deselect All Option */}
+                <DropdownMenuItem
+                  onClick={() => {
+                    handleFilterChange('selectedTestNames', []);
+                  }}
+                  disabled={selectedTestNames.length === 0}
+                >
+                  <span className="text-sm font-semibold">Deselect All</span>
+                </DropdownMenuItem>
+                {/* Divider */}
+                <div className="border-b border-gray-200 my-1" />
+                {/* Individual Test Options */}
                 {allTests
                   .filter(test => !selectedTestNames.includes(test))
                   .map(test => (
                     <DropdownMenuItem
                       key={test}
                       onClick={() => {
-                        if (selectedTestNames.includes(test)) {
-                          return;
-                        }
+                        if (selectedTestNames.includes(test)) return;
                         const updated = [...filters.selectedTestNames, test];
                         handleFilterChange('selectedTestNames', updated);
                       }}
@@ -713,9 +952,10 @@ const Processing = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+
           <div>
             <label className="block font-semibold mb-1">Selected Test Name</label>
-            <div className="flex border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 min-h-[42px] w-full">
+            <div className="flex border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 min-h-[42px] w-full overflow-y-auto max-h-20">
               {selectedTestNames.length === 0 && (
                 <span className="text-gray-400 dark:text-white">No test added</span>
               )}
@@ -740,6 +980,7 @@ const Processing = () => {
               ))}
             </div>
           </div>
+
           <div>
             <label className="block font-semibold mb-1">Sample Status</label>
             <select
@@ -751,6 +992,7 @@ const Processing = () => {
               <option value="">Select Sample Status</option>
               <option value="processing">Under Processing</option>
               <option value="reporting">Ready for Reporting</option>
+              <option value='Not Accepted'>Rejected</option>
             </select>
           </div>
           <div>
@@ -758,10 +1000,8 @@ const Processing = () => {
             <select
               name='sample_indicator'
               className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-              onChange={e => {
-                const options = Array.from(e.target.selectedOptions, option => option.value);
-                setSelectedSampleIndicator(options);
-              }}
+              value={filters.sample_indicator}
+              onChange={e => handleFilterChange('sample_indicator', e.target.value)}
             >
               <option value="">Select the Sample Indicator</option>
               <option value="dna_isolation">DNA Isolation</option>
@@ -843,34 +1083,63 @@ const Processing = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
+                {/* Always visible search bar */}
+                <div className="sticky top-0 bg-white dark:bg-gray-900 z-10 px-2 py-2">
+                  <Input
+                    type="text"
+                    placeholder="Search columns..."
+                    value={columnSearch}
+                    onChange={e => setColumnSearch(e.target.value)}
+                    className="w-full border border-orange-300 rounded-md"
+                    onPointerDown={e => e.stopPropagation()} // Prevent dropdown from closing on mouse
+                    onKeyDown={e => e.stopPropagation()}     // Prevent dropdown from closing on keyboard
+                  />
+                </div>
+                {/* Only show checkboxes for columns that match the search */}
                 <DropdownMenuCheckboxItem
-                  checked={Object.values(table.getState().columnVisibility).every(Boolean)} // Check if all are visible
-                  onCheckedChange={(value) =>
-                    table.getAllLeafColumns().forEach((column) => column.toggleVisibility(!!value))
+                  checked={Object.values(table.getState().columnVisibility).every(Boolean)}
+                  onCheckedChange={value =>
+                    table.getAllLeafColumns()
+                      .filter(column => {
+                        const header = column.columnDef.header;
+                        const headerText = typeof header === "string" ? header : column.id;
+                        return headerText.toLowerCase().includes(columnSearch.toLowerCase());
+                      })
+                      .forEach(column => column.toggleVisibility(!!value))
                   }
                 >
                   Select All
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
-                  // Deselect All: show only defaultVisible columns
                   onClick={() => {
-                    table.getAllLeafColumns().forEach((column) => {
-                      column.toggleVisibility(defaultVisible.includes(column.id));
-                    });
+                    table.getAllLeafColumns()
+                      .filter(column => {
+                        const header = column.columnDef.header;
+                        const headerText = typeof header === "string" ? header : column.id;
+                        return headerText.toLowerCase().includes(columnSearch.toLowerCase());
+                      })
+                      .forEach(column => {
+                        column.toggleVisibility(defaultVisible.includes(column.id));
+                      });
                   }}
                 >
                   Deselect All
                 </DropdownMenuCheckboxItem>
                 {table
                   .getAllLeafColumns()
-                  .slice() // Create a copy of the array
-                  .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header)) // Sort the copied array
-                  .filter((column) => column.getCanHide())
-                  .map((column) => (
+                  .slice()
+                  .sort((a, b) => a.columnDef.header.localeCompare(b.columnDef.header))
+                  .filter(column => column.getCanHide())
+                  .filter(column =>
+                    column.columnDef.header
+                      .toLowerCase()
+                      .includes(columnSearch.toLowerCase())
+                  )
+                  .map(column => (
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       checked={column.getIsVisible()}
-                      onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                      onCheckedChange={value => column.toggleVisibility(!!value)}
                     >
                       {column.columnDef.header}
                     </DropdownMenuCheckboxItem>
@@ -887,7 +1156,7 @@ const Processing = () => {
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap"
               style={{ maxWidth: 'calc(100vw - 60px)' }}
             >
-              <div className="h-[400px] overflow-y-auto w-full">
+              <div className="max-h-[70vh] overflow-y-auto w-full">
                 <table className="min-w-full border-collapse table-auto">
                   <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-10">
                     {table.getHeaderGroups().map((headerGroup) => (
@@ -906,17 +1175,67 @@ const Processing = () => {
                       </tr>
                     ))}
                   </thead>
+
                   <tbody>
                     {table.getRowModel().rows.length ? (
-                      table.getRowModel().rows.map(row => (
-                        <tr key={row.id ?? row.index}>
-                          {row.getVisibleCells().map(cell => (
-                            <td key={cell.id} className="px-4 py-2 border-b border-gray-100">
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                            </td>
-                          ))}
-                        </tr>
-                      ))
+                      table.getRowModel().rows.map((row, idx) => {
+                        const isRejected = row.original.specimen_quality === 'Not Accepted';
+                        const isLibraryPrep = row.original.lib_prep === 'Yes';
+                        const indicatorKeys = ["dna_isolation", "lib_prep", "under_seq", "seq_completed"];
+                        const indicatorIndexes = row.getVisibleCells()
+                          .map((cell, cellIdx) => indicatorKeys.includes(cell.column.id) ? cellIdx : -1)
+                          .filter(cellIdx => cellIdx !== -1);
+
+                        {/* const isMoved = row.original.location && row.original.location !== "monitering"; */ }
+
+                        return (
+                          <tr
+                            key={idx}
+                            className={
+                              (row.original.prority === 'Urgent' ? 'bg-orange-600 ' : '') +
+                              (row.original.location === 'repeat'
+                                ? 'bg-gray-500 '
+                                : row.original.location && row.original.location === 'seq_completed'
+                                  ? 'bg-gray-300 dark:text-black '
+                                  : '')
+                            }
+                          >
+                            {row.getVisibleCells().map((cell, cellIdx) => {
+                              // If this is the first indicator column and rejected, show REJECTED with colspan
+                              if (
+                                isRejected &&
+                                indicatorIndexes.length > 0 &&
+                                cellIdx === indicatorIndexes[0]
+                              ) {
+                                return (
+                                  <td
+                                    key={cell.id + '-rejected'}
+                                    colSpan={indicatorIndexes.length}
+                                    className="px-4 py-2 border-b border-gray-100 text-center text-red-500 font-semibold"
+                                  >
+                                    REJECTED
+                                  </td>
+                                );
+                              }
+                              // Skip rendering the other indicator columns if rejected
+                              if (
+                                isRejected &&
+                                indicatorIndexes.length > 0 &&
+                                indicatorIndexes.includes(cellIdx) &&
+                                cellIdx !== indicatorIndexes[0]
+                              ) {
+                                return null;
+                              }
+                              // Normal rendering
+                              return (
+                                <td key={cell.id + '-' + idx + '-' + cellIdx} className="px-4 py-2 border-b border-gray-100">
+                                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        );
+                      })
                     ) : (
                       <tr>
                         <td colSpan={columns.length} className="text-center py-4 text-gray-400">
@@ -939,9 +1258,9 @@ const Processing = () => {
               Save to excel
             </Button>
 
-            {isAnyLibPrepChecked && (
+            {selectedRows && (
               <Button
-                className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (isAnyLibPrepChecked ? "" : "opacity-50")}
+                className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (selectedRows ? "" : "opacity-50")}
                 onClick={handleSendForLibraryPreparation}
               >
                 Send for Library Preparation
@@ -950,11 +1269,270 @@ const Processing = () => {
 
           </div>
         </>
-      )}
+      )
+      }
+      <AuditSidebar
+        open={showAuditSidebar}
+        onClose={() => setShowAuditSidebar(false)}
+        sampleId={auditSampleId}
+        audits={auditData}
+        changed_by={user.email}
+        setAuditData={setAuditData}
+      />
+
+      <DialogBox
+        isOpen={showRepeatDialog}
+        onClose={() => setShowRepeatDialog(false)}
+        sample_id={repeatRow?.sample_id}
+        internal_id={repeatRow?.internal_id}
+        user_email={user.email}
+      />
       <ToastContainer />
 
-    </div>
+    </div >
   );
 };
 
 export default Processing;
+
+const AuditSidebar = ({ open, onClose, sampleId, audits, changed_by, setAuditData }) => {
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
+
+  if (!open) return null;
+
+  const HandleAddComment = async (value) => {
+    try {
+      const data = {
+        sample_id: sampleId,
+        comments: value,
+        changed_by: changed_by,
+        changed_at: new Date().toISOString(),
+      }
+      const res = await axios.post('/api/audit-logs', data)
+      if (res.data[0].status === 201) {
+        const data = await axios.get(`/api/audit-logs?sample_id=${sampleId}`);
+        if (data.data[0].status === 200) {
+          // toast.success("Comment added successfully.");
+          setAuditData(data.data[0].logs || []);
+        }
+      }
+      else if (res.data[0].status === 400) {
+        toast.error(res.data[0].message || "Failed to add comments.");
+      }
+    }
+    catch (e) {
+      console.log('error:', e);
+    }
+  }
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40"
+        style={{ background: "rgba(0,0,0,0.2)" }}
+        onClick={onClose}
+      />
+      {/* Sidebar */}
+      <div
+        className="fixed top-0 right-0 h-full w-[400px] bg-white dark:bg-gray-900 shadow-lg z-50 transition-transform"
+        style={{ transition: "transform 0.3s", transform: open ? "translateX(0)" : "translateX(100%)" }}
+        onClick={e => e.stopPropagation()} // Prevent closing when clicking inside sidebar
+      >
+        <div className="flex justify-between items-center p-4 border-b">
+          <h2 className="font-bold text-lg text-orange-400">Comments & History: {sampleId}</h2>
+          <Button variant="outline" className='text-red-500' onClick={onClose}>X</Button>
+        </div>
+        <div className="p-4 overflow-y-auto h-[calc(100vh-64px)]">
+          <input
+            type="text"
+            className="w-full mb-4 p-2 border-2 border-orange-200 rounded-md"
+            placeholder="Add Comment..."
+          />
+          <Button
+            className='bg-orange-400 text-white mb-3 hover:bg-orange-400 cursor-pointer'
+            onClick={(e) => HandleAddComment(e.target.previousElementSibling.value)}
+          >
+            Add Comment
+          </Button>
+          {audits.length === 0 ? (
+            <div className="text-gray-500">No audit data found.</div>
+          ) : (
+            <ul className="space-y-3">
+              {audits.map((audit, idx) => (
+                <li key={idx} className="border-b pb-2">
+                  <div className="flex justify-between items-center mb-1">
+                    <div className="">{audit.changed_by}</div>
+                    <div className="">
+                      {new Date(audit.changed_at).toLocaleString("en-GB", {
+                        timeZone: "Asia/Kolkata",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </div>
+                  {audit.changes && audit.changes.map((change, changeIdx) => (
+                    <div key={changeIdx} className="mt-1">
+                      <span className="font-semibold">{change.field}:</span> {change.oldValue} → {change.newValue}
+                    </div>
+                  ))}
+                  {audit.comments !== null && (
+                    <div className="mt-1">
+                      <span className="font-semibold">Comment:</span> {audit.comments}
+                    </div>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
+const DialogBox = ({ isOpen, onClose, sample_id, user_email, internal_id }) => {
+  const handleRepeat = async (type, comments) => {
+    if (!type) {
+      toast.error("Please select a repeat type.");
+      return;
+    }
+    if (!comments || comments.trim() === "") {
+      toast.error("Please enter a reason for the repeat.");
+      return;
+    }
+    try {
+      const res = await axios.post('/api/repeat-sample', {
+        repeat_type: type,
+        comments: comments,
+        sample_id: sample_id,
+        user_email: user_email,
+      });
+      if (res.data[0].status === 200) {
+        toast.success("Repeat sample created successfully!");
+        const row = res.data[0].data;
+
+        // Insert the new row into localStorage under the correct test_name
+        const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
+        const testName = row.test_name?.includes(" + Mito")
+          ? row.test_name.split(" + Mito")[0].trim()
+          : row.test_name;
+
+        if (!libraryData[testName]) {
+          libraryData[testName] = { rows: [], pools: [] };
+        } else if (Array.isArray(libraryData[testName])) {
+          libraryData[testName] = { rows: libraryData[testName], pools: [] };
+        }
+
+        // Prevent duplicate sample_ids
+        const exists = (libraryData[testName].rows || []).some(r => r.internal_id === row.internal_id);
+        if (!exists) {
+          libraryData[testName].rows.push(row);
+        }
+
+        localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
+
+        await axios.put("/api/store", {
+          internal_id: internal_id,
+          updates: { location: "repeat" },
+        });
+
+        const filters = JSON.parse(localStorage.getItem("processingFilters") || "{}");
+        const data = {
+          sample_id: filters.sample_id,
+          test_name: (filters.selectedTestNames || []).join(","),
+          sample_status: filters.sample_status,
+          sample_indicator: filters.sample_indicator,
+          from_date: filters.from_date,
+          to_date: filters.to_date,
+          doctor_name: filters.doctor_name,
+          dept_name: filters.dept_name,
+          run_id: filters.run_id,
+          for: 'process',
+        };
+
+        // Optionally add hospital_name if needed
+        if (user_email && window?.user?.role !== "SuperAdmin") {
+          data.hospital_name = window?.user?.hospital_name;
+        }
+
+        // Call the search API
+        const response = await axios.get(`/api/search`, { params: data });
+        if (response.data[0].status === 200) {
+          // Filter out the repeated sample by internal_id
+          const filteredRows = response.data[0].data.filter(row => row.internal_id !== internal_id);
+          // Update the tableRows in parent (you may need to pass setTableRows as a prop or use a context)
+          if (typeof window.setTableRows === "function") {
+            window.setTableRows(filteredRows);
+          }
+        }
+        onClose();
+      } else {
+        toast.error(res.data[0].message || "Failed to create repeat sample.");
+      }
+    }
+    catch (error) {
+      console.error("Error handling repeat:", error);
+      // toast.error("An error occurred while processing the repeat request.");
+    }
+  }
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+      style={{ backdropFilter: 'blur(5px)' }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-lg font-semibold">Repeat Sample?</DialogTitle>
+        </DialogHeader>
+        <div>
+          <span className="font-bold">Do you want to repeat this sample?</span>
+          <div className="flex gap-2 justify-start mt-2">
+            <select
+              className="border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
+              name='repeat_type'
+              defaultValue=""
+            >
+              <option value="">Select</option>
+              <option value="repeat_from_sequencing">Repeat From Sequencing</option>
+              <option value="repeat_from_extraction">Repeat From Extraction</option>
+            </select>
+            <div>
+              <input
+                type='text'
+                name='comments'
+                placeholder='Enter reason for repeat'
+                className="border-2 border-orange-300 rounded-md p-2"
+              />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button
+            className='bg-green-400 text-white hover:bg-green-500 cursor-pointer'
+            onClick={() => handleRepeat(document.querySelector('select[name="repeat_type"]').value, document.querySelector('input[name="comments"]').value)}
+          >
+            Repeat
+          </Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-700"
+          >
+            Cancel
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+

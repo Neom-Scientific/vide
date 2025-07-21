@@ -1,9 +1,11 @@
 "use client"
 import React, { useState, useRef, useEffect } from 'react'
-import { Sun, Moon, Menu } from 'lucide-react'
+import { Sun, Moon, Menu, ChevronDown } from 'lucide-react'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import Cookies from 'js-cookie';
 import { useRouter } from 'next/navigation';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
 const defaultAvatars = [
   "https://randomuser.me/api/portraits/men/32.jpg",
@@ -27,13 +29,38 @@ const Header = ({ activeTab, setActiveTab }) => {
   const [profilePhoto, setProfilePhoto] = useState(); // Default profile photo
   const [showMenu, setShowMenu] = useState(false); // State for avatar menu
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showTechnicianTabs, setShowTechnicianTabs] = useState(false);
 
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
-      setUser(JSON.parse(cookieUser));
+      const parsedUser = JSON.parse(cookieUser);
+      setUser(parsedUser);
       const savedPhoto = localStorage.getItem('profilePhoto');
       if (savedPhoto) setProfilePhoto(savedPhoto); // Load saved profile photo from local storage
+      const checkUserValidity = async () => {
+        if (parsedUser.created_at) {
+          const createAt = new Date(parsedUser.created_at);
+          const now = new Date();
+          const diffTime = Math.abs(now - createAt) / (1000 * 60 * 60 * 24 * 365); // Difference in days
+          if (diffTime >= 1 && parsedUser.status === 'enable') {
+            try {
+              const res = await axios.put('/api/request-insert', { username: parsedUser.username, status: 'disable' });
+              if (res.data[0].status === 200) {
+                console.log('User status updated to disable');
+                router.push('/login');
+              }
+              else {
+                console.log(res.data[0].message)
+              }
+            }
+            catch (error) {
+              console.error('Error updating user status:', error);
+            }
+          }
+        }
+      }
+      checkUserValidity();
     }
     else {
       router.push('/login'); // Redirect to login if no user cookie found
@@ -94,25 +121,110 @@ const Header = ({ activeTab, setActiveTab }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
+  const getTabsForRole = (role) => {
+    if (role === "manager" && showTechnicianTabs) {
+      // Manager + Technician tabs
+      return [
+        // { value: "lab", label: "Lab" },
+        { value: "sample-register", label: "Sample Registration" },
+        { value: "processing", label: "Monitering" },
+        { value: "library-prepration", label: "Library Preparation" },
+        { value: "run-setup", label: "Run Setup" },
+        { value: "reports", label: "Reports" },
+      ];
+    }
+    switch (role) {
+      case "technician":
+        return [
+          { value: "sample-register", label: "Sample Registration" },
+          { value: "processing", label: "Monitering" },
+          { value: "library-prepration", label: "Library Preparation" },
+          { value: "run-setup", label: "Run Setup" },
+          { value: "reports", label: "Reports" },
+        ];
+      case "manager":
+        return [
+          { value: "processing", label: "Monitering" },
+          { value: "run-setup", label: "Run Setup" },
+          { value: "reports", label: "Reports" },
+        ];
+      case "management":
+        return [
+          { value: "inventory", label: "Inventory Registration" }
+        ];
+      case "SuperAdmin":
+      default:
+        return [
+          { value: "inventory", label: "Inventory Registration" },
+          { value: "sample-register", label: "Sample Registration" },
+          { value: "processing", label: "Monitering" },
+          { value: "library-prepration", label: "Library Preparation" },
+          { value: "run-setup", label: "Run Setup" },
+          { value: "reports", label: "Reports" },
+        ];
+    }
+  };
+
+
   return (
     <header className="max-w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md transition-colors duration-300">
       <div className="container mx-auto flex justify-between items-center px-2 max-w-full">
         {/* Title */}
-        <a
-          href="/"
-          className="xl:text-2xl lg:text-lg md:text-lg font-bold text-orange-500 break-words whitespace-normal max-w-[220px] sm:max-w-[350px] md:max-w-none"
-        >
-          Visualization Index and Dashboard Execution
-        </a>
+        <div>
+          <a
+            href="/"
+            className="xl:text-2xl lg:text-lg md:text-lg font-bold text-orange-500 break-words whitespace-normal max-w-[220px] sm:max-w-[350px] md:max-w-none"
+          >
+            Visualization Index and Dashboard Execution
+          </a>
+
+          <div>
+            {user && (
+              <div className='text-sm flex flex-wrap gap-3 justify-start text-gray-600 dark:text-gray-400'>
+                <div>
+                  {user.hospital_name || 'N/A'}
+                </div>
+                <div>
+                  Organization ID: {user.hospital_id || 'N/A'}
+                </div>
+                <div>
+                  Created At: {new Date(user.created_at).toLocaleDateString('en-GB') || 'N/A'}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         {/* Tabs for xl+ screens */}
         <nav className="hidden xl:flex">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-white dark:bg-gray-900 flex items-center space-x-4 transition-colors duration-300">
-              <TabsTrigger value="dashboard" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Dashboard</TabsTrigger>
+              <div className='relative'>
+                <DropdownMenu className='hover:none'>
+                  <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
+                    <Button
+                      style={{ backgroundColor: 'inherit' }}
+                      className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
+                    >
+                      Dashboard
+                      <ChevronDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="flex flex-col min-w-[140px]">
+                    <TabsTrigger value="management" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                      Management
+                    </TabsTrigger>
+                    <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                      Lab
+                    </TabsTrigger>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory Registration</TabsTrigger>
 
               <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
 
-              <TabsTrigger value="processing" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
+              <TabsTrigger value="processing" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Monitering</TabsTrigger>
 
               <TabsTrigger value="library-prepration" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
 
@@ -122,6 +234,17 @@ const Header = ({ activeTab, setActiveTab }) => {
             </TabsList>
           </Tabs>
         </nav>
+
+        {user && user.role === "manager" && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="bg-orange-400 text-white hover:bg-orange-400 hover:text-white"
+            onClick={() => setShowTechnicianTabs(prev => !prev)}
+          >
+            {showTechnicianTabs ? "Don't Show all tabs" : "Show all Tabs"}
+          </Button>
+        )}
 
         {/* Action buttons always visible */}
         <div className="flex space-x-2">
@@ -157,9 +280,9 @@ const Header = ({ activeTab, setActiveTab }) => {
             )}
 
             {showMenu && (
-              <div 
-              ref = {menuRef}
-              className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 p-2 transition-colors duration-300">
+              <div
+                ref={menuRef}
+                className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded shadow-lg z-50 p-2 transition-colors duration-300">
                 <div className="grid grid-cols-3 gap-2">
                   {defaultAvatars.map((avatar, idx) => (
                     <img key={idx} src={avatar} alt={`Avatar ${idx}`} className="w-10 h-10 rounded-full cursor-pointer border-2 border-transparent hover:border-blue-500 transition-colors duration-300" onClick={() => handleChooseAvatar(avatar)} />
@@ -203,8 +326,8 @@ const Header = ({ activeTab, setActiveTab }) => {
             Logout
           </button>
           {user && user.role === "SuperAdmin" && (
-            <button onClick={() => router.push('/login')} className="p-2 bg-blue-500 text-white font-bold rounded-lg cursor-pointer transition-colors duration-300">
-              Login
+            <button onClick={() => router.push('/login')} className="p-2 bg-orange-500 text-white font-bold rounded-lg cursor-pointer transition-colors duration-300">
+              Assign User
             </button>
           )}
 
@@ -241,13 +364,41 @@ const Header = ({ activeTab, setActiveTab }) => {
                 ✕
               </button>
             </div>
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs
+              value={activeTab}
+              onValueChange={(val) => {
+                setActiveTab(val);
+                setShowMobileMenu(false); // Close sidebar after tab change
+              }}>
               <TabsList className="flex flex-col w-full flex-1 space-y-2 bg-white dark:bg-gray-900">
-                <TabsTrigger value="dashboard" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Dashboard</TabsTrigger>
+                <div className='relative'>
+                  <DropdownMenu className='hover:none'>
+                    <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
+                      <Button
+                        style={{ backgroundColor: 'inherit' }}
+                        className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
+                      >
+                        Dashboard
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="flex flex-col min-w-[140px]">
+                      <TabsTrigger value="management" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                        Management
+                      </TabsTrigger>
+                      <TabsTrigger value="lab" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                        Lab
+                      </TabsTrigger>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                </div>
+
+                <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory Registration</TabsTrigger>
 
                 <TabsTrigger value="sample-register" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
 
-                <TabsTrigger value="processing" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
+                <TabsTrigger value="processing" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Monitering</TabsTrigger>
 
                 <TabsTrigger value="library-prepration" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
 
@@ -264,3 +415,81 @@ const Header = ({ activeTab, setActiveTab }) => {
 };
 
 export default Header;
+
+{/* <nav className="hidden xl:flex">
+<Tabs value={activeTab} onValueChange={setActiveTab}>
+  <TabsList className="bg-white dark:bg-gray-900 flex items-center space-x-4 transition-colors duration-300">
+    <TabsTrigger value="dashboard" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Dashboard</TabsTrigger>
+
+    <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
+
+    <TabsTrigger value="processing" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Processing</TabsTrigger>
+
+    <TabsTrigger value="library-prepration" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Library Preparation</TabsTrigger>
+
+    <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
+
+    <TabsTrigger value="reports" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
+  </TabsList>
+</Tabs>
+</nav> */}
+
+
+{/* Dashboard Dropdown */ }
+// {
+//   user && (
+//     <>
+//       {user.role === "SuperAdmin" && (
+//         <div className='relative'>
+//           <DropdownMenu className='hover:none'>
+//             <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
+//               <Button
+//                 style={{ backgroundColor: 'inherit' }}
+//                 className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
+//               >
+//                 Dashboard
+//                 <ChevronDown className="ml-2 h-4 w-4" />
+//               </Button>
+//             </DropdownMenuTrigger>
+//             <DropdownMenuContent className="flex flex-col min-w-[140px]">
+//               <TabsTrigger value="management" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+//                 Management
+//               </TabsTrigger>
+//               <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+//                 Lab
+//               </TabsTrigger>
+//             </DropdownMenuContent>
+//           </DropdownMenu>
+//         </div>
+//       )}
+//       {user.role === "manager" && (
+//         <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+//           Lab
+//         </TabsTrigger>
+//       )}
+//       {user.role === "management" && (
+//         <TabsTrigger value="management" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+//           Management
+//         </TabsTrigger>
+//       )}
+//       {user.role === "technician" && (
+//         <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+//           Lab
+//         </TabsTrigger>
+//       )}
+//     </>
+//   )
+// }
+
+// {/* Render tabs based on role */ }
+// {
+//   user && getTabsForRole(user.role).map(tab => (
+//     <TabsTrigger
+//       key={tab.value}
+//       value={tab.value}
+//       className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white"
+//     >
+//       {tab.label}
+//     </TabsTrigger>
+//   ))
+// }
