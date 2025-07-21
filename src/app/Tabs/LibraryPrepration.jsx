@@ -2498,7 +2498,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
     }
   }
 
-  const handleRemoveSample = async () => {
+  const handleRemoveSample = async (comments) => {
     if (!rowInfo) return;
     try {
       // Remove from localStorage
@@ -2544,7 +2544,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
         auditLog: {
           sample_id: rowInfo.sample_id,
           changed_by: user_email,
-          comments: "Sample removed from Library Preparation",
+          comments: comments,
           changed_at: new Date().toISOString(),
         }
       });
@@ -2612,7 +2612,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
             <Button
               variant="destructive"
               className="bg-red-500 text-white hover:bg-red-600 cursor-pointer"
-              onClick={handleRemoveSample}
+              onClick={()=> handleRemoveSample(document.querySelector('input[name="comments"]').value)}
             >
               Remove Sample
             </Button>
