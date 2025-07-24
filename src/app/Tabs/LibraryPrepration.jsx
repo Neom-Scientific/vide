@@ -638,7 +638,7 @@ const LibraryPrepration = () => {
             }
 
             if (columnId === "total_vol_for_2nm") {
-              updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
+              updatedRow.lib_vol_for_2nm = parseFloat((2 * total_vol_for_2nm / nm_conc).toFixed(2));
               if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
                 updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
               }
