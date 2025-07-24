@@ -40,7 +40,7 @@ const Processing = () => {
     { key: 'vial_received', label: 'Vial Received' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'registration_date', label: 'Registration Date' },
-    { key: 'internal_id', label: 'Internal ID' },
+    { key: 'internal_id', label: 'Lab ID' },
     { key: 'dept_name', label: 'Department Name' },
     { key: 'run_id', label: 'Run ID' },
     { key: 'sample_date', label: 'Sample Date' },
@@ -52,7 +52,7 @@ const Processing = () => {
     { key: 'hospital_id', label: 'Organization ID' },
     { key: 'client_id', label: 'Client ID' },
     { key: 'client_name', label: 'Client Name' },
-    { key: 'sample_id', label: 'Sample ID' },
+    { key: 'sample_id', label: 'Patient ID' },
     { key: 'patient_name', label: 'Patient Name' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
@@ -172,6 +172,23 @@ const Processing = () => {
     'Cardio Comprehensive Myopathy'
   ];
 
+  const testNameShortMap = {
+    "Cardio Comprehensive Myopathy": { short: "CMP", full: "Cardio Comprehensive Myopathy" },
+    "Cardio Metabolic Syndrome (Screening)": { short: "CMS", full: "Cardio Metabolic Syndrome" },
+    "Cardio Comprehensive (Screening)": { short: "CCS", full: "Cardio Comprehensive (Screening)" },
+    "SolidTumor Panel": { short: "STP", full: "SolidTumor Panel" },
+    "WES": { short: "WES", full: "Whole Exome Sequencing" },
+    "Carrier Screening": { short: "CS", full: "Carrier Screening" },
+    "CES": { short: "CES", full: "Clinical Exome Sequencing" },
+    "Myeloid": { short: "Myeloid", full: "Myeloid" },
+    "HCP": { short: "HCP", full: "Hereditary Cancer Panel" },
+    "HRR": { short: "HRR", full: "Hereditary Retinal Disorders" },
+    "SGS": { short: "SGS", full: "Shallow Genome Sequencing" },
+    "HLA": { short: "HLA", full: "Human Leukocyte Antigen" },
+    "WES + Mito": { short: "WES + Mito", full: "Whole Exome Sequencing + Mitochondrial" },
+    "CES + Mito": { short: "CES + Mito", full: "Clinical Exome Sequencing + Mitochondrial" },
+  };
+
   let rows = [];
 
   const [filters, setFilters] = useState({
@@ -218,7 +235,7 @@ const Processing = () => {
             // Only select rows that are eligible for Library Preparation
             table.getRowModel().rows.forEach(row => {
               const rowData = row.original;
-              if (rowData.location === "monitering") {
+              if (rowData.lib_prep === "Yes" && rowData.under_seq === "No") {
                 const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.lib_prep !== "Yes";
                 if (!disabled) {
                   row.toggleSelected(!!value);
@@ -253,11 +270,15 @@ const Processing = () => {
                 if (value && rowData.location && rowData.under_seq === "Yes" && rowData.seq_completed === 'No') {
                   setRepeatRow(rowData);
                   setShowRepeatDialog(true);
-                  // Optionally, do not select the row until dialog is handled
                   return;
                 }
                 row.toggleSelected(!!value);
 
+                // Update localStorage after toggling
+                setTimeout(() => {
+                  const selectedIds = table.getSelectedRowModel().rows.map(r => r.original.internal_id);
+                  localStorage.setItem("selectedLibraryPrepSamples", JSON.stringify(selectedIds));
+                }, 0);
               }}
               className="border border-orange-400"
             />
@@ -285,7 +306,7 @@ const Processing = () => {
           enableSorting: true,
           cell: (info) => {
             const row = info.row.original;
-            return row.reference_internal_id ? row.reference_internal_id : row.internal_id || "";
+            return row.internal_id || "";
           },
         };
       }
@@ -432,6 +453,26 @@ const Processing = () => {
           },
         };
       }
+      if (col.key === "test_name") {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const value = info.getValue();
+            const mapping = testNameShortMap[value];
+            if (mapping) {
+              return (
+                <abbr title={mapping.full} style={{ textDecoration: "none", cursor: "pointer" }}>
+                  {mapping.short}
+                </abbr>
+              );
+            }
+            // fallback: show value as is
+            return value;
+          },
+        };
+      }
       return {
         accessorKey: col.key,
         header: col.label,
@@ -518,7 +559,7 @@ const Processing = () => {
       const parsedData = JSON.parse(savedData);
       // Map the data to ensure checkbox fields are "Yes"/"No"
       const mappedData = parsedData
-        .filter(row => row.is_repeated !== "True")
+        // .filter(row => row.is_repeated !== "True")
         .map((row) => ({
           ...row,
           dna_isolation: row.dna_isolation === "Yes" ? "Yes" : "No",
@@ -526,7 +567,22 @@ const Processing = () => {
           under_seq: row.under_seq === "Yes" ? "Yes" : "No",
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
-      setTableRows(mappedData); // Update the tableRows state with the mapped data
+
+        const latestRows = Object.values(
+          mappedData.reduce((acc, row) => {
+            const key = row.sample_id || row.internal_id;
+            if (
+              !acc[key] ||
+              new Date(row.registration_date) > new Date(acc[key].registration_date) ||
+              row.is_repeated === 'True'
+            ) {
+              acc[key] = row;
+            }
+            return acc;
+          }, {})
+        );
+      setTableRows(latestRows);
+      localStorage.setItem("searchData", JSON.stringify(latestRows));
     }
   }, []);
 
@@ -580,10 +636,12 @@ const Processing = () => {
         // Deduplicate: keep only the latest occurrence (repeat if exists)
         const latestRows = Object.values(
           mappedData.reduce((acc, row) => {
-            // Use sample_id or internal_id as key
             const key = row.sample_id || row.internal_id;
-            // If repeated, always prefer it
-            if (!acc[key] || row.is_repeated === "True") {
+            if (
+              !acc[key] ||
+              new Date(row.registration_date) > new Date(acc[key].registration_date) ||
+              row.is_repeated === 'True'
+            ) {
               acc[key] = row;
             }
             return acc;
@@ -831,10 +889,25 @@ const Processing = () => {
                 if (!filters.run_id) return true;
                 return row.run_id === filters.run_id;
               });
+
+            // Deduplicate: keep only the latest occurrence (repeat if exists)
+            const latestRows = Object.values(
+              mappedData.reduce((acc, row) => {
+                const key = row.sample_id || row.internal_id;
+                if (
+                  !acc[key] ||
+                  new Date(row.registration_date) > new Date(acc[key].registration_date) ||
+                  row.is_repeated === 'True'
+                ) {
+                  acc[key] = row;
+                }
+                return acc;
+              }, {})
+            );
             setProcessing(false);
             console.log('mappedData:', mappedData); // Debugging mapped data
-            setTableRows(mappedData); // Update the tableRows state with the mapped data
-            localStorage.setItem("searchData", JSON.stringify(mappedData)); // Save to localStorage
+            setTableRows(latestRows); // Update the tableRows state with the mapped data
+            localStorage.setItem("searchData", JSON.stringify(latestRows)); // Save to localStorage
           } else if (response.data[0].status === 400 || response.data[0].status === 404) {
             setProcessing(false);
             setTableRows([]);
@@ -1193,7 +1266,7 @@ const Processing = () => {
                             key={idx}
                             className={
                               (row.original.prority === 'Urgent' ? 'bg-orange-600 ' : '') +
-                              (row.original.location === 'repeat'
+                              (row.original.is_repeated === 'True'
                                 ? 'bg-gray-500 '
                                 : row.original.location && row.original.location === 'seq_completed'
                                   ? 'bg-gray-300 dark:text-black '
@@ -1441,7 +1514,7 @@ const DialogBox = ({ isOpen, onClose, sample_id, user_email, internal_id }) => {
 
         await axios.put("/api/store", {
           internal_id: internal_id,
-          updates: { location: "repeat" },
+          updates: { is_repeated: "True" },
         });
 
         const filters = JSON.parse(localStorage.getItem("processingFilters") || "{}");

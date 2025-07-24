@@ -13,7 +13,7 @@ export async function GET(request) {
             });
             return NextResponse.json(response);
         }
-        const data = await pool.query('SELECT * FROM audit_logs WHERE sample_id = $1', [sample_id]);
+        const data = await pool.query('SELECT * FROM audit_logs WHERE sample_id = $1 order by id', [sample_id]);
         if (data.rows.length > 0) {
             response.push({
                 message: 'Audit logs fetched successfully',

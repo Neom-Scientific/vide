@@ -145,11 +145,11 @@ const AssignUser = () => {
                       <select className='bg-gray-50 border border-black text-gray-900 text-sm rounded-lg p-2'
                         onChange={(e) => handleRole(user.username, e.target.value)}
                       >
-                        {/* <option value="NormalUser">NormalUser</option>
-                        <option value="AdminUser">AdminUser</option> */}
-                        <option value='technician'>Lab Technician</option>
+                        <option value="NormalUser">NormalUser</option>
+                        <option value="AdminUser">AdminUser</option>
+                        {/* <option value='technician'>Lab Technician</option>
                         <option value='manager'>Lab Manager</option>
-                        <option value='management'>Management</option>
+                        <option value='management'>Management</option> */}
                       </select>
                     </TableCell>
 

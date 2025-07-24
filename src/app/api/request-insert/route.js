@@ -173,6 +173,23 @@ export async function PUT(request) {
         if (status) {
             if (status === 'disable') {
                 await pool.query('UPDATE request_form SET status = $1 WHERE username = $2', ['enable', username]);
+                const email = await pool.query('SELECT email FROM request_form WHERE username = $1', [username]);
+                await sendMail(
+                    email.rows[0].email,
+                    'SignUp Successfully',
+                    ` <html>
+                        <body>
+                            <p>Dear User,</p>
+                            <p>Your account has been updated successfully.So you can now login with your credentials.</p>
+                            <p><strong>Username:</strong> ${username}</p>
+                            <p>Please keep this information safe and do not share it with anyone.</p>
+                            <p>If you have any questions, please contact the admin.</p>
+                            <p>Best regards,</p>
+                            <p>NEOM Scientific Solutions Team</p>
+                        </body>
+                    </html>
+                    `
+                );
                 response.push({
                     status: 200,
                     message: 'Status updated successfully',

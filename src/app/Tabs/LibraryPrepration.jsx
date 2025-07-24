@@ -57,9 +57,9 @@ const LibraryPrepration = () => {
     { key: 'id', label: 'S.No.' },
     { key: 'batch_id', label: 'Batch ID' },
     { key: 'pool_no', label: 'Pool No.' },
-    { key: 'sample_id', label: 'Sample ID' },
+    { key: 'sample_id', label: 'Patient ID' },
     { key: 'registration_date', label: 'Registration Date' },
-    { key: 'internal_id', label: 'Internal ID' },
+    { key: 'internal_id', label: 'Lab ID' },
     { key: 'test_name', label: 'Test Name' },
     { key: 'sample_type', label: 'Sample Type' },
     { key: 'client_id', label: 'Client ID' },
@@ -699,9 +699,9 @@ const LibraryPrepration = () => {
     return nextPoolNo;
   }
 
+
   const handleCreatePool = async () => {
     if (Array.isArray(currentSelection) && currentSelection.length > 0) {
-      // Use local logic to generate next pool number
       const poolNo = getNextPoolNo();
       const firstIdx = currentSelection[0];
       const firstRow = tableRows[firstIdx] || {};
@@ -710,24 +710,49 @@ const LibraryPrepration = () => {
         ...pooledValues,
         total_vol_for_2nm: pooledValues.total_vol_for_2nm ?? firstRow.total_vol_for_2nm ?? "",
       };
-      setTableRows(prevRows =>
-        prevRows.map((row, idx) =>
-          currentSelection.includes(idx)
-            ? { ...row, pool_no: poolNo }
-            : row
-        )
+
+      // 1. Assign pool_no to selected rows
+      let updatedRows = tableRows.map((row, idx) =>
+        currentSelection.includes(idx)
+          ? { ...row, pool_no: poolNo }
+          : row
       );
-      setPooledRowData(prev => [
-        ...prev,
-        { sampleIndexes: [...currentSelection], values: mergedPooledValues }
-      ]);
+
+      // 2. Move all pooled rows above all unpooled rows, keeping their original order
+      const pooledRows = updatedRows.filter(row => row.pool_no);
+      const unpooledRows = updatedRows.filter(row => !row.pool_no);
+      const newRows = [...pooledRows, ...unpooledRows];
+
+      // 3. Pools track internal_ids, not indexes
+      const newPool = {
+        sampleInternalIds: currentSelection.map(idx => tableRows[idx].internal_id),
+        values: mergedPooledValues
+      };
+
+      // 4. Recalculate all pools' sampleIndexes based on current newRows
+      const updatedPooledRowData = [
+        ...pooledRowData.map(pool => ({
+          ...pool,
+          sampleIndexes: (pool.sampleInternalIds || []).map(internal_id =>
+            newRows.findIndex(r => r.internal_id === internal_id)
+          ).filter(idx => idx !== -1)
+        })),
+        {
+          ...newPool,
+          sampleIndexes: newPool.sampleInternalIds.map(internal_id =>
+            newRows.findIndex(r => r.internal_id === internal_id)
+          ).filter(idx => idx !== -1)
+        }
+      ];
+
+      setTableRows(newRows);
+      setPooledRowData(updatedPooledRowData);
       setPooledValues({});
       setCurrentSelection([]);
       setShowPooledFields(false);
       setRowSelection({});
     }
   };
-
   const handleCreateBatch = async () => {
     // Find all pools that have any selected row
     const selectedPoolIndexes = pooledRowData
@@ -1483,84 +1508,6 @@ const LibraryPrepration = () => {
     // eslint-disable-next-line
   }, [tableRows, pooledRowData]);
 
-  const handleRemove = async (prevRows, rowIndex) => {
-    const updatedRows = prevRows.filter((_, idx) => idx !== rowIndex);
-
-    setPooledRowData(prevPools => {
-      const indexMap = {};
-      prevRows.forEach((_, idx) => {
-        if (idx < rowIndex) indexMap[idx] = idx;
-        else if (idx > rowIndex) indexMap[idx] = idx - 1;
-      });
-      return prevPools
-        .map(pool => ({
-          ...pool,
-          sampleIndexes: pool.sampleIndexes
-            .map(idx => indexMap[idx])
-            .filter(idx => idx !== undefined)
-        }))
-        .filter(pool => pool.sampleIndexes.length > 0);
-    });
-
-    // Update localStorage and UI
-    const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-    if (storedData[testName]) {
-      if (Array.isArray(storedData[testName])) {
-        storedData[testName] = updatedRows;
-      } else {
-        storedData[testName].rows = updatedRows;
-      }
-      // Remove testName if both rows and pools are empty
-      const rowsLeft = Array.isArray(storedData[testName])
-        ? storedData[testName].length
-        : (storedData[testName].rows || []).length;
-      const poolsLeft = Array.isArray(storedData[testName])
-        ? 0
-        : (storedData[testName].pools || []).length;
-      if (rowsLeft === 0 && poolsLeft === 0) {
-        delete storedData[testName];
-        // Switch to next available test tab
-        const testNames = Object.keys(storedData);
-        if (testNames.length > 0) {
-          setTestName(testNames[0]);
-          if (Array.isArray(storedData[testNames[0]])) {
-            setTableRows(storedData[testNames[0]]);
-            setPooledRowData([]);
-          } else {
-            setTableRows(storedData[testNames[0]].rows || []);
-            setPooledRowData(storedData[testNames[0]].pools || []);
-          }
-        } else {
-          setTestName("");
-          setTableRows([]);
-          setPooledRowData([]);
-          setMessage(1); // Show "No data available"
-        }
-      }
-      localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
-    }
-
-    // Update backend location to "monitering"
-    const removedRow = prevRows[rowIndex];
-    if (removedRow && removedRow.internal_id) {
-      try {
-        await axios.put("/api/store", {
-          internal_id: removedRow.internal_id,
-          updates: { location: "monitering" },
-          auditLog: {
-            sample_id: removedRow.sample_id,
-            changed_by: user.email,
-            comments: "Sample removed from Library Preparation",
-            changed_at: new Date().toISOString(),
-          }
-        });
-      } catch {
-        toast.error("Failed to update sample location in backend.");
-      }
-    }
-
-    return updatedRows;
-  };
 
   const filteredTestNames = getTheTestNames.filter(testName => {
     const storedData = JSON.parse(localStorage.getItem("libraryPreparationData") || {});
@@ -1881,18 +1828,27 @@ const LibraryPrepration = () => {
                             {row.getVisibleCells().map((cell, colIdx) => {
                               // Pooled (existing) inputs
                               if (cell.column.id === "pool_no" && pool) {
-                                if (isFirstOfPool) {
+                                // Find the sorted indexes for this pool
+                                const sortedIndexes = [...pool.sampleIndexes].sort((a, b) => a - b);
+                                // Only render the cell for the first selected row in the pool
+                                if (rowIndex === sortedIndexes[0]) {
                                   return (
                                     <td
                                       key={cell.column.id}
                                       rowSpan={pool.sampleIndexes.length}
                                       className="align-middle px-2 py-1 border border-gray-300 font-bold bg-orange-50"
+                                      style={{
+                                        // Optional: visually highlight non-consecutive pooled rows
+                                        borderTop: "2px solid #fbbf24",
+                                        borderBottom: "2px solid #fbbf24"
+                                      }}
                                     >
                                       {row.original.pool_no}
                                     </td>
                                   );
                                 }
-                                return null; // skip cell covered by rowspan
+                                // For other rows in the pool, skip rendering (covered by rowspan)
+                                return null;
                               }
 
                               if (testName === "Myeloid" && cell.column.id === "pool_dna_rna_10ul") {
@@ -2325,18 +2281,18 @@ const LibraryPrepration = () => {
                               );
                             })}
                             <td>
-                              {row.original.location !== 'repeat' && (
-                                <Button
-                                  variant="destructive"
-                                  size="sm"
-                                  onClick={() => {
-                                    setDialogOpen(true);
-                                    setDialogRowInfo(row.original); // <-- Store row info for dialog
-                                  }}
-                                >
-                                  Remove
-                                </Button>
-                              )}
+
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  setDialogOpen(true);
+                                  setDialogRowInfo(row.original); // <-- Store row info for dialog
+                                }}
+                              >
+                                Remove
+                              </Button>
+
                             </td>
                           </tr>
 
@@ -2419,9 +2375,19 @@ const LibraryPrepration = () => {
         user_email={user?.email}
         rowInfo={dialogRowInfo}
         onRemove={(removedInternalId) => {
-          setTableRows(prevRows => prevRows.filter(r => r.internal_id !== removedInternalId));
+          // Always reload from localStorage after removal
+          const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+          const testData = storedData[testName];
+          if (testData) {
+            setTableRows(Array.isArray(testData) ? testData : testData.rows || []);
+            setPooledRowData(Array.isArray(testData) ? [] : testData.pools || []);
+          } else {
+            setTableRows([]);
+            setPooledRowData([]);
+          }
           setDialogRowInfo(null);
         }}
+        user_hospital_name={user?.hospital_name}
       />
       <ToastContainer />
     </div>
@@ -2430,14 +2396,63 @@ const LibraryPrepration = () => {
 
 export default LibraryPrepration
 
-const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
+const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo, user_hospital_name }) => {
   const [repeatType, setRepeatType] = useState("");
   const [comments, setComments] = useState("");
 
   const removeInternalIdFromLocalStorage = (internal_id, testName) => {
+    // Remove from selectedLibraryPrepSamples
     const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
     const updatedIds = selectedIds.filter(id => id !== internal_id);
     localStorage.setItem("selectedLibraryPrepSamples", JSON.stringify(updatedIds));
+
+    // Remove from libraryPreparationData
+    const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
+    if (libraryData[testName]) {
+      // Remove from rows
+      let rows = Array.isArray(libraryData[testName])
+        ? libraryData[testName]
+        : (libraryData[testName].rows || []);
+      rows = rows.filter(r => r.internal_id !== internal_id);
+
+      // Remove from pools and recalculate sampleIndexes
+      let pools = Array.isArray(libraryData[testName])
+        ? []
+        : (libraryData[testName].pools || []);
+      pools = pools
+        .map(pool => ({
+          ...pool,
+          sampleInternalIds: (pool.sampleInternalIds || []).filter(id => id !== internal_id)
+        }))
+        .filter(pool => pool.sampleInternalIds.length > 0)
+        .map(pool => ({
+          ...pool,
+          sampleIndexes: pool.sampleInternalIds
+            .map(id => rows.findIndex(r => r.internal_id === id))
+            .filter(idx => idx !== -1)
+        }));
+
+      // Save back to localStorage
+      if (Array.isArray(libraryData[testName])) {
+        libraryData[testName] = rows;
+      } else {
+        libraryData[testName].rows = rows;
+        libraryData[testName].pools = pools;
+      }
+
+      // If no rows and no pools left, remove the testName key
+      const rowsLeft = Array.isArray(libraryData[testName])
+        ? libraryData[testName].length
+        : (libraryData[testName].rows || []).length;
+      const poolsLeft = Array.isArray(libraryData[testName])
+        ? 0
+        : (libraryData[testName].pools || []).length;
+      if (rowsLeft === 0 && poolsLeft === 0) {
+        delete libraryData[testName];
+      }
+
+      localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
+    }
   };
 
   const handleRepeat = async (type, comments) => {
@@ -2450,6 +2465,21 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
       return;
     }
     try {
+      const getPoolData = await axios.get(`/api/pool-data/get-pool?sample_id=${rowInfo.sample_id}`);
+      if (getPoolData.data[0].message === "Pool data not found") {
+        const payload = {
+          rows: [rowInfo],
+          testName: rowInfo.test_name?.includes(" + Mito")
+            ? rowInfo.test_name.split(" + Mito")[0].trim()
+            : rowInfo.test_name,
+          hospital_name: user_hospital_name,
+        }
+        const insertPoolData = await axios.post('/api/pool-data', payload)
+        if (insertPoolData.data[0].status !== 200) {
+          toast.error("cannot create repeat sample");
+          return;
+        }
+      }
       const res = await axios.post('/api/repeat-sample', {
         repeat_type: type,
         comments: comments,
@@ -2459,34 +2489,39 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
       if (res.data[0].status === 200) {
         toast.success("Repeat sample created successfully!");
         const row = res.data[0].data;
-
+  
+        // Remove the original sample (not the new repeat)
+        const testName = rowInfo.test_name?.includes(" + Mito")
+          ? rowInfo.test_name.split(" + Mito")[0].trim()
+          : rowInfo.test_name;
+        removeInternalIdFromLocalStorage(rowInfo.internal_id, testName);
+  
         // Insert the new row into localStorage under the correct test_name
         const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
-        const testName = row.test_name?.includes(" + Mito")
+        const repeatTestName = row.test_name?.includes(" + Mito")
           ? row.test_name.split(" + Mito")[0].trim()
           : row.test_name;
-
-        removeInternalIdFromLocalStorage(row.internal_id, testName);
-
-        if (!libraryData[testName]) {
-          libraryData[testName] = { rows: [], pools: [] };
-        } else if (Array.isArray(libraryData[testName])) {
-          libraryData[testName] = { rows: libraryData[testName], pools: [] };
+  
+        if (!libraryData[repeatTestName]) {
+          libraryData[repeatTestName] = { rows: [], pools: [] };
+        } else if (Array.isArray(libraryData[repeatTestName])) {
+          libraryData[repeatTestName] = { rows: libraryData[repeatTestName], pools: [] };
         }
-
+  
         // Prevent duplicate sample_ids
-        const exists = (libraryData[testName].rows || []).some(r => r.internal_id === row.internal_id);
+        const exists = (libraryData[repeatTestName].rows || []).some(r => r.internal_id === row.internal_id);
         if (!exists) {
-          libraryData[testName].rows.push(row);
+          libraryData[repeatTestName].rows.push(row);
         }
-
+  
         localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
-
+  
         await axios.put("/api/store", {
           internal_id: rowInfo.internal_id,
-          updates: { location: "repeat" },
+          updates: { is_repeated: "True" },
         });
-
+  
+        if (typeof onRemove === "function") onRemove(rowInfo.internal_id);
         onClose();
       } else {
         toast.error(res.data[0].message || "Failed to create repeat sample.");
@@ -2503,26 +2538,44 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
     try {
       // Remove from localStorage
       const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
-    const testName = rowInfo.test_name?.includes(" + Mito")
-      ? rowInfo.test_name.split(" + Mito")[0].trim()
-      : rowInfo.test_name;
+      const testName = rowInfo.test_name?.includes(" + Mito")
+        ? rowInfo.test_name.split(" + Mito")[0].trim()
+        : rowInfo.test_name;
 
       removeInternalIdFromLocalStorage(rowInfo.internal_id, testName);
 
       if (libraryData[testName]) {
+        // Remove from rows
+        let rows = Array.isArray(libraryData[testName])
+          ? libraryData[testName]
+          : (libraryData[testName].rows || []);
+        rows = rows.filter(r => r.internal_id !== rowInfo.internal_id);
+
+        // Remove from pools and recalculate sampleIndexes
+        let pools = Array.isArray(libraryData[testName])
+          ? []
+          : (libraryData[testName].pools || []);
+        pools = pools
+          .map(pool => ({
+            ...pool,
+            sampleInternalIds: (pool.sampleInternalIds || []).filter(id => id !== rowInfo.internal_id)
+          }))
+          .filter(pool => pool.sampleInternalIds.length > 0)
+          .map(pool => ({
+            ...pool,
+            sampleIndexes: pool.sampleInternalIds
+              .map(id => rows.findIndex(r => r.internal_id === id))
+              .filter(idx => idx !== -1)
+          }));
+
+        // Save back to localStorage
         if (Array.isArray(libraryData[testName])) {
-          libraryData[testName] = libraryData[testName].filter(r => r.internal_id !== rowInfo.internal_id);
+          libraryData[testName] = rows;
         } else {
-          libraryData[testName].rows = (libraryData[testName].rows || []).filter(r => r.internal_id !== rowInfo.internal_id);
-          // Also remove from pools if needed
-          libraryData[testName].pools = (libraryData[testName].pools || []).filter(pool =>
-            pool.sampleIndexes.some(idx => {
-              const row = libraryData[testName].rows[idx];
-              return row && row.internal_id !== rowInfo.internal_id;
-            })
-          );
+          libraryData[testName].rows = rows;
+          libraryData[testName].pools = pools;
         }
-  
+
         // If no rows and no pools left, remove the testName key
         const rowsLeft = Array.isArray(libraryData[testName])
           ? libraryData[testName].length
@@ -2533,7 +2586,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
         if (rowsLeft === 0 && poolsLeft === 0) {
           delete libraryData[testName];
         }
-  
+
         localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
       }
 
@@ -2612,7 +2665,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo }) => {
             <Button
               variant="destructive"
               className="bg-red-500 text-white hover:bg-red-600 cursor-pointer"
-              onClick={()=> handleRemoveSample(document.querySelector('input[name="comments"]').value)}
+              onClick={() => handleRemoveSample(document.querySelector('input[name="comments"]').value)}
             >
               Remove Sample
             </Button>

@@ -1,5 +1,4 @@
 import { pool } from "@/lib/db";
-import { run } from "googleapis/build/src/apis/run";
 import { NextResponse } from "next/server";
 
 // List all fields from SampleRegistration.jsx here
@@ -19,7 +18,8 @@ const dateFields = [
 
 const integerFields = [
     "age", "systolic_bp", "diastolic_bp", "total_cholesterol", "hdl_cholesterol", "ldl_cholesterol",
-    "tat_days", "gb_per_sample", "total_gb_available", "total_gb_required", "total_volume_next_seq_550", "count"
+    "tat_days", "gb_per_sample", "total_gb_available", "total_required", "total_volume_next_seq_550",
+    "count"
 ];
 
 // List all pool_info and run_setup columns here
@@ -31,18 +31,41 @@ const poolFields = [
     "i5_index_forward", "sample_volume", "pooling_volume", "pool_conc", "one_tenth_of_nm_conc",
     "data_required", "hospital_name", "run_id", "lib_prep_date", "internal_id", "batch_id",
     "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by",
-
-    // Added run_setup fields below
-
 ];
 
-const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_550", "final_pool_conc_vol_2nm_next_seq_1000_2000", "instument_type", "lib_required_next_seq_550", "loading_conc_550", "loading_conc_1000_2000", "nm_cal", "pool_conc_run_setup", "pool_size", "rsbetween_vol_2nm_next_seq_1000_2000", "selected_application", "seq_run_date", "total_gb_available", "total_required", "total_volume_2nm_next_seq_1000_2000", "total_volume_600pm_next_seq_1000_2000", "total_volume_next_seq_550", "vol_of_2nm_for_600pm_next_seq_1000_2000", "vol_of_rs_between_for_600pm_next_seq_1000_2000", "total_volume_2nm_next_seq_550", "final_pool_conc_vol_2nm_next_seq_550", "nfw_vol_2nm_next_seq_550", "count", "final_pool_vol_ul", "table_data", "ht_buffer_next_seq_1000_2000", "run_remarks"]
+const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_550",
+    "final_pool_conc_vol_2nm_next_seq_1000_2000", "instument_type",
+    "lib_required_next_seq_550", "loading_conc_550", "loading_conc_1000_2000", "nm_cal",
+    "pool_conc_run_setup", "pool_size", "rsbetween_vol_2nm_next_seq_1000_2000",
+    "selected_application", "seq_run_date", "total_gb_available", "total_required",
+    "total_volume_2nm_next_seq_1000_2000", "total_volume_600pm_next_seq_1000_2000",
+    "total_volume_next_seq_550", "vol_of_2nm_for_600pm_next_seq_1000_2000",
+    "vol_of_rs_between_for_600pm_next_seq_1000_2000", "total_volume_2nm_next_seq_550",
+    "final_pool_conc_vol_2nm_next_seq_550", "nfw_vol_2nm_next_seq_550", "count",
+    "final_pool_vol_ul", "table_data", "ht_buffer_next_seq_1000_2000", "run_remarks"]
 
 const floatFields = [
     "pool_conc", "one_tenth_of_nm_conc", "lib_vol_for_2nm", "nfw_volu_for_2nm",
-    "total_vol_for_2nm", "lib_vol_for_hyb", "data_required", "sample_volume", "pooling_volume", "buffer_volume_next_seq_550", "dinatured_lib_next_seq_550", "lib_required_next_seq_550", "loading_conc_1000_2000", "total_volume_2nm_next_seq_550", "final_pool_vol_ul", "ht_buffer_next_seq_1000_2000", "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool"
+    "total_vol_for_2nm", "lib_vol_for_hyb", "data_required", "sample_volume",
+    "pooling_volume", "buffer_volume_next_seq_550", "dinatured_lib_next_seq_550",
+    "lib_required_next_seq_550", "loading_conc_1000_2000", "total_volume_2nm_next_seq_550",
+    "final_pool_vol_ul", "ht_buffer_next_seq_1000_2000", "vol_for_40nm_percent_pooling",
+    "volume_from_40nm_for_total_25ul_pool", "final_pool_conc_vol_2nm_next_seq_1000_2000",
+    "loading_conc_550",
+    "nm_cal",
+    "pool_size",
+    "pool_conc_run_setup",
+    "rsbetween_vol_2nm_next_seq_1000_2000",
+    "total_volume_2nm_next_seq_1000_2000",
+    "total_volume_600pm_next_seq_1000_2000",
+    "vol_of_2nm_for_600pm_next_seq_1000_2000",
+    "vol_of_rs_between_for_600pm_next_seq_1000_2000",
+    "final_pool_conc_vol_2nm_next_seq_550",
+    "nfw_vol_2nm_next_seq_550", "final_pool_conc_vol_2nm_next_seq_1000_2000",
     // Add any other float/double columns in your schema
 ];
+
+const jsonFields = ['table_data']
 
 // Helper to generate new internal_id (YYYYNNNNN)
 async function generateInternalId() {
@@ -120,7 +143,7 @@ export async function POST(request) {
             newSample.reference_internal_id = original.internal_id;
             newSample.dna_isolation = "Yes";
             newSample.lib_prep = "Yes";
-            newSample.location = "repeat";
+            newSample.is_repeated = "True";
             newSample.pool_no = null
             newSample.batch_id = null;
             newSample.run_id = null;
@@ -161,7 +184,7 @@ export async function POST(request) {
             newSample.batch_id = null;
             newSample.dna_isolation = "Yes";
             newSample.lib_prep = "Yes";
-            newSample.location = "repeat";
+            newSample.is_repeated = "True";
             newSample.run_id = null;
             newSample.reference_id = original.id;
             console.log('newsample.internal_id', newSample.internal_id);
@@ -240,7 +263,24 @@ export async function POST(request) {
         delete newSample.created_at;
         delete newSample.updated_at;
 
-        // Insert new sample into master_sheet
+        // Convert all "" to null for numeric fields before insert
+        floatFields.forEach(field => {
+            if (!(field in newSample) || newSample[field] === "" || newSample[field] === undefined) {
+                newSample[field] = null;
+            }
+        });
+        integerFields.forEach(field => {
+            if (!(field in newSample) || newSample[field] === "" || newSample[field] === undefined) {
+                newSample[field] = null;
+            }
+        });
+        jsonFields.forEach(field => {
+            if (!(field in newSample) || newSample[field] === "" || newSample[field] === undefined) {
+                newSample[field] = null;
+            }
+        });
+
+        // Now build columns, values, placeholders as before
         const columns = Object.keys(newSample);
         const values = columns.map((col) => newSample[col]);
         const placeholders = columns.map((_, idx) => `$${idx + 1}`).join(", ");
@@ -250,6 +290,9 @@ export async function POST(request) {
       VALUES (${placeholders})
       RETURNING *;
     `;
+
+        console.log("Insert Query:", insertQuery);
+        console.log("Values:", values);
         const insertResult = await pool.query(insertQuery, values);
 
         // Optionally, add audit log

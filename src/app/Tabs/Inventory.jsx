@@ -127,8 +127,12 @@ const Inventory = () => {
       <div>
         <h2 className='text-xl font-semibold mb-4'>Inventory Items</h2>
         {/* make the table to add the items display each item in the table */}
-        <table className='min-w-full bg-white border border-gray-200 rounded-lg shadow-md'>
-          <thead>
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-6 overflow-x-auto w-full whitespace-nowrap"
+              style={{ maxWidth: 'calc(100vw - 60px)' }}
+            >
+              <div className="max-h-[70vh] overflow-y-auto w-full">
+                <table className="min-w-full border-collapse table-auto">
+                  <thead className="bg-orange-100 dark:bg-gray-800 sticky top-0 z-10">
             <tr className='bg-gray-100'>
               <th className="px-4 py-2 text-left">Serial No.</th>
               <th className="px-4 py-2 text-left">SKU</th>
@@ -155,6 +159,8 @@ const Inventory = () => {
             ))}
           </tbody>
         </table>
+        </div>
+        </div>
 
       </div>
       <AddNewItemDialog
