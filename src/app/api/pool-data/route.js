@@ -169,7 +169,7 @@ export async function POST(request) {
         if (testName === "Myeloid") {
             for (const sample of rows) {
                 const { sample_id, qubit_dna, data_required,batch_id, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size, pool_no, internal_id,vol_for_40nm_percent_pooling,
-                    volume_from_40nm_for_total_25ul_pool 
+                    volume_from_40nm_for_total_25ul_pool ,tapestation_size, tapestation_conc
                  } = sample;
 
                 if (!sample_id) {
@@ -193,6 +193,8 @@ export async function POST(request) {
                     total_vol_for_2nm: toNumberOrNull(total_vol_for_2nm),
                     size: toNumberOrNull(size),
                     lib_prep_date: new Date().toISOString(),
+                    tapestation_conc: toNumberOrNull(tapestation_conc),
+                    tapestation_size: toNumberOrNull(tapestation_size),
                 };
 
                 await pool.query(`INSERT INTO pool_info (qubit_dna, data_required, conc_rxn, barcode, i5_index_reverse, i7_index, lib_qubit, nm_conc, lib_vol_for_2nm, nfw_volu_for_2nm, total_vol_for_2nm, size, test_name, hospital_name, lib_prep_date,sample_id, internal_id, batch_id , vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool)
@@ -219,11 +221,15 @@ export async function POST(request) {
                         batch_id = EXCLUDED.batch_id,
                         vol_for_40nm_percent_pooling = EXCLUDED.vol_for_40nm_percent_pooling,
                         volume_from_40nm_for_total_25ul_pool = EXCLUDED.volume_from_40nm_for_total_25ul_pool
+                        tapestation_size = EXCLUDED.tapestation_size,
+                        tapestation_conc = EXCLUDED.tapestation_conc
                      WHERE pool_info.internal_id = $17`,
                     [
                         sanitized.qubit_dna, sanitized.data_required, sanitized.conc_rxn, sanitized.barcode, sanitized.i5_index_reverse, sanitized.i7_index, sanitized.lib_qubit, sanitized.nm_conc, sanitized.lib_vol_for_2nm, sanitized.nfw_volu_for_2nm, sanitized.total_vol_for_2nm, sanitized.size, testName, hospital_name, lib_prep_date, sample_id, internal_id,batch_id,
                         sanitized.vol_for_40nm_percent_pooling || null,
-                        sanitized.volume_from_40nm_for_total_25ul_pool || null
+                        sanitized.volume_from_40nm_for_total_25ul_pool || null,
+                        sanitized.tapestation_size || null,
+                        sanitized.tapestation_conc || null
                     ]
                 )
 
@@ -231,10 +237,10 @@ export async function POST(request) {
                     `UPDATE master_sheet SET qubit_dna = $1, data_required = $2, conc_rxn = $3, barcode = $4,
                      i5_index_reverse = $5, i7_index = $6, lib_qubit = $7, nm_conc = $8,
                      lib_vol_for_2nm = $9, nfw_volu_for_2nm = $10, total_vol_for_2nm = $11,
-                     size = $12, pool_no = $16, lib_prep_date = $17 , batch_id = $18, vol_for_40nm_percent_pooling = $19, volume_from_40nm_for_total_25ul_pool=$20 WHERE sample_id = $13 AND test_name = $14 AND hospital_name = $15`,
+                     size = $12, pool_no = $16, lib_prep_date = $17 , batch_id = $18, vol_for_40nm_percent_pooling = $19, volume_from_40nm_for_total_25ul_pool=$20 , tapestation_size = $21 , tapestation_conc = $22 WHERE sample_id = $13 AND test_name = $14 AND hospital_name = $15`,
                     [sanitized.qubit_dna, sanitized.data_required, sanitized.conc_rxn, sanitized.barcode, sanitized.i5_index_reverse, sanitized.i7_index,
                     sanitized.lib_qubit, sanitized.nm_conc, sanitized.lib_vol_for_2nm, sanitized.nfw_volu_for_2nm, sanitized.total_vol_for_2nm,
-                    sanitized.size, sample_id, testName, hospital_name, sanitized.pool_no, lib_prep_date, batch_id , sanitized.vol_for_40nm_percent_pooling || null, sanitized.volume_from_40nm_for_total_25ul_pool || null]
+                    sanitized.size, sample_id, testName, hospital_name, sanitized.pool_no, lib_prep_date, batch_id , sanitized.vol_for_40nm_percent_pooling || null, sanitized.volume_from_40nm_for_total_25ul_pool || null , sanitized.tapestation_size || null, sanitized.tapestation_conc || null]
                 );
                 response.push({ message: 'Data updated successfully', status: 200 });
             }

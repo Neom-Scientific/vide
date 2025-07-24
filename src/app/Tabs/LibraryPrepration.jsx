@@ -94,6 +94,8 @@ const LibraryPrepration = () => {
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
     { key: 'pool_dna_rna_10ul', label: 'Pool DNA/RNA 10ul' },
+    { key: 'tapestation_size', label: 'Average bp  Size' },
+    { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'sample_volume', label: 'Sample Volume (ul)' },
     { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
@@ -151,6 +153,7 @@ const LibraryPrepration = () => {
         "sample_type",
         "qubit_dna",
         "conc_rxn",
+        // "plate_designation",
         "barcode",
         "i5_index_forward",
         "i5_index_reverse",
@@ -162,6 +165,8 @@ const LibraryPrepration = () => {
         "lib_vol_for_2nm",
         "nfw_volu_for_2nm",
         "pool_dna_rna_10ul",
+        "tapestation_size",
+        "tapestation_conc",
         // "data_required",
         // Do NOT include pool_conc or finalPoolingColumns here
       ];
@@ -363,6 +368,42 @@ const LibraryPrepration = () => {
       enableSorting: false,
       enableHiding: true, // allow hiding via column selector
     });
+
+    // if (testName === "Myeloid") {
+    //   cols.push({
+    //     accessorKey: "pool_dna_rna_10ul",
+    //     header: "Pool DNA/RNA (8:1) ul",
+    //     cell: ({ row, table }) => {
+    //       const arr = table.getRowModel().rows;
+    //       const rowIndex = row.index;
+    //       const rnaRows = arr.filter(r => r.original.sample_type === "RNA");
+    //       const dnaRows = arr.filter(r => r.original.sample_type === "DNA");
+    //       const isFirstRNA = row.original.sample_type === "RNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "RNA");
+    //       const isFirstDNA = row.original.sample_type === "DNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "DNA");
+
+    //       if (isFirstRNA) {
+    //         return <span rowSpan={rnaRows.length}>1 ul</span>;
+    //       }
+    //       if (isFirstDNA) {
+    //         return <span rowSpan={dnaRows.length}>8 ul</span>;
+    //       }
+    //       if (row.original.sample_type === "RNA" || row.original.sample_type === "DNA") {
+    //         return null;
+    //       }
+    //       return <span></span>;
+    //     },
+    //     enableSorting: false,
+    //     enableHiding: true,
+    //   });
+
+    //   cols.push({
+    //     accessorKey: "size",
+    //     header: "Average bp Size",
+    //     cell: ({ row }) => <span>{row.original.size}</span>,
+    //     enableSorting: false,
+    //     enableHiding: true,
+    //   });
+    // }
 
     // Add S. No. column
     cols.push({
@@ -1851,43 +1892,89 @@ const LibraryPrepration = () => {
                                 return null;
                               }
 
-                              if (testName === "Myeloid" && cell.column.id === "pool_dna_rna_10ul") {
-                                // Find all RNA and DNA rows
-                                const rnaRows = arr.filter(r => r.original.sample_type === "RNA");
-                                const dnaRows = arr.filter(r => r.original.sample_type === "DNA");
-                                const isFirstRNA = row.original.sample_type === "RNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "RNA");
-                                const isFirstDNA = row.original.sample_type === "DNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "DNA");
+                              if (testName === "Myeloid") {
+                                if (cell.column.id === "pool_dna_rna_10ul") {
+                                  // Find all RNA and DNA rows
+                                  const rnaRows = arr.filter(r => r.original.sample_type === "RNA");
+                                  const dnaRows = arr.filter(r => r.original.sample_type === "DNA");
+                                  const isFirstRNA = row.original.sample_type === "RNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "RNA");
+                                  const isFirstDNA = row.original.sample_type === "DNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "DNA");
 
-                                if (isFirstRNA) {
-                                  return (
-                                    <td
-                                      key={cell.column.id}
-                                      rowSpan={rnaRows.length}
-                                      className=" font-bold text-center align-middle"
-                                      style={{ verticalAlign: "middle" }}
-                                    >
-                                      RNA
-                                    </td>
+                                  if (isFirstRNA) {
+                                    return (
+                                      <td
+                                        key={cell.column.id}
+                                        rowSpan={rnaRows.length}
+                                        className=" font-bold text-center align-middle"
+                                        style={{ verticalAlign: "middle" }}
+                                      >
+                                        1ul
+                                      </td>
+                                    );
+                                  }
+                                  if (isFirstDNA) {
+                                    return (
+                                      <td
+                                        key={cell.column.id}
+                                        rowSpan={dnaRows.length}
+                                        className=" font-bold text-center align-middle"
+                                        style={{ verticalAlign: "middle" }}
+                                      >
+                                        8ul
+                                      </td>
+                                    );
+                                  }
+                                  // Other RNA/DNA rows: skip cell (covered by rowspan)
+                                  if (row.original.sample_type === "RNA" || row.original.sample_type === "DNA") {
+                                    return null;
+                                  }
+                                  // For other sample types, show empty cell
+                                  return <td key={cell.column.id}></td>;
+                                }
+                                if (cell.column.id === "tapestation_conc" || cell.column.id === "tapestation_size") {
+                                  // Find all DNA and RNA rows
+                                  const dnaRnaRows = arr.filter(r =>
+                                    r.original.sample_type === "DNA" || r.original.sample_type === "RNA"
                                   );
+                                  const isFirstDnaRna =
+                                    (row.original.sample_type === "DNA" || row.original.sample_type === "RNA") &&
+                                    rowIndex === arr.findIndex(r =>
+                                      r.original.sample_type === "DNA" || r.original.sample_type === "RNA"
+                                    );
+
+                                  if (isFirstDnaRna) {
+                                    return (
+                                      <td
+                                        key={cell.column.id}
+                                        rowSpan={dnaRnaRows.length}
+                                        className="align-middle px-2 py-1 border border-gray-300"
+                                      >
+                                        <input
+                                          className="border border-orange-300 rounded p-1 w-[150px]"
+                                          value={row.original[cell.column.id] || ""}
+                                          onChange={e => {
+                                            const value = e.target.value;
+                                            // Update all DNA/RNA rows at once
+                                            setTableRows(prevRows =>
+                                              prevRows.map(r =>
+                                                (r.sample_type === "DNA" || r.sample_type === "RNA")
+                                                  ? { ...r, [cell.column.id]: value }
+                                                  : r
+                                              )
+                                            );
+                                          }}
+                                          placeholder={cell.column.columnDef.header || cell.column.id}
+                                        />
+                                      </td>
+                                    );
+                                  }
+                                  // For other DNA/RNA rows, skip rendering (covered by rowspan)
+                                  if (row.original.sample_type === "DNA" || row.original.sample_type === "RNA") {
+                                    return null;
+                                  }
+                                  // For other sample types, show empty cell
+                                  return <td key={cell.column.id}></td>;
                                 }
-                                if (isFirstDNA) {
-                                  return (
-                                    <td
-                                      key={cell.column.id}
-                                      rowSpan={dnaRows.length}
-                                      className=" font-bold text-center align-middle"
-                                      style={{ verticalAlign: "middle" }}
-                                    >
-                                      DNA
-                                    </td>
-                                  );
-                                }
-                                // Other RNA/DNA rows: skip cell (covered by rowspan)
-                                if (row.original.sample_type === "RNA" || row.original.sample_type === "DNA") {
-                                  return null;
-                                }
-                                // For other sample types, show empty cell
-                                return <td key={cell.column.id}></td>;
                               }
 
                               if (cell.column.id === "batch_id" && currentBatchId) {
@@ -2489,38 +2576,38 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo, user_hospit
       if (res.data[0].status === 200) {
         toast.success("Repeat sample created successfully!");
         const row = res.data[0].data;
-  
+
         // Remove the original sample (not the new repeat)
         const testName = rowInfo.test_name?.includes(" + Mito")
           ? rowInfo.test_name.split(" + Mito")[0].trim()
           : rowInfo.test_name;
         removeInternalIdFromLocalStorage(rowInfo.internal_id, testName);
-  
+
         // Insert the new row into localStorage under the correct test_name
         const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
         const repeatTestName = row.test_name?.includes(" + Mito")
           ? row.test_name.split(" + Mito")[0].trim()
           : row.test_name;
-  
+
         if (!libraryData[repeatTestName]) {
           libraryData[repeatTestName] = { rows: [], pools: [] };
         } else if (Array.isArray(libraryData[repeatTestName])) {
           libraryData[repeatTestName] = { rows: libraryData[repeatTestName], pools: [] };
         }
-  
+
         // Prevent duplicate sample_ids
         const exists = (libraryData[repeatTestName].rows || []).some(r => r.internal_id === row.internal_id);
         if (!exists) {
           libraryData[repeatTestName].rows.push(row);
         }
-  
+
         localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
-  
+
         await axios.put("/api/store", {
           internal_id: rowInfo.internal_id,
           updates: { is_repeated: "True" },
         });
-  
+
         if (typeof onRemove === "function") onRemove(rowInfo.internal_id);
         onClose();
       } else {

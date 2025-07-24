@@ -30,7 +30,7 @@ const poolFields = [
     "qubit_lib_qc_ng_ul", "stock_ng_ul", "lib_vol_for_hyb", "gb_per_sample", "pool_no", "size",
     "i5_index_forward", "sample_volume", "pooling_volume", "pool_conc", "one_tenth_of_nm_conc",
     "data_required", "hospital_name", "run_id", "lib_prep_date", "internal_id", "batch_id",
-    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by",
+    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by","tapestation_size","tapestation_conc",
 ];
 
 const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_550",
@@ -51,7 +51,7 @@ const floatFields = [
     "lib_required_next_seq_550", "loading_conc_1000_2000", "total_volume_2nm_next_seq_550",
     "final_pool_vol_ul", "ht_buffer_next_seq_1000_2000", "vol_for_40nm_percent_pooling",
     "volume_from_40nm_for_total_25ul_pool", "final_pool_conc_vol_2nm_next_seq_1000_2000",
-    "loading_conc_550",
+    "loading_conc_550","tapestation_size","tapestation_conc",
     "nm_cal",
     "pool_size",
     "pool_conc_run_setup",
