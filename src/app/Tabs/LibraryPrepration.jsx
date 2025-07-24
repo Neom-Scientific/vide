@@ -94,8 +94,8 @@ const LibraryPrepration = () => {
     { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
     { key: 'pool_dna_rna_10ul', label: 'Pool DNA/RNA 10ul' },
-    { key: 'tapestation_size', label: 'Average bp  Size' },
     { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool' },
+    { key: 'tapestation_size', label: 'Average bp  Size' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
     { key: 'sample_volume', label: 'Sample Volume (ul)' },
     { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
@@ -165,8 +165,8 @@ const LibraryPrepration = () => {
         "lib_vol_for_2nm",
         "nfw_volu_for_2nm",
         "pool_dna_rna_10ul",
-        "tapestation_size",
         "tapestation_conc",
+        "tapestation_size",
         // "data_required",
         // Do NOT include pool_conc or finalPoolingColumns here
       ];
