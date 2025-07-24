@@ -581,7 +581,7 @@ const Processing = () => {
 
       const latestRows = Object.values(
         mappedData.reduce((acc, row) => {
-          const key = row.sample_id || row.internal_id;
+          const key = row.internal_id;
           if (
             !acc[key] ||
             new Date(row.registration_date) > new Date(acc[key].registration_date) ||
@@ -647,7 +647,7 @@ const Processing = () => {
         // Deduplicate: keep only the latest occurrence (repeat if exists)
         const latestRows = Object.values(
           mappedData.reduce((acc, row) => {
-            const key = row.sample_id || row.internal_id;
+            const key = row.internal_id;
             if (
               !acc[key] ||
               new Date(row.registration_date) > new Date(acc[key].registration_date) ||
@@ -904,7 +904,7 @@ const Processing = () => {
             // Deduplicate: keep only the latest occurrence (repeat if exists)
             const latestRows = Object.values(
               mappedData.reduce((acc, row) => {
-                const key = row.sample_id || row.internal_id;
+                const key = row.internal_id;
                 if (
                   !acc[key] ||
                   new Date(row.registration_date) > new Date(acc[key].registration_date) ||
