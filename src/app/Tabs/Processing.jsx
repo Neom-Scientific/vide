@@ -254,7 +254,7 @@ const Processing = () => {
       ),
       cell: ({ row }) => {
         const rowData = row.original;
-        const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.lib_prep !== "Yes";
+        const disabled = rowData.specimen_quality === 'Not Accepted' ;
         return disabled
           ? (
             <Checkbox
@@ -267,7 +267,18 @@ const Processing = () => {
             <Checkbox
               checked={row.getIsSelected()}
               onCheckedChange={value => {
-                if (value && rowData.location && rowData.under_seq === "Yes" && rowData.seq_completed === 'No') {
+                // 1. Only dna_isolation is Yes
+                const onlyDnaIsolation =
+                  rowData.dna_isolation === "Yes" &&
+                  rowData.lib_prep === "No" &&
+                  rowData.under_seq === "No" &&
+                  rowData.seq_completed === "No";
+
+                // 2. under_seq is Yes and seq_completed is No
+                const underSeqYesSeqCompletedNo =
+                  rowData.under_seq === "Yes" && rowData.seq_completed === "No";
+
+                if (value && (onlyDnaIsolation || underSeqYesSeqCompletedNo)) {
                   setRepeatRow(rowData);
                   setShowRepeatDialog(true);
                   return;
@@ -568,19 +579,19 @@ const Processing = () => {
           seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
         }));
 
-        const latestRows = Object.values(
-          mappedData.reduce((acc, row) => {
-            const key = row.sample_id || row.internal_id;
-            if (
-              !acc[key] ||
-              new Date(row.registration_date) > new Date(acc[key].registration_date) ||
-              row.is_repeated === 'True'
-            ) {
-              acc[key] = row;
-            }
-            return acc;
-          }, {})
-        );
+      const latestRows = Object.values(
+        mappedData.reduce((acc, row) => {
+          const key = row.sample_id || row.internal_id;
+          if (
+            !acc[key] ||
+            new Date(row.registration_date) > new Date(acc[key].registration_date) ||
+            row.is_repeated === 'True'
+          ) {
+            acc[key] = row;
+          }
+          return acc;
+        }, {})
+      );
       setTableRows(latestRows);
       localStorage.setItem("searchData", JSON.stringify(latestRows));
     }

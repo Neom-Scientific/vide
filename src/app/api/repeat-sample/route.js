@@ -241,6 +241,7 @@ export async function POST(request) {
                         }
                     }
                 }
+
             });
 
             // Empty all runSetupFields
@@ -253,7 +254,45 @@ export async function POST(request) {
             });
             await pool.query(`UPDATE master_sheet SET dna_isolation = 'Yes' , lib_prep = 'Yes' , location = 'repeat' WHERE internal_id = $1`, [newSample.internal_id]);
             await pool.query(`UPDATE master_sheet SET is_repeated = 'True' WHERE internal_id = $1`, [original.internal_id]);
-        } else {
+        }
+        else if (repeat_type === "repeat_from_extraction") {
+            newSample.internal_id = await generateInternalId();
+            newSample.reference_internal_id = original.internal_id;
+            newSample.dna_isolation = "No";
+            newSample.lib_prep = "No";
+            newSample.is_repeated = "True";
+            newSample.pool_no = null
+            newSample.batch_id = null;
+            newSample.run_id = null;
+            newSample.reference_id = original.id;
+
+            poolFields.forEach(field => {
+                if (floatFields.includes(field)) {
+                    newSample[field] = null;
+                } else if (integerFields.includes(field)) {
+                    newSample[field] = null;
+                } else if (dateFields.includes(field)) {
+                    newSample[field] = null;
+                } else {
+                    if (floatFields.includes(field)) {
+                        newSample[field] = null;
+                    } else {
+                        newSample[field] = "";
+                    }
+                }
+            });
+
+            // Empty all runSetupFields
+            runSetupFields.forEach(field => {
+                if (floatFields.includes(field) || integerFields.includes(field) || dateFields.includes(field)) {
+                    newSample[field] = null;
+                } else {
+                    newSample[field] = "";
+                }
+            });
+            await pool.query(`UPDATE master_sheet SET is_repeated = 'True' WHERE internal_id = $1`, [original.internal_id]);
+        }
+        else {
             response.push({ status: 400, message: "Invalid repeat type" });
             return NextResponse.json(response);
         }
