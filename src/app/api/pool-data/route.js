@@ -641,7 +641,7 @@ export async function POST(request) {
                     sanitized.total_vol_for_2nm || null, sanitized.lib_vol_for_2nm || null,
                     sanitized.nfw_volu_for_2nm || null, sanitized.vol_for_40nm_percent_pooling || null,
                     sanitized.volume_from_40nm_for_total_25ul_pool || null, sanitized.nm_conc || null,
-                    sanitized.size || null, sanitized.one_tenth_of_nm_conc || null, sample_id, testName, hospital_name]
+                    sanitized.size || null, sanitized.one_tenth_of_nm_conc || null, internal_id, testName, hospital_name]
                 );
                 response.push({ message: 'Data updated successfully', status: 200 });
             }
