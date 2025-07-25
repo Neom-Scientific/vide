@@ -226,6 +226,7 @@ const LibraryPrepration = () => {
         "test_name",
         "patient_name",
         "qubit_dna",
+        "plate_designation",
         "well",
         "i7_index",
         "qubit_lib_qc_ng_ul",
@@ -369,6 +370,7 @@ const LibraryPrepration = () => {
   const plateOptions = [
     "NeoAmp-A", "NeoAmp-B", "NeoAmp-C", "NeoAmp-D",
     "1-NDI", "2-NDI", "3-NDI", "4-NDI",
+    '5-NDI (WES)', '6-NDI (SGS)',
     "HLA-1", "HLA-2", "HLA-3", "HLA-4"
   ];
 

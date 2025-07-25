@@ -417,7 +417,7 @@ export async function POST(request) {
         }
         if (testName === 'SGS') {
             for (const sample of rows) {
-                const { sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, internal_id, batch_id, vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool } = sample;
+                const { sample_id, qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, internal_id, batch_id, vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool,plate_designation } = sample;
 
                 if (!sample_id) {
                     response.push({ message: 'Sample Id is required', status: 400 });
@@ -447,9 +447,9 @@ export async function POST(request) {
 
                 await pool.query(
                     `INSERT INTO pool_info (
-                      qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, test_name, hospital_name, lib_prep_date, sample_id, internal_id, batch_id, vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool
+                      qubit_dna, data_required, well, i7_index, sample_volume, qubit_lib_qc_ng_ul, pooling_volume, pool_conc, size, nm_conc, one_tenth_of_nm_conc, total_vol_for_2nm, lib_vol_for_2nm, nfw_volu_for_2nm, pool_no, test_name, hospital_name, lib_prep_date, sample_id, internal_id, batch_id, vol_for_40nm_percent_pooling, volume_from_40nm_for_total_25ul_pool,plate_designation
                     )
-                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23,$24)
                     ON CONFLICT (internal_id)
                     DO UPDATE SET
                       qubit_dna = EXCLUDED.qubit_dna,
@@ -473,7 +473,8 @@ export async function POST(request) {
                       sample_id = EXCLUDED.sample_id,
                       batch_id = EXCLUDED.batch_id,
                       vol_for_40nm_percent_pooling = EXCLUDED.vol_for_40nm_percent_pooling,
-                      volume_from_40nm_for_total_25ul_pool = EXCLUDED.volume_from_40nm_for_total_25ul_pool
+                      volume_from_40nm_for_total_25ul_pool = EXCLUDED.volume_from_40nm_for_total_25ul_pool,
+                        plate_designation = EXCLUDED.plate_designation
                     WHERE pool_info.internal_id = $20`,
                     [
                       sanitized.qubit_dna, sanitized.data_required, sanitized.well, sanitized.i7_index,
@@ -492,7 +493,8 @@ export async function POST(request) {
                       internal_id,
                       batch_id,
                       sanitized.vol_for_40nm_percent_pooling || null,
-                      sanitized.volume_from_40nm_for_total_25ul_pool || null
+                      sanitized.volume_from_40nm_for_total_25ul_pool || null,
+                      plate_designation || null
                     ]
                   );
 
@@ -516,7 +518,8 @@ export async function POST(request) {
                       lib_prep_date = $16,
                       batch_id = $17,
                       vol_for_40nm_percent_pooling = $18,
-                      volume_from_40nm_for_total_25ul_pool = $19
+                      volume_from_40nm_for_total_25ul_pool = $19,
+                        plate_designation = $23
                     WHERE internal_id = $20 AND test_name = $21 AND hospital_name = $22`,
                     [
                         sanitized.qubit_dna,                       // $1
@@ -540,7 +543,8 @@ export async function POST(request) {
                         sanitized.volume_from_40nm_for_total_25ul_pool || null, // $19
                         internal_id,                               // $20
                         testName,                                  // $21
-                        hospital_name                              // $22
+                        hospital_name,                              // $22
+                        plate_designation || null // $23
                     ]
                 );
                 response.push({ message: 'Data updated successfully', status: 200 });
