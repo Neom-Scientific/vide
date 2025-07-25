@@ -1433,7 +1433,7 @@ const LibraryPrepration = () => {
       const response = await axios.post('/api/pool-data', payload);
 
       if (response.data[0].status === 200) {
-        toast.success("Sample indicator updated successfully!");
+        toast.success("Data Saved successfully!");
         setProcessing(false);
         // Remove only the selected testName's data
         const updatedData = { ...storedData };
