@@ -30,7 +30,7 @@ const poolFields = [
     "qubit_lib_qc_ng_ul", "stock_ng_ul", "lib_vol_for_hyb", "gb_per_sample", "pool_no", "size",
     "i5_index_forward", "sample_volume", "pooling_volume", "pool_conc", "one_tenth_of_nm_conc",
     "data_required", "hospital_name", "run_id", "lib_prep_date", "internal_id", "batch_id",
-    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by","tapestation_size","tapestation_conc",
+    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by","tapestation_size","tapestation_conc","dna_vol_for_dilution","buffer_vol_to_be_added","conc_of_amplicons","vol_for_fragmentation"
 ];
 
 const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_550",
@@ -61,7 +61,7 @@ const floatFields = [
     "vol_of_2nm_for_600pm_next_seq_1000_2000",
     "vol_of_rs_between_for_600pm_next_seq_1000_2000",
     "final_pool_conc_vol_2nm_next_seq_550",
-    "nfw_vol_2nm_next_seq_550", "final_pool_conc_vol_2nm_next_seq_1000_2000",
+    "nfw_vol_2nm_next_seq_550", "final_pool_conc_vol_2nm_next_seq_1000_2000","dna_vol_for_dilution","buffer_vol_to_be_added","conc_of_amplicons","vol_for_fragmentation"
     // Add any other float/double columns in your schema
 ];
 

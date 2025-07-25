@@ -78,6 +78,10 @@ const LibraryPrepration = () => {
     { key: 'volume', label: 'Volume (ul)' },
     { key: 'gdna_volume_3x', label: 'gDNA Volume (ul) (3X)' },
     { key: 'nfw', label: 'NFW (ul) (3x)' },
+    { key: 'dna_vol_for_dilution', label: 'DNA Vol for Dilution (40ng/ul)' },
+    { key: 'buffer_vol_to_be_added', label: 'Buffer Vol (ul)' },
+    { key: 'conc_of_amplicons', label: 'Conc of Amplicons (ng/ul)' },
+    { key: 'vol_for_fragmentation', label: 'Volume for Fragmentation (ul)' },
     { key: 'plate_designation', label: 'Plate Designation' },
     { key: 'well', label: 'Well No./Barcode' },
     { key: 'i5_index_reverse', label: 'i5 (reverse)' },
@@ -86,6 +90,8 @@ const LibraryPrepration = () => {
     { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'qubit_lib_qc_ng_ul', label: 'Library Qubit (ng/ul)' },
     { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb (ul)' },
+    { key: 'sample_volume', label: 'Sample Volume (ul)' },
+    { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
     { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
     { key: 'size', label: 'Size (bp)' },
     { key: 'nm_conc', label: 'nM conc' },
@@ -97,8 +103,6 @@ const LibraryPrepration = () => {
     { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool' },
     { key: 'tapestation_size', label: 'Average bp  Size' },
     { key: 'stock_ng_ul', label: 'Stock (ng/ul)' },
-    { key: 'sample_volume', label: 'Sample Volume (ul)' },
-    { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
     { key: 'data_required', label: 'Data Required(GB)' },
     { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
@@ -130,6 +134,7 @@ const LibraryPrepration = () => {
     }
     return result;
   };
+
   const insertFinalPoolingColumns = (columns) => {
     const result = [];
     for (let col of columns) {
@@ -209,7 +214,7 @@ const LibraryPrepration = () => {
         "data_required",
       ];
       return insertFinalPoolingColumns(insertPooledColumns(baseCols));
-    } else if (testName === "SGS" || testName === "HLA") {
+    } else if (testName === "SGS") {
       baseCols = [
         "select",
         "id",
@@ -221,11 +226,34 @@ const LibraryPrepration = () => {
         "test_name",
         "patient_name",
         "qubit_dna",
-        "sample_volume",
         "well",
         "i7_index",
         "qubit_lib_qc_ng_ul",
         "pooling_volume",
+        "data_required",
+      ];
+      return insertFinalPoolingColumns(insertPooledColumns(baseCols));
+    }
+    else if (testName === "HLA") {
+      baseCols = [
+        "select",
+        "id",
+        "batch_id",
+        "pool_no",
+        "sample_id",
+        "registration_date",
+        "internal_id",
+        "test_name",
+        "patient_name",
+        "qubit_dna",
+        "dna_vol_for_dilution",
+        "buffer_vol_to_be_added",
+        "conc_of_amplicons",
+        "vol_for_fragmentation",
+        "plate_designation",
+        "well",
+        "i5_index_reverse",
+        "i7_index",
         "data_required",
       ];
       return insertFinalPoolingColumns(insertPooledColumns(baseCols));
@@ -587,6 +615,7 @@ const LibraryPrepration = () => {
             const size = parseFloat(updatedRow.size) || 0;
             const nm_conc = parseFloat(updatedRow.nm_conc) || 0;
             const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
+            const conc_of_amplicons = parseFloat(updatedRow.conc_of_amplicons) || 0;
 
             if (columnId === "lib_qubit" || columnId === "size") {
               const lib_qubit = parseFloat(updatedRow.lib_qubit) || 0;
@@ -595,19 +624,6 @@ const LibraryPrepration = () => {
 
               updatedRow.nm_conc = parseFloat(nm_conc.toFixed(2));
 
-              // const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-
-              // if (nm_conc > 0 && total_vol_for_2nm > 0) {
-              //   updatedRow.lib_vol_for_2nm = parseFloat(((3 * total_vol_for_2nm) / nm_conc).toFixed(2));
-              //   console.log('lib_vol_for_2nm:', updatedRow.lib_vol_for_2nm);
-              //   if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
-              //     updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
-              //   }
-              //   updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
-              // } else {
-              //   updatedRow.lib_vol_for_2nm = 0;
-              //   updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
-              // }
               return updatedRow;
             }
 
@@ -639,7 +655,6 @@ const LibraryPrepration = () => {
               return updatedRow;
             }
 
-
             if (columnId === 'pool_conc' || columnId === 'size') {
               const poolConc = parseFloat(updatedRow.pool_conc) || 0;
               updatedRow.nm_conc = size > 0 ? Math.round(((poolConc / (size * 660)) * Math.pow(10, 6))) : "";
@@ -652,8 +667,18 @@ const LibraryPrepration = () => {
             if (columnId === "size") {
               updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
             }
+
             if (qubit_dna || per_rxn_gdna) {
               updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.round((per_rxn_gdna / qubit_dna) * 3) : "";
+            }
+
+            if (qubit_dna) {
+              updatedRow.dna_vol_for_dilution = qubit_dna > 0 ? (400 / qubit_dna).toFixed(2) : "";
+              updatedRow.buffer_vol_to_be_added = (10 - updatedRow.dna_vol_for_dilution).toFixed(2);
+            }
+
+            if (columnId === "conc_of_amplicons") {
+              updatedRow.vol_for_fragmentation = conc_of_amplicons > 0 ? (Math.round((250 / conc_of_amplicons) * 10) / 10).toFixed(1) : "";
             }
 
             if (columnId === "volume" || columnId === "gdna_volume_3x") {
@@ -666,6 +691,7 @@ const LibraryPrepration = () => {
               updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
 
             }
+
             if (columnId === "stock_ng_ul") {
               const stock = parseFloat(value) || 0;
               updatedRow.stock_ng_ul = stock;
