@@ -1362,7 +1362,6 @@ const LibraryPrepration = () => {
         if (Array.isArray(data)) {
           rows = data;
         } else if (data && Array.isArray(data.rows)) {
-          // Sync pools for each testName
           rows = data.rows.map((row, idx) => {
             const pool = (data.pools || []).find(pool => pool.sampleIndexes.includes(idx));
             if (pool) {
@@ -1380,16 +1379,17 @@ const LibraryPrepration = () => {
 
       const results = await Promise.all(savePromises);
 
-      // Check if all were successful
       const allSuccess = results.every(res => res.data[0]?.status === 200);
 
       if (allSuccess) {
         toast.success("All data saved successfully!");
         setProcessing(false);
-        // localStorage.removeItem('libraryPreparationData');
-        // setMessage(1); // Set message to indicate no data available
-        // setTableRows([]);
-        // setGetTheTestNames([]);
+
+        // Remove all samples from localStorage after save
+        localStorage.removeItem('libraryPreparationData');
+        setTableRows([]);
+        setGetTheTestNames([]);
+        setMessage(1); // Show "No data available" message
       } else {
         setProcessing(false);
         toast.error("Some data could not be saved. Please check and try again.");
@@ -1405,13 +1405,10 @@ const LibraryPrepration = () => {
     setProcessing(true);
     try {
       const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-      // const poolNos = [...new Set(tableRows.map(row => row.pool_no).filter(Boolean))];
 
-      // Prepare the payload for the API call
       const syncedRows = tableRows.map((row, idx) => {
         const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(idx));
         if (pool) {
-          // Only merge pooledColumns, not all pool.values
           const pooledFields = pooledColumns.reduce((acc, key) => {
             acc[key] = pool.values[key];
             return acc;
@@ -1430,20 +1427,18 @@ const LibraryPrepration = () => {
         rows: syncedRows,
       };
 
-      console.log('payload:', payload);
-
       const response = await axios.post('/api/pool-data', payload);
 
       if (response.data[0].status === 200) {
         toast.success("Data Saved successfully!");
         setProcessing(false);
-        // Remove only the selected testName's data
-        const updatedData = { ...storedData };
-        // delete updatedData[testName];
 
+        // Remove only the selected testName's data after save
+        const updatedData = { ...storedData };
+        delete updatedData[testName];
         localStorage.setItem('libraryPreparationData', JSON.stringify(updatedData));
-        // setTableRows([]); 
-        // setMessage(1); // Set message to indicate no data available
+        setTableRows([]);
+        setMessage(1); // Show "No data available" message
       } else if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
         setProcessing(false);
