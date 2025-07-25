@@ -168,6 +168,7 @@ const LibraryPrepration = () => {
         "pool_dna_rna_10ul",
         "tapestation_conc",
         "tapestation_size",
+        "data_required",
         // "data_required",
         // Do NOT include pool_conc or finalPoolingColumns here
       ];
@@ -382,146 +383,154 @@ const LibraryPrepration = () => {
       cols.push(
         ...allColumns
           .filter(col => col.key !== "select" && col.key !== "id")
-          .map((column) => ({
-            accessorKey: column.key,
-            header: column.label,
-            cell: (info) => {
-              const value = typeof info.getValue === "function"
-                ? info.getValue()
-                : (info.row && info.row.original ? info.row.original[column.key] : "");
-              if (column.key === 'registration_date') {
-                const formattedDate = new Date(value).toLocaleDateString("en-GB", {
-                  day: "2-digit",
-                  month: "2-digit",
-                  year: "numeric",
-                }); // Format as dd-mm-yyyy
-                return <span>{formattedDate}</span> || "";
-              }
+          .map((column) => {
+            let headerLabel = column.label;
+            if (testName === "Myeloid") {
+              if (column.key === 'total_vol_for_2nm') headerLabel = "Total Volume For 2nM";
+              if (column.key === 'lib_vol_for_2nm') headerLabel = "Volume from Stock library for 2nM";
+              if (column.key === 'nfw_volu_for_2nm') headerLabel = "NFW Volume For 2nM";
+            }
+            return {
+              accessorKey: column.key,
+              header: headerLabel,
+              cell: (info) => {
+                const value = typeof info.getValue === "function"
+                  ? info.getValue()
+                  : (info.row && info.row.original ? info.row.original[column.key] : "");
+                if (column.key === 'registration_date') {
+                  const formattedDate = new Date(value).toLocaleDateString("en-GB", {
+                    day: "2-digit",
+                    month: "2-digit",
+                    year: "numeric",
+                  }); // Format as dd-mm-yyyy
+                  return <span>{formattedDate}</span> || "";
+                }
 
-              if (column.key === 'well' || column.key === 'plate_designation') {
-                return (
-                  <select
-                    className="border-2 border-orange-300 rounded-lg p-2"
-                    value={value || ""}
-                    onChange={e => {
-                      const newValue = e.target.value;
-                      if (!newValue) return;
+                if (column.key === 'well' || column.key === 'plate_designation') {
+                  return (
+                    <select
+                      className="border-2 border-orange-300 rounded-lg p-2"
+                      value={value || ""}
+                      onChange={e => {
+                        const newValue = e.target.value;
+                        if (!newValue) return;
 
-                      setTableRows(prevRows => {
-                        if (info.row.index === 0) {
-                          if (syncFirstRow) {
-                            // Sync logic (as before)
-                            if (column.key === 'well') {
-                              const startIdx = wellNumberOptions.indexOf(newValue);
-                              return prevRows.map((row, idx) => {
-                                if (idx === 0 || (!manualWellRows.has(idx) && wellNumberOptions[startIdx + idx])) {
-                                  return { ...row, well: wellNumberOptions[startIdx + idx] };
-                                }
-                                return row;
-                              });
-                            }
-                            if (column.key === 'plate_designation') {
-                              const oldPlate = prevRows[0].plate_designation;
-                              return prevRows.map((row, idx) => {
-                                if (idx === 0 || (!manualPlateRows.has(idx) && row.plate_designation === oldPlate)) {
-                                  return { ...row, plate_designation: newValue };
-                                }
-                                return row;
-                              });
+                        setTableRows(prevRows => {
+                          if (info.row.index === 0) {
+                            if (syncFirstRow) {
+                              // Sync logic (as before)
+                              if (column.key === 'well') {
+                                const startIdx = wellNumberOptions.indexOf(newValue);
+                                return prevRows.map((row, idx) => {
+                                  if (idx === 0 || (!manualWellRows.has(idx) && wellNumberOptions[startIdx + idx])) {
+                                    return { ...row, well: wellNumberOptions[startIdx + idx] };
+                                  }
+                                  return row;
+                                });
+                              }
+                              if (column.key === 'plate_designation') {
+                                const oldPlate = prevRows[0].plate_designation;
+                                return prevRows.map((row, idx) => {
+                                  if (idx === 0 || (!manualPlateRows.has(idx) && row.plate_designation === oldPlate)) {
+                                    return { ...row, plate_designation: newValue };
+                                  }
+                                  return row;
+                                });
+                              }
+                            } else {
+                              // Only update first row
+                              return prevRows.map((row, idx) =>
+                                idx === 0 ? { ...row, [column.key]: newValue } : row
+                              );
                             }
                           } else {
-                            // Only update first row
-                            return prevRows.map((row, idx) =>
-                              idx === 0 ? { ...row, [column.key]: newValue } : row
-                            );
+                            if (column.key === 'well') {
+                              setManualWellRows(prev => {
+                                const next = new Set(prev);
+                                // If matches expected sequence, unmark as manual
+                                const firstWell = prevRows[0].well;
+                                const startIdx = wellNumberOptions.indexOf(firstWell);
+                                const expectedWell = wellNumberOptions[startIdx + info.row.index];
+                                if (newValue === expectedWell) {
+                                  next.delete(info.row.index);
+                                } else {
+                                  next.add(info.row.index);
+                                }
+                                return next;
+                              });
+                              return prevRows.map((row, idx) =>
+                                idx === info.row.index ? { ...row, well: newValue } : row
+                              );
+                            }
+                            if (column.key === 'plate_designation') {
+                              setManualPlateRows(prev => {
+                                const next = new Set(prev);
+                                // If matches expected plate, unmark as manual
+                                const firstPlate = prevRows[0].plate_designation;
+                                if (newValue === firstPlate) {
+                                  next.delete(info.row.index);
+                                } else {
+                                  next.add(info.row.index);
+                                }
+                                return next;
+                              });
+                              return prevRows.map((row, idx) =>
+                                idx === info.row.index ? { ...row, plate_designation: newValue } : row
+                              );
+                            }
                           }
-                        } else {
-                          if (column.key === 'well') {
-                            setManualWellRows(prev => {
-                              const next = new Set(prev);
-                              // If matches expected sequence, unmark as manual
-                              const firstWell = prevRows[0].well;
-                              const startIdx = wellNumberOptions.indexOf(firstWell);
-                              const expectedWell = wellNumberOptions[startIdx + info.row.index];
-                              if (newValue === expectedWell) {
-                                next.delete(info.row.index);
-                              } else {
-                                next.add(info.row.index);
-                              }
-                              return next;
-                            });
-                            return prevRows.map((row, idx) =>
-                              idx === info.row.index ? { ...row, well: newValue } : row
-                            );
-                          }
-                          if (column.key === 'plate_designation') {
-                            setManualPlateRows(prev => {
-                              const next = new Set(prev);
-                              // If matches expected plate, unmark as manual
-                              const firstPlate = prevRows[0].plate_designation;
-                              if (newValue === firstPlate) {
-                                next.delete(info.row.index);
-                              } else {
-                                next.add(info.row.index);
-                              }
-                              return next;
-                            });
-                            return prevRows.map((row, idx) =>
-                              idx === info.row.index ? { ...row, plate_designation: newValue } : row
-                            );
-                          }
-                        }
-                      });
-                    }}
-                  >
-                    <option value="">Select {column.key === 'well' ? 'Well' : 'Plate Designation'}</option>
-                    {(column.key === 'well' ? wellNumberOptions : plateOptions).map(opt => (
-                      <option key={opt} value={opt}>{opt}</option>
-                    ))}
-                  </select>
+                        });
+                      }}
+                    >
+                      <option value="">Select {column.key === 'well' ? 'Well' : 'Plate Designation'}</option>
+                      {(column.key === 'well' ? wellNumberOptions : plateOptions).map(opt => (
+                        <option key={opt} value={opt}>{opt}</option>
+                      ))}
+                    </select>
+                  );
+                }
+
+                if (
+                  column.key === "sample_id" ||
+                  column.key === "test_name" ||
+                  column.key === "patient_name" ||
+                  column.key === "sample_type" ||
+                  column.key === "pool_no" ||
+                  column.key === "internal_id" ||
+                  column.key === "batch_id" ||
+                  column.key === "registration_date" ||
+                  column.key === "client_id" ||
+                  column.key === "client_name" ||
+                  column.key === "docter_name" ||
+                  column.key === "email" ||
+                  column.key === "remarks" ||
+                  column.key === "clinical_history" ||
+                  column.key === "father_husband_name" ||
+                  column.key === "age" ||
+                  column.key === "gender"
+                ) {
+                  return <span>{value}</span> || "";
+                }
+                if (!info.row) return null;
+                return (
+                  <InputCell
+                    value={value || ""}
+                    rowIndex={info.row.index}
+                    columnId={column.key}
+                    columnLabel={column.label}
+                    updateData={table.options.meta.updateData}
+                  />
                 );
-              }
-
-
-              if (
-                column.key === "sample_id" ||
-                column.key === "test_name" ||
-                column.key === "patient_name" ||
-                column.key === "sample_type" ||
-                column.key === "pool_no" ||
-                column.key === "internal_id" ||
-                column.key === "batch_id" ||
-                column.key === "registration_date" ||
-                column.key === "client_id" ||
-                column.key === "client_name" ||
-                column.key === "docter_name" ||
-                column.key === "email" ||
-                column.key === "remarks" ||
-                column.key === "clinical_history" ||
-                column.key === "father_husband_name" ||
-                column.key === "age" ||
-                column.key === "gender"
-              ) {
-                return <span>{value}</span> || "";
-              }
-              if (!info.row) return null;
-              return (
-                <InputCell
-                  value={value || ""}
-                  rowIndex={info.row.index}
-                  columnId={column.key}
-                  columnLabel={column.label}
-                  updateData={table.options.meta.updateData}
-                />
-              );
-            },
-            enableSorting: false,
-            enableHiding: true,
-          }))
+              },
+              enableSorting: false,
+              enableHiding: true,
+            };
+          })
       );
 
+
     return cols;
-  }, [allColumns, rowSelection]);
+  }, [allColumns, rowSelection, testName]);
 
   useEffect(() => {
     const defaultVisible = getDefaultVisible(testName);
