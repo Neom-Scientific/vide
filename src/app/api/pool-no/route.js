@@ -27,13 +27,14 @@ export async function GET(request) {
             const batchData = await pool.query('SELECT batch_id FROM pool_info WHERE batch_id IS NOT NULL and hospital_name = $1 ORDER BY batch_id DESC LIMIT 1 FOR UPDATE',[hospital_name]);
             // console.log('batchData:', batchData.rows);
             if (batchData.rows.length > 0) {
-                const lastBatchId = batchData.rows[0].batch_id;
-                if (typeof lastBatchId === "string" && lastBatchId.includes("_")) {
-                    const lastNumber = parseInt(lastBatchId.split('_')[1], 10);
-                    const newNumber = lastNumber + 1;
-                    // console.log('lastNumber:', lastNumber, 'newNumber:', newNumber);
-                    batch_id = `SBB_${newNumber.toString().padStart(2, '0')}`;
-                }
+                // const lastBatchId = batchData.rows[0].batch_id;
+                // if (typeof lastBatchId === "string" && lastBatchId.includes("_")) {
+                //     const lastNumber = parseInt(lastBatchId.split('_')[1], 10);
+                //     const newNumber = lastNumber + 1;
+                //     // console.log('lastNumber:', lastNumber, 'newNumber:', newNumber);
+                //     batch_id = `SBB_${newNumber.toString().padStart(2, '0')}`;
+                // }
+                batch_id = batchData.rows[0].batch_id;
             }
             response.push({
                 batch_id: batch_id,

@@ -27,8 +27,7 @@ export async function GET(request) {
     if (
       !sample_ids.length && !test_names.length && !run_ids.length &&
       !sample_statuses.length && !sample_indicators.length &&
-      !doctor_names.length && !dept_names.length && !from_dates.length && !to_dates.length &&
-      hospital_names.length // Include hospital_name in validation
+      !doctor_names.length && !dept_names.length && !from_dates.length && !to_dates.length && !hospital_names.length
     ) {
       response.push({
         status: 400,
@@ -104,8 +103,12 @@ export async function GET(request) {
     }
 
     if (from_dates.length && to_dates.length) {
-      where.push(`registration_date BETWEEN $${idx++} AND $${idx++}`);
-      values.push(from_dates[0], to_dates[0]);
+      const fromDate = from_dates[0];
+      let toDate = new Date(to_dates[0]);
+      toDate.setDate(toDate.getDate() + 1);
+      const toDateStr = toDate.toISOString().slice(0, 10); // 'YYYY-MM-DD'
+      where.push(`registration_date >= $${idx++} AND registration_date < $${idx++}`);
+      values.push(fromDate, toDateStr);
     }
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';

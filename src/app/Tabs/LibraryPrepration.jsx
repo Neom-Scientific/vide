@@ -104,6 +104,7 @@ const LibraryPrepration = () => {
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
     { key: 'remarks', label: 'Remarks' },
     { key: 'clinical_history', label: 'Clinical History' },
+
   ];
 
 
@@ -274,10 +275,10 @@ const LibraryPrepration = () => {
         // If local data exists for this testName, use it and do not overwrite
         if (testName && storedData[testName]) {
           if (Array.isArray(storedData[testName])) {
-            setTableRows(storedData[testName]);
+            setTableRows(sortRowsByBatchAndPool(storedData[testName]));
             setPooledRowData([]);
           } else {
-            setTableRows(storedData[testName].rows || []);
+            setTableRows(sortRowsByBatchAndPool(storedData[testName].rows || []));
             setPooledRowData(storedData[testName].pools || []);
           }
           setGetTheTestNames(Object.keys(storedData));
@@ -314,10 +315,10 @@ const LibraryPrepration = () => {
               localStorage.setItem('libraryPreparationData', JSON.stringify(mergedData));
             } else {
               if (Array.isArray(storedData[testName])) {
-                setTableRows(storedData[testName]);
+                setTableRows(sortRowsByBatchAndPool(storedData[testName]));
                 setPooledRowData([]);
               } else {
-                setTableRows(storedData[testName].rows || []);
+                setTableRows(sortRowsByBatchAndPool(storedData[testName].rows || []));
                 setPooledRowData(storedData[testName].pools || []);
               }
               setGetTheTestNames(Object.keys(storedData));
@@ -369,43 +370,6 @@ const LibraryPrepration = () => {
       enableHiding: true, // allow hiding via column selector
     });
 
-    // if (testName === "Myeloid") {
-    //   cols.push({
-    //     accessorKey: "pool_dna_rna_10ul",
-    //     header: "Pool DNA/RNA (8:1) ul",
-    //     cell: ({ row, table }) => {
-    //       const arr = table.getRowModel().rows;
-    //       const rowIndex = row.index;
-    //       const rnaRows = arr.filter(r => r.original.sample_type === "RNA");
-    //       const dnaRows = arr.filter(r => r.original.sample_type === "DNA");
-    //       const isFirstRNA = row.original.sample_type === "RNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "RNA");
-    //       const isFirstDNA = row.original.sample_type === "DNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "DNA");
-
-    //       if (isFirstRNA) {
-    //         return <span rowSpan={rnaRows.length}>1 ul</span>;
-    //       }
-    //       if (isFirstDNA) {
-    //         return <span rowSpan={dnaRows.length}>8 ul</span>;
-    //       }
-    //       if (row.original.sample_type === "RNA" || row.original.sample_type === "DNA") {
-    //         return null;
-    //       }
-    //       return <span></span>;
-    //     },
-    //     enableSorting: false,
-    //     enableHiding: true,
-    //   });
-
-    //   cols.push({
-    //     accessorKey: "size",
-    //     header: "Average bp Size",
-    //     cell: ({ row }) => <span>{row.original.size}</span>,
-    //     enableSorting: false,
-    //     enableHiding: true,
-    //   });
-    // }
-
-    // Add S. No. column
     cols.push({
       accessorKey: "id",
       header: "S. No.",
@@ -517,6 +481,7 @@ const LibraryPrepration = () => {
                   </select>
                 );
               }
+
 
               if (
                 column.key === "sample_id" ||
@@ -749,6 +714,7 @@ const LibraryPrepration = () => {
       const mergedPooledValues = {
         ...firstRow,
         ...pooledValues,
+        pool_no: poolNo,
         total_vol_for_2nm: pooledValues.total_vol_for_2nm ?? firstRow.total_vol_for_2nm ?? "",
       };
 
@@ -786,14 +752,31 @@ const LibraryPrepration = () => {
         }
       ];
 
-      setTableRows(newRows);
-      setPooledRowData(updatedPooledRowData);
+      // setTableRows(newRows);
+      // setTableRows(sortRowsByBatchAndPool(newRows));
+      // setPooledRowData(updatedPooledRowData);
+      const sortedRows = sortRowsByBatchAndPool(newRows);
+      const syncedPools = syncPoolSampleIndexes(updatedPooledRowData, sortedRows);
+      setTableRows(sortedRows);
+      setPooledRowData(syncedPools);
       setPooledValues({});
       setCurrentSelection([]);
       setShowPooledFields(false);
       setRowSelection({});
     }
   };
+
+  function getNextBatchNo() {
+    const lastBatchNo = localStorage.getItem('lastBatchNo');
+    let nextNumber = 1;
+    if (lastBatchNo && /^SBB_\d+$/.test(lastBatchNo)) {
+      nextNumber = parseInt(lastBatchNo.split('_')[1], 10) + 1;
+    }
+    const nextBatchNo = `SBB_${nextNumber}`;
+    localStorage.setItem('lastBatchNo', nextBatchNo);
+    return nextBatchNo;
+  }
+
   const handleCreateBatch = async () => {
     // Find all pools that have any selected row
     const selectedPoolIndexes = pooledRowData
@@ -807,50 +790,42 @@ const LibraryPrepration = () => {
     if (batchIndexes.length > 0) {
       // Check if selection is consecutive
       const sorted = [...batchIndexes].sort((a, b) => a - b);
-      const isConsecutive = sorted.every((val, idx, arr) => idx === 0 || val === arr[idx - 1] + 1);
-      if (!isConsecutive) {
-        toast.error("Please select consecutive rows to create a batch.");
-        return;
-      }
-      try {
-        const response = await axios.get(`/api/pool-no?id=batch_id&hospital_name=${user.hospital_name}`);
-        if (response.data[0].status === 200) {
-          const batchNo = response.data[0].batch_no || response.data[0].id || response.data[0].batch_id;
-          setTableRows(prevRows => {
-            let updatedRows = prevRows.map((row, idx) =>
-              sorted.includes(idx)
-                ? { ...row, batch_id: batchNo }
-                : row
-            );
-            // Update batch_id for all pools that have any selected row
-            setPooledRowData(prevPools => {
-              const updated = prevPools.map(pool => ({
-                ...pool,
-                batch_id: pool.sampleIndexes.some(idx => sorted.includes(idx)) ? batchNo : pool.batch_id
-              }));
-              return updated;
-            });
-            // Update localStorage
-            const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
-            if (storedData[testName]) {
-              if (Array.isArray(storedData[testName])) {
-                storedData[testName] = updatedRows;
-              } else {
-                storedData[testName].rows = updatedRows;
-              }
-              localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
-            }
-            return updatedRows;
-          });
-          setCurrentSelection([]);
-          setRowSelection({});
-          setShowPooledFields(false);
-        } else {
-          toast.error(response.data[0].message || "Failed to create batch.");
+      // const isConsecutive = sorted.every((val, idx, arr) => idx === 0 || val === arr[idx - 1] + 1);
+      // if (!isConsecutive) {
+      //   toast.error("Please select consecutive rows to create a batch.");
+      //   return;
+      // }
+      // Use local batch number logic
+      const batchNo = getNextBatchNo();
+      setTableRows(prevRows => {
+        let updatedRows = prevRows.map((row, idx) =>
+          sorted.includes(idx)
+            ? { ...row, batch_id: batchNo }
+            : row
+        );
+        // Update batch_id for all pools that have any selected row
+        setPooledRowData(prevPools => {
+          const updated = prevPools.map(pool => ({
+            ...pool,
+            batch_id: pool.sampleIndexes.some(idx => sorted.includes(idx)) ? batchNo : pool.batch_id
+          }));
+          return updated;
+        });
+        // Update localStorage
+        const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+        if (storedData[testName]) {
+          if (Array.isArray(storedData[testName])) {
+            storedData[testName] = updatedRows;
+          } else {
+            storedData[testName].rows = updatedRows;
+          }
+          localStorage.setItem('libraryPreparationData', JSON.stringify(storedData));
         }
-      } catch (error) {
-        toast.error("Batch creation failed.");
-      }
+        return updatedRows; // <--- DO NOT SORT HERE
+      });
+      setCurrentSelection([]);
+      setRowSelection({});
+      setShowPooledFields(false);
     }
   };
 
@@ -1021,6 +996,16 @@ const LibraryPrepration = () => {
       }
     }
     syncLastPoolNo();
+  }, []);
+
+  useEffect(() => {
+    async function syncLastBatchNo() {
+      const response = await axios.get(`/api/pool-no?id=batch_id&count=1&hospital_name=${user.hospital_name}`);
+      if (response.data[0]?.batch_id) {
+        localStorage.setItem('lastBatchNo', response.data[0].batch_id);
+      }
+    }
+    syncLastBatchNo();
   }, []);
 
 
@@ -1248,10 +1233,10 @@ const LibraryPrepration = () => {
         const defaultTestName = testNames[0];
         setTestName(defaultTestName);
         if (Array.isArray(storedData[defaultTestName])) {
-          setTableRows(storedData[defaultTestName]);
+          setTableRows(sortRowsByBatchAndPool(storedData[defaultTestName]));
           setPooledRowData([]);
         } else {
-          setTableRows(storedData[defaultTestName].rows || []);
+          setTableRows(sortRowsByBatchAndPool(storedData[defaultTestName]).rows || []);
           setPooledRowData(storedData[defaultTestName].pools || []);
         }
       }
@@ -1266,10 +1251,10 @@ const LibraryPrepration = () => {
     // Always show local data if it exists
     if (storedData && storedData[selectedTestName]) {
       if (Array.isArray(storedData[selectedTestName])) {
-        setTableRows(storedData[selectedTestName]);
+        setTableRows(sortRowsByBatchAndPool(storedData[selectedTestName]));
         setPooledRowData([]);
       } else {
-        setTableRows(storedData[selectedTestName].rows || []);
+        setTableRows(sortRowsByBatchAndPool(storedData[selectedTestName].rows || []));
         setPooledRowData(storedData[selectedTestName].pools || []);
       }
       return; // Do not fetch or overwrite with API data
@@ -1446,13 +1431,18 @@ const LibraryPrepration = () => {
   useEffect(() => {
     const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
     if (storedData[testName]) {
+      let rows, pools;
       if (Array.isArray(storedData[testName])) {
-        setTableRows(storedData[testName]);
-        setPooledRowData([]);
+        rows = sortRowsByBatchAndPool(storedData[testName]);
+        pools = [];
       } else {
-        setTableRows(storedData[testName].rows || []);
-        setPooledRowData(storedData[testName].pools || []);
+        rows = sortRowsByBatchAndPool(storedData[testName].rows || []);
+        pools = storedData[testName].pools || [];
       }
+      // Sync pool sampleIndexes with the loaded/sorted rows
+      const syncedPools = syncPoolSampleIndexes(pools, rows);
+      setTableRows(rows);
+      setPooledRowData(syncedPools);
     }
   }, [testName]);
 
@@ -1626,6 +1616,73 @@ const LibraryPrepration = () => {
   useEffect(() => {
     setTableRows(prevRows => sortSamplesByType(prevRows));
   }, [testName, tableRows]);
+
+
+  function sortRowsByBatchAndPool(rows) {
+    if (!Array.isArray(rows)) return []
+    return [...rows].sort((a, b) => {
+      // Sort by batch_id, then pool_no, then id (or index)
+      if ((a.batch_id || "") < (b.batch_id || "")) return -1;
+      if ((a.batch_id || "") > (b.batch_id || "")) return 1;
+      if ((a.pool_no || "") < (b.pool_no || "")) return -1;
+      if ((a.pool_no || "") > (b.pool_no || "")) return 1;
+      return (a.id || 0) - (b.id || 0);
+    });
+  }
+
+  function syncPoolSampleIndexes(pools, rows) {
+    return pools.map(pool => ({
+      ...pool,
+      sampleIndexes: (pool.sampleInternalIds || []).map(internal_id =>
+        rows.findIndex(r => r.internal_id === internal_id)
+      ).filter(idx => idx !== -1)
+    }));
+  }
+
+  const handleAddSampleToPool = (rowIndex, poolNo) => {
+    if (!poolNo) return;
+    setTableRows(prevRows => {
+      const pool = pooledRowData.find(p => p.values.pool_no === poolNo);
+      const poolBatchId = pool?.batch_id || "";
+      const internal_id = prevRows[rowIndex].internal_id;
+
+      // Remove from other pools, add to target pool
+      let newPools = pooledRowData.map(p => {
+        let sampleInternalIds = p.sampleInternalIds.filter(id => id !== internal_id);
+        if (p.values.pool_no === poolNo && !sampleInternalIds.includes(internal_id)) {
+          sampleInternalIds = [...sampleInternalIds, internal_id];
+        }
+        return { ...p, sampleInternalIds };
+      }).filter(p => p.sampleInternalIds.length > 0);
+
+      let updatedRows = prevRows.map((row, idx) =>
+        idx === rowIndex
+          ? { ...row, pool_no: poolNo, batch_id: poolBatchId || row.batch_id }
+          : row
+      );
+
+      let sortedRows = sortRowsByBatchAndPool(updatedRows);
+      newPools = syncPoolSampleIndexes(newPools, sortedRows);
+
+      // For all samples in the pool, update their pooled columns from pool.values
+      sortedRows = sortedRows.map(row => {
+        const poolForRow = newPools.find(p => p.sampleInternalIds.includes(row.internal_id));
+        if (poolForRow && poolForRow.values) {
+          const pooledFields = pooledColumns.reduce((acc, key) => {
+            acc[key] = poolForRow.values[key];
+            return acc;
+          }, {});
+          // Always set batch_id from pool if present
+          return { ...row, ...pooledFields, batch_id: poolForRow.batch_id || row.batch_id };
+        }
+        return row;
+      });
+
+      setPooledRowData(newPools);
+      return sortedRows;
+    });
+  };
+
   return (
     <div className="p-4 ">
       {!message ?
@@ -1807,6 +1864,7 @@ const LibraryPrepration = () => {
                             </th>
                           );
                         })}
+                        <th className=""></th>
                       </tr>
                     ))}
                   </thead>
@@ -2367,19 +2425,36 @@ const LibraryPrepration = () => {
                                 </td>
                               );
                             })}
-                            <td>
-
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => {
-                                  setDialogOpen(true);
-                                  setDialogRowInfo(row.original); // <-- Store row info for dialog
-                                }}
-                              >
-                                Remove
-                              </Button>
-
+                            <td className="align-middle px-2 py-1 border border-gray-300">
+                              <div className="flex items-center gap-2">
+                                {!row.original.pool_no && pooledRowData.length > 0 && (
+                                  <select
+                                    onChange={e => handleAddSampleToPool(row.index, e.target.value)}
+                                    defaultValue=""
+                                    className="border border-orange-300 rounded-lg p-2 bg-white text-sm focus:ring-2 focus:ring-orange-400 transition"
+                                  >
+                                    <option value="">Add to Pool</option>
+                                    {pooledRowData
+                                      .filter(pool => !pool.values.batch_id)
+                                      .map(pool => (
+                                        <option key={pool.values.pool_no} value={pool.values.pool_no}>
+                                          {pool.values.pool_no}
+                                        </option>
+                                      ))}
+                                  </select>
+                                )}
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  className="rounded-lg px-4 py-2 text-sm font-semibold bg-red-500 hover:bg-red-600 transition"
+                                  onClick={() => {
+                                    setDialogOpen(true);
+                                    setDialogRowInfo(row.original);
+                                  }}
+                                >
+                                  Remove
+                                </Button>
+                              </div>
                             </td>
                           </tr>
 
@@ -2466,7 +2541,7 @@ const LibraryPrepration = () => {
           const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
           const testData = storedData[testName];
           if (testData) {
-            setTableRows(Array.isArray(testData) ? testData : testData.rows || []);
+            setTableRows(sortRowsByBatchAndPool(Array.isArray(testData) ? testData : testData.rows || []));
             setPooledRowData(Array.isArray(testData) ? [] : testData.pools || []);
           } else {
             setTableRows([]);

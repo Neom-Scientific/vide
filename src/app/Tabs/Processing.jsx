@@ -236,7 +236,7 @@ const Processing = () => {
             table.getRowModel().rows.forEach(row => {
               const rowData = row.original;
               if (rowData.lib_prep === "Yes" && rowData.under_seq === "No") {
-                const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.lib_prep !== "Yes";
+                const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.dna_isolation !== "Yes";
                 if (!disabled) {
                   row.toggleSelected(!!value);
                 }
@@ -254,7 +254,7 @@ const Processing = () => {
       ),
       cell: ({ row }) => {
         const rowData = row.original;
-        const disabled = rowData.specimen_quality === 'Not Accepted' ;
+        const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.dna_isolation !== "Yes" ;
         return disabled
           ? (
             <Checkbox
@@ -625,9 +625,9 @@ const Processing = () => {
       run_id: filters.run_id,
       for: 'process'
     };
-    if (user && user.role !== "SuperAdmin") {
+    // if (user && user.role !== "SuperAdmin") {
       data.hospital_name = user.hospital_name; // Add hospital_name from user data
-    }
+    // }
 
     try {
       const response = await axios.get(`/api/search`, { params: data });
@@ -681,6 +681,8 @@ const Processing = () => {
   const selectedRows = table.getSelectedRowModel().rows.map(row => row.original);
 
   const pooledColumns = [
+    "pool_no",
+    "batch_id",
     "pool_conc",
     "size",
     "nm_conc",
@@ -753,23 +755,21 @@ const Processing = () => {
 
       rows.forEach((row, idx) => {
         const poolNo = row.pool_no;
-        if (!poolNo) return; // Only group rows with a pool_no
-
+        if (!poolNo) return;
         if (!poolsMap[poolNo]) {
           poolsMap[poolNo] = {
             sampleIndexes: [],
+            sampleInternalIds: [], // <-- ADD THIS LINE
             values: {},
           };
         }
         poolsMap[poolNo].sampleIndexes.push(idx);
-
-        // Collect pooled columns (last non-empty value wins)
+        poolsMap[poolNo].sampleInternalIds.push(row.internal_id); // <-- ADD THIS LINE
         pooledColumns.forEach(col => {
           if (row[col] !== undefined && row[col] !== null && row[col] !== "") {
             poolsMap[poolNo].values[col] = row[col];
           }
         });
-
       });
 
       // Convert poolsMap to array
