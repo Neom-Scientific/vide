@@ -57,6 +57,7 @@ const RunSetup = () => {
   const [runDetails, setRunDetails] = useState([]);
   const user = JSON.parse(Cookies.get('user') || '{}');
   const [runDetailsWithSampleIds, setRunDetailsWithSampleIds] = useState([]);
+  const [selectedPoolNos, setSelectedPoolNos] = useState([]);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -186,7 +187,7 @@ const RunSetup = () => {
       // console.log('response', response.data);
       if (response.data[0].status === 200) {
         const poolDataForTest = response.data[0].data;
-        // console.log('poolDataForTest', poolDataForTest);
+        console.log('poolDataForTest', poolDataForTest);
         setPoolData((prev) => {
           // Remove any existing pool data for this test (and its + Mito variant)
           const filtered = prev.filter(
@@ -194,6 +195,18 @@ const RunSetup = () => {
               pool.test_name !== selectedTestName &&
               pool.test_name !== `${selectedTestName} + Mito`
           );
+
+          const combined = [...filtered, ...poolDataForTest];
+          const uniqueByPoolNo = [];
+          const seenPoolNos = new Set();
+          for (const pool of combined) {
+            if (!seenPoolNos.has(pool.pool_no)) {
+              uniqueByPoolNo.push(pool);
+              seenPoolNos.add(pool.pool_no);
+            }
+          }
+          const selectedPoolNos = uniqueByPoolNo.map(pool => pool.pool_no);
+          setSelectedPoolNos(selectedPoolNos);
           return [...filtered, ...poolDataForTest];
         });
       } else if (response.data[0].status === 404) {
@@ -298,43 +311,54 @@ const RunSetup = () => {
 
   const handleCheckboxChange = (testName, isChecked) => {
     let updatedCheckboxes;
+    let updatedPoolNos;
+    console.log('selectedPoolnos', selectedPoolNos);
 
     if (isChecked) {
-      // Add the test name to the selected checkboxes
       updatedCheckboxes = [...selectedCheckboxes, testName];
-
-      // Extract the size data for the selected test_name
-      const sizeData = poolData
+      const poolNosForTest = poolData
         .filter((pool) => pool.test_name === testName || pool.test_name === `${testName} + Mito`)
-        .map((pool) => Number(pool.size)); // Ensure size is a number
+        .map((pool) => pool.pool_no);
 
-      // Update the size state
-      setSize((prev) => [...prev, ...sizeData]);
+      console.log('selectedPoolNos', selectedPoolNos);
+
+      updatedPoolNos = [...selectedPoolNos, ...poolNosForTest];
+      console.log('updatedPoolNos', updatedPoolNos);
+      setSelectedPoolNos(updatedPoolNos);
     } else {
-      // Remove the test name from the selected checkboxes
       updatedCheckboxes = selectedCheckboxes.filter((name) => name !== testName);
-
-      // Remove the size data for the deselected test_name
-      const sizeDataToRemove = poolData
+      const poolNosToRemove = poolData
         .filter((pool) => pool.test_name === testName || pool.test_name === `${testName} + Mito`)
-        .map((pool) => Number(pool.size)); // Ensure size is a number
+        .map((pool) => pool.pool_no);
 
-      setSize((prev) => prev.filter((size) => !sizeDataToRemove.includes(size)));
+      updatedPoolNos = selectedPoolNos.filter((no) => !poolNosToRemove.includes(no));
+      setSelectedPoolNos(updatedPoolNos);
     }
 
     setSelectedCheckboxes(updatedCheckboxes);
 
-    // Calculate the average size
-    const updatedSize = [...new Set(
-      poolData
-        .filter((pool) => updatedCheckboxes.includes(pool.test_name))
-        .map((pool) => Number(pool.size)) // Ensure size is a number
-    )]; // Use Set to get unique sizes
+    // Use updatedPoolNos for calculation, not selectedPoolNos
+    const updatedSize = poolData
+      .filter(
+        (pool) =>
+          updatedCheckboxes.includes(pool.test_name) &&
+          updatedPoolNos.includes(pool.pool_no)
+      )
+      .map((pool) => {
+        // Prefer tapestation_size if valid, else fallback to size
+        const tapestation = Number(pool.tapestation_size);
+        if (tapestation && tapestation !== 0) {
+          return tapestation;
+        }
+        return Number(pool.size);
+      });
 
     console.log('updatedSize', updatedSize);
     const avgSize = updatedSize.length > 0
       ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
       : 0;
+
+    console.log('selectedpoolNos', selectedPoolNos);
     console.log('avgSize', avgSize);
     console.log('poolData', poolData);
 
@@ -506,18 +530,6 @@ const RunSetup = () => {
     fetchRunDetails();
   }, [])
 
-  useEffect(() => {
-    // Calculate average size based on checked checkboxes
-    const updatedSize = [...new Set(
-      poolData
-        .filter((pool) => selectedCheckboxes.includes(pool.test_name))
-        .map((pool) => Number(pool.size))
-    )];
-    const avg = updatedSize.length > 0
-      ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
-      : 0;
-    setAvgSize(avg);
-  }, [selectedCheckboxes, poolData]);
 
   const handleRunDetail = async (runId) => {
     try {

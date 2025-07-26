@@ -645,7 +645,7 @@ const LibraryPrepration = () => {
               const percent = columnId === "vol_for_40nm_percent_pooling"
                 ? parseFloat(value) || 0
                 : parseFloat(updatedRow.vol_for_40nm_percent_pooling) || 0;
-              updatedRow.volume_from_40nm_for_total_25ul_pool = ((totalVol * percent) / 100).toFixed(2);
+              updatedRow.volume_from_40nm_for_total_25ul_pool = (totalVol * (percent / 100)).toFixed(2);
 
               // If you have other logic for total_vol_for_2nm, keep it here:
               if (columnId === "total_vol_for_2nm") {
@@ -1362,6 +1362,7 @@ const LibraryPrepration = () => {
         if (Array.isArray(data)) {
           rows = data;
         } else if (data && Array.isArray(data.rows)) {
+          // Sync pools for each testName
           rows = data.rows.map((row, idx) => {
             const pool = (data.pools || []).find(pool => pool.sampleIndexes.includes(idx));
             if (pool) {
@@ -1379,17 +1380,16 @@ const LibraryPrepration = () => {
 
       const results = await Promise.all(savePromises);
 
+      // Check if all were successful
       const allSuccess = results.every(res => res.data[0]?.status === 200);
 
       if (allSuccess) {
         toast.success("All data saved successfully!");
         setProcessing(false);
-
-        // Remove all samples from localStorage after save
-        localStorage.removeItem('libraryPreparationData');
-        setTableRows([]);
-        setGetTheTestNames([]);
-        setMessage(1); // Show "No data available" message
+        // localStorage.removeItem('libraryPreparationData');
+        // setMessage(1); // Set message to indicate no data available
+        // setTableRows([]);
+        // setGetTheTestNames([]);
       } else {
         setProcessing(false);
         toast.error("Some data could not be saved. Please check and try again.");
@@ -1405,10 +1405,13 @@ const LibraryPrepration = () => {
     setProcessing(true);
     try {
       const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+      // const poolNos = [...new Set(tableRows.map(row => row.pool_no).filter(Boolean))];
 
+      // Prepare the payload for the API call
       const syncedRows = tableRows.map((row, idx) => {
         const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(idx));
         if (pool) {
+          // Only merge pooledColumns, not all pool.values
           const pooledFields = pooledColumns.reduce((acc, key) => {
             acc[key] = pool.values[key];
             return acc;
@@ -1427,18 +1430,20 @@ const LibraryPrepration = () => {
         rows: syncedRows,
       };
 
+      console.log('payload:', payload);
+
       const response = await axios.post('/api/pool-data', payload);
 
       if (response.data[0].status === 200) {
         toast.success("Data Saved successfully!");
         setProcessing(false);
-
-        // Remove only the selected testName's data after save
+        // Remove only the selected testName's data
         const updatedData = { ...storedData };
-        delete updatedData[testName];
+        // delete updatedData[testName];
+
         localStorage.setItem('libraryPreparationData', JSON.stringify(updatedData));
-        setTableRows([]);
-        setMessage(1); // Show "No data available" message
+        // setTableRows([]); 
+        // setMessage(1); // Set message to indicate no data available
       } else if (response.data[0].status === 400) {
         toast.error(response.data[0].message);
         setProcessing(false);
@@ -1531,10 +1536,10 @@ const LibraryPrepration = () => {
           ? parseFloat(pool.values.vol_for_40nm_percent_pooling) || 0
           : batchSum > 0 ? ((poolSum / batchSum) * 100) : 0;
 
-        const vol = ((totalVol * percent) / 100) || 0;
+        const vol = (totalVol * (percent / 100)) || 0;
 
         // Update percent if needed
-        const percentStr = batchSum > 0 ? ((poolSum / batchSum) * 100).toFixed(2) : "";
+        const percentStr = batchSum > 0 ? ((poolSum / batchSum) * 100.00).toFixed(2) : "";
         if (pool.values.vol_for_40nm_percent_pooling !== percentStr) {
           needsUpdate = true;
           newPooledRowData[poolIdx] = {
@@ -2150,7 +2155,7 @@ const LibraryPrepration = () => {
                                                   ? parseFloat(value) || 0
                                                   : parseFloat(updated.vol_for_40nm_percent_pooling ?? 0) || 0;
 
-                                              updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                              updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
                                               const poolConc = parseFloat(updated.pool_conc) || 0;
 
@@ -2225,7 +2230,7 @@ const LibraryPrepration = () => {
                                                 const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
                                                 const percentPooling = parseFloat(value) || 0;
 
-                                                updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                                updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
                                                 return { ...p, values: updated };
                                               })
@@ -2256,7 +2261,7 @@ const LibraryPrepration = () => {
                                                     ? parseFloat(value) || 0
                                                     : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
-                                                updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                                updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
                                                 return { ...p, values: updated };
                                               })
@@ -2285,7 +2290,7 @@ const LibraryPrepration = () => {
                                             const updated = { ...p.values, vol_for_40nm_percent_pooling: value };
                                             const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
                                             const percentPooling = parseFloat(value) || 0;
-                                            updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                            updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
                                             return { ...p, values: updated };
                                           })
                                         );
@@ -2346,7 +2351,7 @@ const LibraryPrepration = () => {
                                                 ? parseFloat(value) || 0
                                                 : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
-                                            updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                            updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
                                             const poolConc = parseFloat(updated.pool_conc) || 0;
 
@@ -2379,7 +2384,7 @@ const LibraryPrepration = () => {
                                                 : "";
                                             }
 
-                                            updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                            updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
                                             return { ...p, values: updated };
                                           })
@@ -2427,7 +2432,7 @@ const LibraryPrepration = () => {
                                                   ? parseFloat(value) || 0
                                                   : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
-                                              updated.volume_from_40nm_for_total_25ul_pool = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
+                                              updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
                                               return { ...p, values: updated };
                                             })
                                           );
