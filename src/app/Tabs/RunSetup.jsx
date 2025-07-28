@@ -72,7 +72,7 @@ const RunSetup = () => {
       final_pool_vol_ul: 0,
       selected_application: '',
       dinatured_lib_next_seq_550: 20,
-      total_volume_next_seq_550: 0, // Ensure numeric default value
+      total_volume_next_seq_550: 1500, // Ensure numeric default value
       loading_conc_550: 0, // Ensure numeric default value
       lib_required_next_seq_550: 0, // Ensure numeric default value
       buffer_volume_next_seq_550: 0, // Ensure numeric default value
@@ -1052,9 +1052,10 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value="1500"
+                              // value={1500}
                               disabled
-                              onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
+                              // value={field.value ?? ""}
+                              // onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume"
                               className="mb-2 border-2 border-orange-300"
                             />
