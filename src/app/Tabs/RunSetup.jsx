@@ -425,7 +425,7 @@ const RunSetup = () => {
 
   useEffect(() => {
     const totalGbAvailable = Number(form.watch("total_gb_available"));
-  
+
     if (totalGbAvailable > 0) {
       // Calculate unrounded percentages for each test
       const unroundedPercents = selectedCheckboxes.map(test => {
@@ -434,7 +434,7 @@ const RunSetup = () => {
           .reduce((sum, pool) => sum + (Number(pool.data_required) || 0), 0);
         return totalGbAvailable !== 0 ? (totalDataRequired / totalGbAvailable) * 100 : 0;
       });
-  
+
       // Round all but last, last = 100 - sum of previous
       let roundedPercents = [];
       let sumRounded = 0;
@@ -449,12 +449,12 @@ const RunSetup = () => {
           roundedPercents.push(last);
         }
       }
-  
+
       const updatedPercentageData = selectedCheckboxes.map((test, idx) => ({
         test_name: test,
         percentage: roundedPercents[idx]
       }));
-  
+
       setPercentage(updatedPercentageData);
     } else {
       setPercentage([]);
@@ -969,8 +969,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value="1500"
-                              disabled
+                              value={field.value ?? ""}
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume (2nM)"
                               className="mb-2 border-2 border-orange-300"
@@ -1053,7 +1052,8 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value ?? ""}
+                              value="1500"
+                              disabled
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume"
                               className="mb-2 border-2 border-orange-300"
