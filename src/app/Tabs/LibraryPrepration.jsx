@@ -116,7 +116,7 @@ const LibraryPrepration = () => {
     "pool_conc",
     "size",
     "nm_conc",
-    "one_tenth_of_nm_conc",
+    // "one_tenth_of_nm_conc",
     "lib_vol_for_2nm",
     "nfw_volu_for_2nm",
     "total_vol_for_2nm",
@@ -376,8 +376,8 @@ const LibraryPrepration = () => {
 
   // A01 - H12
   const wellNumberOptions = Array.from({ length: 96 }, (_, i) => {
-    const row = String.fromCharCode(65 + Math.floor(i / 12)); // Convert to A-H
-    const col = (i % 12 + 1).toString().padStart(2, '0'); // Convert to 01-12
+    const row = String.fromCharCode(65 + (i % 8)); // Convert to A-H (cycle through rows)
+    const col = Math.floor(i / 8 + 1).toString().padStart(2, '0'); // Convert to 01-12 (increment columns)
     return `${row}${col}`;
   });
 
