@@ -12,23 +12,46 @@ import Dialogbox from '@/app/components/Dialogbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Cookies from 'js-cookie'
 
-const formSchema = z.object({
-  sample_id: z.string().min(1, 'Sample ID is required'),
-  sample_type: z.string().min(1, 'Sample Type is required'),
-  client_name: z.string().min(1, 'Client Name is required'),
-  doctor_name: z.string().min(1, 'Doctor Name is required'),
-  email: z.string()
-    .min(1, 'Email is required')
-    .email('Invalid email address'),
-  selectedTestName: z.string().min(1, 'Add the test name to confirm'),
-  hospital_id: z.string().min(1, 'Organization ID is required'),
-  patient_name: z.string().min(1, 'Patient Name is required'),
-  trf: z.string().min(1, 'TRF is required'),
-  specimen_quality: z.string().min(1, 'Specimen Quality is required'),
-  age: z.string().min(1, 'Age is required'),
-  clinical_history: z.string().min(1, 'Clinical History is required'),
-  sample_name: z.string().min(1, 'Sample Name is required'),
-})
+const cardioTests = [
+  "Cardio Comprehensive (Screening)",
+  "Cardio Metabolic Syndrome (Screening)",
+  "Cardio Comprehensive Myopathy"
+];
+
+const getFormSchema = (selectedTests) => {
+  const baseSchema = {
+    sample_id: z.string().min(1, 'Sample ID is required'),
+    sample_type: z.string().min(1, 'Sample Type is required'),
+    client_name: z.string().min(1, 'Client Name is required'),
+    doctor_name: z.string().min(1, 'Doctor Name is required'),
+    email: z.string().min(1, 'Email is required').email('Invalid email address'),
+    selectedTestName: z.string().min(1, 'Add the test name to confirm'),
+    hospital_id: z.string().min(1, 'Organization ID is required'),
+    patient_name: z.string().min(1, 'Patient Name is required'),
+    trf: z.string().min(1, 'TRF is required'),
+    specimen_quality: z.string().min(1, 'Specimen Quality is required'),
+    age: z.string().min(1, 'Age is required'),
+    clinical_history: z.string().min(1, 'Clinical History is required'),
+    sample_name: z.string().min(1, 'Sample Name is required'),
+    // ...other fields...
+  };
+
+  // If any cardio test is selected, require cardio fields
+  if (selectedTests.some(test => cardioTests.includes(test))) {
+    baseSchema.systolic_bp = z.string().min(1, 'Systolic BP is required');
+    baseSchema.diastolic_bp = z.string().min(1, 'Diastolic BP is required');
+    baseSchema.total_cholesterol = z.string().min(1, 'Total Cholesterol is required');
+    baseSchema.hdl_cholesterol = z.string().min(1, 'HDL Cholesterol is required');
+    baseSchema.ldl_cholesterol = z.string().min(1, 'LDL Cholesterol is required');
+    baseSchema.diabetes = z.string().min(1, 'Diabetes history is required');
+    baseSchema.smoker = z.string().min(1, 'Smoker status is required');
+    baseSchema.hypertension_treatment = z.string().min(1, 'Hypertension treatment is required');
+    baseSchema.statin = z.string().min(1, 'Statin is required');
+    baseSchema.aspirin_therapy = z.string().min(1, 'Aspirin therapy is required');
+  }
+
+  return z.object(baseSchema);
+};
 
 export const SampleRegistration = () => {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
@@ -51,7 +74,7 @@ export const SampleRegistration = () => {
 
 
   const form = useForm({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(getFormSchema(selectedTests)),
     defaultValues: {
       // hosptial and doctor information
       hospital_name: user?.hospital_name || '',
@@ -217,6 +240,24 @@ export const SampleRegistration = () => {
     try {
       if (file) {
         const url = URL.createObjectURL(file);
+        // const formData = new FormData();
+        // formData.append('file', file);
+        // // console.log('file', file);
+        // const inputDir = form.getValues('input_dir') || '';
+        // // console.log('inputDir', inputDir);
+        // formData.append('uploadPath', inputDir);
+
+        // const response = await axios.post('/api/upload', formData, {
+        //   headers: {
+        //     'Content-Type': 'multipart/form-data'
+        //   }
+        // });
+        // console.log('response', response);
+        // if(response.data[0].status === 400){
+        //   toast.error(response.data[0].message || 'TRF upload failed');
+        //   return;
+        // }
+
         setTrfUrl(url);
         form.setValue('trf', file.name); // Store file name if needed
         form.setValue('trf_file', file.name); // Store the file object
@@ -419,7 +460,8 @@ export const SampleRegistration = () => {
     if (localStorage.getItem('editRowData')) return;
 
     const subscription = form.watch((value) => {
-      localStorage.setItem('sampleRegistrationForm', JSON.stringify(value));
+      const { registration_date, sample_date, ...rest } = value;
+      localStorage.setItem('sampleRegistrationForm', JSON.stringify(rest));
     });
     return () => subscription.unsubscribe();
   }, [form]);
@@ -495,11 +537,24 @@ export const SampleRegistration = () => {
     fetchTestNames();
   }, [user?.hospital_name]);
 
+  useEffect(() => {
+    form.reset(form.getValues()); // keep values
+    form.resolver = zodResolver(getFormSchema(selectedTests));
+  }, [selectedTests]);
+
   return (
     <div className="flex justify-center min-h-screen bg-white dark:bg-gray-900">
       <div className="w-full max-w-3xl lg:max-w-5xl sm:max-w-2xl md:max-w-3xl mt-3">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onFormSubmit)}>
+          <form
+            onSubmit={form.handleSubmit(onFormSubmit)}
+            onKeyDown={e => {
+              if (e.key === "Enter") {
+                // Prevent form submit on Enter
+                e.preventDefault();
+              }
+            }}
+          >
             {/* <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 mb-4 dark:border dark:border-orange-50">
               <h1 className=' font-bold text-2xl text-orange-400 mb-2'>Organization Information</h1>
               <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
@@ -554,7 +609,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2 flex-1'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>Sample ID<span className='text-red-500'>*</span></FormLabel>
+                        <FormLabel>Patient ID<span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.sample_id && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.sample_id.message}
@@ -562,7 +617,7 @@ export const SampleRegistration = () => {
                         )}
                       </div>
                       <Input
-                        placeholder='Sample ID'
+                        placeholder='Patient ID'
                         className='my-2 border-2 border-orange-300'
                         {...field} />
                     </FormItem>
@@ -1406,7 +1461,7 @@ export const SampleRegistration = () => {
                           <FormItem className="my-2">
                             <FormLabel>Systolic Blood Pressure
                               <span className="text-xs font-normal">(mm Hg)</span>
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <Input
                               {...field}
@@ -1431,7 +1486,7 @@ export const SampleRegistration = () => {
                           <FormItem className="my-2">
                             <FormLabel>Diastolic Blood Pressure
                               <span className="text-xs font-normal">(mm Hg)</span>
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <Input
                               {...field}
@@ -1458,7 +1513,7 @@ export const SampleRegistration = () => {
                           <FormItem className="my-2">
                             <FormLabel>Total Cholesterol
                               <span className="text-xs font-normal">(mg/dL)</span>
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <Input
                               {...field}
@@ -1483,7 +1538,7 @@ export const SampleRegistration = () => {
                           <FormItem className="my-2">
                             <FormLabel>HDL Cholesterol
                               <span className="text-xs font-normal">(mg/dL)</span>
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <Input
                               {...field}
@@ -1508,7 +1563,7 @@ export const SampleRegistration = () => {
                           <FormItem className="my-2">
                             <FormLabel>LDL Cholesterol
                               <span className="text-xs font-normal">(mg/dL)</span>
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <Input
                               {...field}
@@ -1532,7 +1587,7 @@ export const SampleRegistration = () => {
                         render={({ field }) => (
                           <FormItem className="my-2">
                             <FormLabel>History of Diabetes?
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <div className="flex gap-2">
                               <Button
@@ -1557,7 +1612,7 @@ export const SampleRegistration = () => {
                         render={({ field }) => (
                           <FormItem className="my-2">
                             <FormLabel>Smoker?
-                              <span className="text-orange-500">*</span>
+                              <span className="text-red-500">*</span>
                             </FormLabel>
                             <div className="flex gap-2">
                               {["current", "former", "never"].map(opt => (
@@ -1583,7 +1638,7 @@ export const SampleRegistration = () => {
                         name="hypertension_treatment"
                         render={({ field }) => (
                           <FormItem className="my-2">
-                            <FormLabel>On Hypertension Treatment? <span className="text-orange-500">*</span></FormLabel>
+                            <FormLabel>On Hypertension Treatment? <span className="text-red-500">*</span></FormLabel>
                             <div className="flex gap-2">
                               <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
                               <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
@@ -1600,7 +1655,7 @@ export const SampleRegistration = () => {
                         name="statin"
                         render={({ field }) => (
                           <FormItem className="my-2">
-                            <FormLabel>On a Statin? <span className="text-orange-500">*</span></FormLabel>
+                            <FormLabel>On a Statin? <span className="text-red-500">*</span></FormLabel>
                             <div className="flex gap-2">
                               <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
                               <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
@@ -1617,7 +1672,7 @@ export const SampleRegistration = () => {
                         name="aspirin_therapy"
                         render={({ field }) => (
                           <FormItem className="my-2">
-                            <FormLabel>On Aspirin Therapy? <span className="text-orange-500">*</span></FormLabel>
+                            <FormLabel>On Aspirin Therapy? <span className="text-red-500">*</span></FormLabel>
                             <div className="flex gap-2">
                               <Button type="button" variant={field.value === "yes" ? "default" : "outline"} onClick={() => field.onChange("yes")}>Yes</Button>
                               <Button type="button" variant={field.value === "no" ? "default" : "outline"} onClick={() => field.onChange("no")}>No</Button>
@@ -1633,6 +1688,23 @@ export const SampleRegistration = () => {
                   )}
 
                 <div>
+
+                  {/* <div>
+                  <FormField
+                    control={form.control}
+                    name='input_dir'
+                    render={({ field }) => (
+                      <FormItem className='my-3'>
+                        <FormLabel>Input Directory</FormLabel>
+                        <Input
+                          {...field}
+                          className='my-2 border-2 border-orange-300'
+                          value ={field.value ?? ''}
+                          placeholder='Input Directory' />
+                      </FormItem>
+                    )}
+                  />
+                </div> */}
 
                   {/* upload trf */}
                   <FormField

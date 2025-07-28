@@ -98,6 +98,8 @@ export async function POST(request) {
             for (const internalId of setup.internal_ids) {
                 await pool.query(
                     `UPDATE master_sheet SET 
+                    under_seq = 'Yes',
+                    location = 'under_seq',
                   selected_application = $1,
                   seq_run_date = $2,
                   total_gb_available = $3,
@@ -159,6 +161,13 @@ export async function POST(request) {
                         internalId,
                     ]
                 );
+
+                await pool.query(
+                    `UPDATE pool_info SET run_id = $1 WHERE internal_id = $2`,
+                    [run_id, internalId]
+                );
+
+                await pool.query(`INSERT INTO audit_logs (internal_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [internalId, `Run setup created with run_id: ${run_id}`, setup.change_by]);
             }
         }
 
@@ -170,7 +179,7 @@ export async function POST(request) {
                 for (const id of internalIds) {
                     await pool.query(`UPDATE pool_info SET run_id = $1 WHERE internal_id = $2`, [run_id, id]);
                     await pool.query(`UPDATE master_sheet SET under_seq = $1 , location = $2 WHERE internal_id = $3`, ['Yes', 'under_seq' ,id]);
-                    await pool.query(`INSERT INTO audit_logs (sample_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [id, `Run setup created with run_id: ${run_id}`, setup.change_by]);
+                    await pool.query(`INSERT INTO audit_logs (internal_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [id, `Run setup created with run_id: ${run_id}`, setup.change_by]);
                 }
             }
         }

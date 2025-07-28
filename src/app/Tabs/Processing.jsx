@@ -347,13 +347,13 @@ const Processing = () => {
           header: col.label,
           enableSorting: true,
           cell: (info) => {
-            const value = info.getValue();
+            const row = info.row.original
             return (
               <button
                 className="cursor-pointer"
-                onClick={() => handleShowAudit(value)}
+                onClick={() => handleShowAudit(row.sample_id, row.internal_id)}
               >
-                <abbr className="underline [text-decoration-style:solid]" title="Click to display the Comments & History">{value}</abbr>
+                <abbr className="underline [text-decoration-style:solid]" title="Click to display the Comments & History">{row.sample_id}</abbr>
               </button>
             );
           },
@@ -936,11 +936,11 @@ const Processing = () => {
     fetchInUseEffect();
   }, [])
 
-  const handleShowAudit = async (sampleId) => {
+  const handleShowAudit = async (sampleId,internalId) => {
     setAuditSampleId(sampleId);
     setShowAuditSidebar(true);
     try {
-      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}`);
+      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}?internal_id=${internalId}`);
       setAuditData(res.data[0]?.logs || []);
     } catch (e) {
       setAuditData([]);

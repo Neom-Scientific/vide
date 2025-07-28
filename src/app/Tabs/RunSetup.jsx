@@ -13,9 +13,7 @@ import { useForm } from 'react-hook-form'
 import { toast, ToastContainer } from 'react-toastify'
 import { z } from 'zod'
 
-const formSchema = z.object({
-  // application: z.string().min(1, 'Application is required'),
-  selected_application: z.string().optional(),
+const getRunSetupSchema = (instrumentType) => z.object({
   seq_run_date: z.string().min(1, 'Sequence run date is required'),
   total_gb_available: z.string().min(1, 'Total GB available is required'),
   instument_type: z.string().min(1, 'Instrument type is required'),
@@ -23,26 +21,27 @@ const formSchema = z.object({
   pool_conc_run_setup: z.string().min(1, 'Pool concentration is required'),
   nm_cal: z.number().min(1, 'nM calibration is required'),
   total_required: z.number().min(1, 'Total required is required'),
-  dinatured_lib_next_seq_550: z.number().optional(),
-  total_volume_next_seq_550: z.number().optional(),
   final_pool_vol_ul: z.number().min(1, 'Final pool volume (ul) is required'),
-  loading_conc_550: z.number().optional(),
-  lib_required_next_seq_550: z.number().optional(),
-  buffer_volume_next_seq_550: z.number().optional(),
-  final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().optional(),
-  rsbetween_vol_2nm_next_seq_1000_2000: z.number().optional(),
-  total_volume_2nm_next_seq_1000_2000: z.number().optional(),
-  vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().optional(),
-  vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().optional(),
-  total_volume_600pm_next_seq_1000_2000: z.number().optional(),
-  loading_conc_1000_2000: z.number().optional(),
-  select_application: z.array(z.string()).optional(),
-  total_volume_2nm_next_seq_550: z.number().optional(),
-  final_pool_conc_vol_2nm_next_seq_550: z.number().optional(),
-  nfw_vol_2nm_next_seq_550: z.number().optional(),
-  table_data: z.string().optional(),
-  ht_buffer_next_seq_1000_2000: z.number().optional(),
-})
+  ...(instrumentType === 'NextSeq_550' && {
+    dinatured_lib_next_seq_550: z.number().min(1, 'Stock Conc(pM) is required'),
+    total_volume_next_seq_550: z.number().min(1, 'Total Volume is required'),
+    loading_conc_550: z.number().min(1, 'Required Concentration(pM) is required'),
+    lib_required_next_seq_550: z.number().min(1, 'Volume from Stock is required'),
+    buffer_volume_next_seq_550: z.number().min(1, 'HT Buffer is required'),
+    final_pool_conc_vol_2nm_next_seq_550: z.number().min(1, 'Volume for Final Pool conc 2nM is required'),
+    nfw_vol_2nm_next_seq_550: z.number().min(1, 'NFW (2nM) is required'),
+  }),
+  ...(instrumentType === 'NextSeq_1000_2000' && {
+    final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().min(1, 'Volulme for Final Pool conc 2nM is required'),
+    rsbetween_vol_2nm_next_seq_1000_2000: z.number().min(1, 'RS Between (2nM) is required'),
+    total_volume_2nm_next_seq_1000_2000: z.number().min(1, 'Total Volume (2nM) is required'),
+    vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of 2nM conc(600pM) is required'),
+    vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of RS Between(600pM) is required'),
+    total_volume_600pm_next_seq_1000_2000: z.number().min(1, 'Total Volume(600pM) is required'),
+    loading_conc_1000_2000: z.number().min(1, 'Loading Concentration(pM) is required'),
+  }),
+  // Add other fields as needed
+});
 
 const RunSetup = () => {
   const [testNames, setTestNames] = useState([]);
@@ -60,7 +59,7 @@ const RunSetup = () => {
   const [selectedPoolNos, setSelectedPoolNos] = useState([]);
 
   const form = useForm({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(getRunSetupSchema(InstrumentType)),
     defaultValues: {
       // application: '',
       seq_run_date: '',
@@ -251,6 +250,45 @@ const RunSetup = () => {
         setSelectedTestNames([]);
         setSelectedCheckboxes([]);
         localStorage.removeItem('runSetupForm'); // <-- clear localStorage here
+
+        // --- Remove samples from libraryPreparationData ---
+        const libraryData = JSON.parse(localStorage.getItem("libraryPreparationData") || "{}");
+        Object.keys(libraryData).forEach(testName => {
+          let testData = libraryData[testName];
+          if (Array.isArray(testData)) {
+            // Old format: array of rows
+            testData = testData.filter(row => !selectedInternalIds.includes(row.internal_id));
+            if (testData.length > 0) {
+              libraryData[testName] = testData;
+            } else {
+              delete libraryData[testName];
+            }
+          } else if (testData && Array.isArray(testData.rows)) {
+            // New format: { rows, pools }
+            testData.rows = testData.rows.filter(row => !selectedInternalIds.includes(row.internal_id));
+            // Remove from pools as well
+            if (Array.isArray(testData.pools)) {
+              testData.pools = testData.pools
+                .map(pool => ({
+                  ...pool,
+                  sampleInternalIds: (pool.sampleInternalIds || []).filter(id => !selectedInternalIds.includes(id)),
+                  sampleIndexes: (pool.sampleIndexes || []).filter(idx => {
+                    const row = testData.rows[idx];
+                    return row && !selectedInternalIds.includes(row.internal_id);
+                  }),
+                }))
+                .filter(pool => pool.sampleInternalIds.length > 0);
+            }
+            // Remove testName if no rows and no pools left
+            if ((testData.rows.length === 0) && (!testData.pools || testData.pools.length === 0)) {
+              delete libraryData[testName];
+            } else {
+              libraryData[testName] = testData;
+            }
+          }
+        });
+        localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
+
         setPoolData([]);
         fetchRunDetails(); // Fetch updated run details after submission
       } else if (response.data[0].status === 404) {
@@ -275,9 +313,14 @@ const RunSetup = () => {
 
   useEffect(() => {
     if (dinatured_lib_next_seq_550 && total_volume_next_seq_550 && loading_conc_550) {
+      console.log('dinatured_lib_next_seq_550', dinatured_lib_next_seq_550);
       const libReq = parseFloat((total_volume_next_seq_550 * loading_conc_550 / dinatured_lib_next_seq_550).toFixed(2));
+      // console.log('libReq', libReq);
+      console.log('total_volume_next_seq_550', total_volume_next_seq_550);
+      console.log('loading_conc_550', loading_conc_550);
       form.setValue("lib_required_next_seq_550", libReq);
       const bufferVolume = parseFloat((total_volume_next_seq_550 - libReq).toFixed(2));
+
       form.setValue("buffer_volume_next_seq_550", bufferVolume);
     }
   }, [dinatured_lib_next_seq_550, total_volume_next_seq_550, loading_conc_550])
@@ -382,30 +425,36 @@ const RunSetup = () => {
 
   useEffect(() => {
     const totalGbAvailable = Number(form.watch("total_gb_available"));
-
+  
     if (totalGbAvailable > 0) {
-      const updatedPercentageData = selectedCheckboxes.map((test) => {
-        // Sum data_required for both test and test + Mito
+      // Calculate unrounded percentages for each test
+      const unroundedPercents = selectedCheckboxes.map(test => {
         const totalDataRequired = poolData
-          .filter(
-            (pool) =>
-              pool.test_name === test ||
-              pool.test_name === `${test} + Mito`
-          )
+          .filter(pool => pool.test_name === test || pool.test_name === `${test} + Mito`)
           .reduce((sum, pool) => sum + (Number(pool.data_required) || 0), 0);
-
-        let percent = 0;
-        if (Math.abs(totalDataRequired - totalGbAvailable) < 0.01) {
-          percent = 100;
-        } else if (totalGbAvailable !== 0) {
-          percent = (totalDataRequired / totalGbAvailable) * 100;
-        }
-        return {
-          test_name: test,
-          percentage: percent
-        };
+        return totalGbAvailable !== 0 ? (totalDataRequired / totalGbAvailable) * 100 : 0;
       });
-
+  
+      // Round all but last, last = 100 - sum of previous
+      let roundedPercents = [];
+      let sumRounded = 0;
+      for (let i = 0; i < unroundedPercents.length; i++) {
+        if (i < unroundedPercents.length - 1) {
+          const rounded = Number(unroundedPercents[i].toFixed(2));
+          roundedPercents.push(rounded);
+          sumRounded += rounded;
+        } else {
+          // Last percentage: force to 100 - sum of previous
+          const last = Number((100 - sumRounded).toFixed(2));
+          roundedPercents.push(last);
+        }
+      }
+  
+      const updatedPercentageData = selectedCheckboxes.map((test, idx) => ({
+        test_name: test,
+        percentage: roundedPercents[idx]
+      }));
+  
       setPercentage(updatedPercentageData);
     } else {
       setPercentage([]);
@@ -413,14 +462,20 @@ const RunSetup = () => {
   }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
 
   useEffect(() => {
-    if (avgSize && pool_conc_run_setup && !isNaN(avgSize) && !isNaN(pool_conc_run_setup)) {
-      const nM = parseFloat(((pool_conc_run_setup / (avgSize * 660)) * 1000000).toFixed(2)); // Perform calculation
-      console.log('nM', nM);
-      form.setValue("nm_cal", nM); // Update nm_cal field
-    } else {
-      form.setValue("nm_cal", 0); // Set default value if inputs are invalid
-    }
-  }, [avgSize, pool_conc_run_setup]); // Watch for changes in pool_size and pool_conc_run_setup
+    const subscription = form.watch((values) => {
+      const avgSize = values.pool_size;
+      const poolConc = values.pool_conc_run_setup;
+      let nM = 0;
+      if (avgSize && poolConc && !isNaN(avgSize) && !isNaN(poolConc)) {
+        nM = parseFloat(((poolConc / (avgSize * 660)) * 1000000).toFixed(2));
+      }
+      // Only update if value is different
+      if (form.getValues("nm_cal") !== nM) {
+        form.setValue("nm_cal", nM);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   useEffect(() => {
     if (avgSize && !isNaN(avgSize)) {
@@ -559,7 +614,15 @@ const RunSetup = () => {
         <div className="w-full max-w-3xl lg:max-w-5xl sm:max-w-2xl md:max-w-3xl mt-3">
           <h1 className='md:text-xl text-lg font-bold text-orange-400'>Run Setup</h1>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)}>
+            <form
+              onSubmit={form.handleSubmit(handleSubmit)}
+              onKeyDown={e => {
+                if (e.key === "Enter") {
+                  // Prevent form submit on Enter
+                  e.preventDefault();
+                }
+              }}
+            >
               <div className="mt-4">
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
 
@@ -906,7 +969,8 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value ?? ""}
+                              value="1500"
+                              disabled
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume (2nM)"
                               className="mb-2 border-2 border-orange-300"
@@ -1302,16 +1366,18 @@ const RunSetup = () => {
                   <h2 className="font-bold text-orange-400 mb-2">Run Samples</h2>
                   <div>
                     <div className="font-bold mb-2">Run ID: {runDetailsWithSampleIds[0]?.run_id}</div>
-                    {Object.entries(groupedByTest).map(([testName, sampleIds]) => (
-                      <div key={testName} className="mb-4">
-                        <div className="font-semibold">{testName}</div>
-                        <ul className="ml-4 list-disc">
-                          {sampleIds.map((id, idx) => (
-                            <li key={id}>{id}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
+                    <div className="flex flex-row gap-8 flex-wrap">
+                      {Object.entries(groupedByTest).map(([testName, sampleIds]) => (
+                        <div key={testName} className="mb-4 min-w-[200px]">
+                          <div className="font-semibold mb-1">{testName}</div>
+                          <div className="flex flex-col gap-1 ml-4">
+                            {sampleIds.map((id, idx) => (
+                              <span key={idx} className="text-gray-700 dark:text-gray-200">{id}</span>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                     <div className="font-bold mt-2">Count: {runDetailsWithSampleIds.length}</div>
                   </div>
                 </div>

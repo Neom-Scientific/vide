@@ -700,7 +700,7 @@ const LibraryPrepration = () => {
             }
 
             if (columnId === "qubit_lib_qc_ng_ul") {
-              updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
+              updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (100 / qubit_lib_qc_ng_ul).toFixed(2) : "";
             }
 
             if (columnId === 'pool_conc' || columnId === 'size') {
@@ -1411,8 +1411,8 @@ const LibraryPrepration = () => {
       const syncedRows = tableRows.map((row, idx) => {
         const pool = pooledRowData.find(pool => pool.sampleIndexes.includes(idx));
         if (pool) {
-          // Only merge pooledColumns, not all pool.values
-          const pooledFields = pooledColumns.reduce((acc, key) => {
+          // Merge both pooledColumns and finalPoolingColumns
+          const pooledFields = [...pooledColumns, ...finalPoolingColumns].reduce((acc, key) => {
             acc[key] = pool.values[key];
             return acc;
           }, {});
@@ -1514,32 +1514,46 @@ const LibraryPrepration = () => {
     let newPooledRowData = [...pooledRowData];
 
     Object.values(poolsByBatch).forEach(poolsInBatch => {
-      // 1. Calculate percent for each pool (as before)
+      // 1. Calculate percent for each pool (unrounded)
       const batchRows = tableRows.filter(row => row.batch_id === tableRows[poolsInBatch[0].pool.sampleIndexes[0]]?.batch_id);
       const batchSum = batchRows.reduce(
         (sum, row) => sum + (parseFloat(row.data_required) || 0),
         0
       );
 
-      // 2. Calculate initial (unscaled) volume for each pool
-      const unscaled = poolsInBatch.map(({ pool, poolIdx }) => {
-        const totalVol = parseFloat(pool.values.total_vol_for_2nm) || 0;
-
-        // Calculate poolSum for this pool
+      // Calculate unrounded percents for each pool
+      const unroundedPercents = poolsInBatch.map(({ pool }) => {
         const poolSum = pool.sampleIndexes.reduce(
           (sum, idx) => sum + (parseFloat(tableRows[idx]?.data_required) || 0),
           0
         );
+        return batchSum > 0 ? (poolSum / batchSum) * 100 : 0;
+      });
 
-        // Use calculated percent if available, else recalculate
-        const percent = pool.values.vol_for_40nm_percent_pooling
-          ? parseFloat(pool.values.vol_for_40nm_percent_pooling) || 0
-          : batchSum > 0 ? ((poolSum / batchSum) * 100) : 0;
-
+      // Round all but last, last = 100 - sum of previous
+      let roundedPercents = [];
+      let sumRounded = 0;
+      for (let i = 0; i < unroundedPercents.length; i++) {
+        if (i < unroundedPercents.length - 1) {
+          const rounded = Number(unroundedPercents[i].toFixed(2));
+          roundedPercents.push(rounded);
+          sumRounded += rounded;
+        } else {
+          const last = Number((100 - sumRounded).toFixed(2));
+          roundedPercents.push(last);
+        }
+      }
+      console.log('roundedPercents:', roundedPercents);
+      // 2. Calculate initial (unscaled) volume for each pool using rounded percents
+      const unscaled = poolsInBatch.map(({ pool, poolIdx }, i) => {
+        const totalVol = parseFloat(pool.values.total_vol_for_2nm) || 0;
+        const percent = roundedPercents[i];
         const vol = (totalVol * (percent / 100)) || 0;
 
+        console.log('percent:', percent, 'totalVol:', totalVol, 'vol:', vol);
+
         // Update percent if needed
-        const percentStr = batchSum > 0 ? ((poolSum / batchSum) * 100.00).toFixed(2) : "";
+        const percentStr = percent.toFixed(2);
         if (pool.values.vol_for_40nm_percent_pooling !== percentStr) {
           needsUpdate = true;
           newPooledRowData[poolIdx] = {
@@ -1555,15 +1569,27 @@ const LibraryPrepration = () => {
 
       // 3. Scale so sum is 25
       const sumUnscaled = unscaled.reduce((a, b) => a + b, 0) || 1;
+      let scaledVolumes = [];
+      let sumScaled = 0;
+      for (let i = 0; i < poolsInBatch.length; i++) {
+        if (i < poolsInBatch.length - 1) {
+          const scaled = Number(((unscaled[i] / sumUnscaled) * 25).toFixed(2));
+          scaledVolumes.push(scaled);
+          sumScaled += scaled;
+        } else {
+          // Last pool: set to 25 - sum of previous
+          const lastScaled = Number((25 - sumScaled).toFixed(2));
+          scaledVolumes.push(lastScaled);
+        }
+      }
       poolsInBatch.forEach(({ pool, poolIdx }, i) => {
-        const scaled = ((unscaled[i] / sumUnscaled) * 25).toFixed(2);
-        if (pool.values.volume_from_40nm_for_total_25ul_pool !== scaled) {
+        if (pool.values.volume_from_40nm_for_total_25ul_pool !== scaledVolumes[i].toString()) {
           needsUpdate = true;
           newPooledRowData[poolIdx] = {
             ...newPooledRowData[poolIdx],
             values: {
               ...newPooledRowData[poolIdx].values,
-              volume_from_40nm_for_total_25ul_pool: scaled,
+              volume_from_40nm_for_total_25ul_pool: scaledVolumes[i].toString(),
             }
           };
         }
