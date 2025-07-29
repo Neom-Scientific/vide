@@ -1048,7 +1048,7 @@ const RunSetup = () => {
                               type="number"
                               // value={1500}
                               disabled
-                              // value={field.value ?? ""}
+                              value={field.value ?? 1500}
                               // onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume"
                               className="mb-2 border-2 border-orange-300"
