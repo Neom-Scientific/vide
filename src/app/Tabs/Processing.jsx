@@ -1196,6 +1196,7 @@ const Processing = () => {
                 </div>
                 {/* Only show checkboxes for columns that match the search */}
                 <DropdownMenuCheckboxItem
+                  onSelect={(e) => e.preventDefault()}
                   checked={Object.values(table.getState().columnVisibility).every(Boolean)}
                   onCheckedChange={value =>
                     table.getAllLeafColumns()
@@ -1210,6 +1211,7 @@ const Processing = () => {
                   Select All
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  onSelect={(e) => e.preventDefault()}
                   onClick={() => {
                     table.getAllLeafColumns()
                       .filter(column => {
@@ -1236,6 +1238,7 @@ const Processing = () => {
                   )
                   .map(column => (
                     <DropdownMenuCheckboxItem
+                      onSelect={(e) => e.preventDefault()}
                       key={column.id}
                       checked={column.getIsVisible()}
                       onCheckedChange={value => column.toggleVisibility(!!value)}

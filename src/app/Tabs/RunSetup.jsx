@@ -355,7 +355,6 @@ const RunSetup = () => {
   const handleCheckboxChange = (testName, isChecked) => {
     let updatedCheckboxes;
     let updatedPoolNos;
-    console.log('selectedPoolnos', selectedPoolNos);
 
     if (isChecked) {
       updatedCheckboxes = [...selectedCheckboxes, testName];
@@ -363,10 +362,7 @@ const RunSetup = () => {
         .filter((pool) => pool.test_name === testName || pool.test_name === `${testName} + Mito`)
         .map((pool) => pool.pool_no);
 
-      console.log('selectedPoolNos', selectedPoolNos);
-
       updatedPoolNos = [...selectedPoolNos, ...poolNosForTest];
-      console.log('updatedPoolNos', updatedPoolNos);
       setSelectedPoolNos(updatedPoolNos);
     } else {
       updatedCheckboxes = selectedCheckboxes.filter((name) => name !== testName);
@@ -381,29 +377,27 @@ const RunSetup = () => {
     setSelectedCheckboxes(updatedCheckboxes);
 
     // Use updatedPoolNos for calculation, not selectedPoolNos
-    const updatedSize = poolData
-      .filter(
-        (pool) =>
-          updatedCheckboxes.includes(pool.test_name) &&
-          updatedPoolNos.includes(pool.pool_no)
-      )
-      .map((pool) => {
-        // Prefer tapestation_size if valid, else fallback to size
-        const tapestation = Number(pool.tapestation_size);
-        if (tapestation && tapestation !== 0) {
-          return tapestation;
-        }
-        return Number(pool.size_for_2nm);
-      });
+    const updatedSize = Array.from(new Set(
+      poolData
+        .filter(pool =>
+          updatedCheckboxes.includes(pool.test_name)
+        )
+        .map(pool => {
+          // Prefer tapestation_size if valid, else fallback to size
+          const tapestation = Number(pool.tapestation_size);
+          if (tapestation && tapestation !== 0) {
+            return tapestation;
+          }
+          return Number(pool.size_for_2nm);
+        })
+        .filter(size => !isNaN(size) && size > 0)
+    ));
 
     console.log('updatedSize', updatedSize);
     const avgSize = updatedSize.length > 0
       ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
       : 0;
 
-    console.log('selectedpoolNos', selectedPoolNos);
-    console.log('avgSize', avgSize);
-    console.log('poolData', poolData);
 
     setAvgSize(avgSize); // Update the avgSize state
 

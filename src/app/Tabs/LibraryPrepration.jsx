@@ -1872,6 +1872,7 @@ const LibraryPrepration = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
                 <DropdownMenuCheckboxItem
+                onSelect={(e) => e.preventDefault()} // Prevent default behavior
                   checked={Object.values(table.getState().columnVisibility).every(Boolean)} // Check if all are visible
                   onCheckedChange={(value) =>
                     table.getAllLeafColumns().forEach((column) => column.toggleVisibility(!!value))
@@ -1880,7 +1881,7 @@ const LibraryPrepration = () => {
                   Select All
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
-                  // Deselect All: show only defaultVisible columns
+                  onSelect={(e) => e.preventDefault()} 
                   onClick={() => {
                     const visibleCols = getDefaultVisible(testName); // <-- get the correct default columns here
                     table.getAllLeafColumns().forEach((column) => {
@@ -1899,6 +1900,7 @@ const LibraryPrepration = () => {
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       checked={column.getIsVisible()}
+                      onSelect={(e)=>e.preventDefault()}
                       onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
                       {column.columnDef.header}
