@@ -29,7 +29,7 @@ const getRunSetupSchema = (instrumentType) => z.object({
     lib_required_next_seq_550: z.number().min(1, 'Volume from Stock is required'),
     buffer_volume_next_seq_550: z.number().min(1, 'HT Buffer is required'),
     final_pool_conc_vol_2nm_next_seq_550: z.number().min(1, 'Volume for Final Pool conc 2nM is required'),
-    nfw_vol_2nm_next_seq_550: z.number().min(1, 'NFW (2nM) is required'),
+    // nfw_vol_2nm_next_seq_550: z.number().min(1, 'NFW (2nM) is required'),
   }),
   ...(instrumentType === 'NextSeq_1000_2000' && {
     final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().min(1, 'Volulme for Final Pool conc 2nM is required'),

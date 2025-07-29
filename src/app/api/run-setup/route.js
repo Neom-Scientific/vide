@@ -167,22 +167,22 @@ export async function POST(request) {
                     [run_id, internalId]
                 );
 
-                await pool.query(`INSERT INTO audit_logs (internal_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [internalId, `Run setup created with run_id: ${run_id}`, setup.change_by]);
+                await pool.query(`INSERT INTO audit_logs (internal_id , comments, changed_by, changed_at) VALUES ($1, $2, $3, NOW())`, [internalId, `Run setup created with run_id: ${run_id}`, setup.change_by]);
             }
         }
 
         // I am passing the array of the sample_id with the name sample_ids
         // console.log('sample_ids', setup.sample_ids);
-        if (setup.internal_ids && setup.internal_ids.length > 0) {
-            const internalIds = setup.internal_ids.map(id => id); // Trim and filter out empty strings
-            if (internalIds.length > 0) {
-                for (const id of internalIds) {
-                    await pool.query(`UPDATE pool_info SET run_id = $1 WHERE internal_id = $2`, [run_id, id]);
-                    await pool.query(`UPDATE master_sheet SET under_seq = $1 , location = $2 WHERE internal_id = $3`, ['Yes', 'under_seq' ,id]);
-                    await pool.query(`INSERT INTO audit_logs (internal_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [id, `Run setup created with run_id: ${run_id}`, setup.change_by]);
-                }
-            }
-        }
+        // if (setup.internal_ids && setup.internal_ids.length > 0) {
+        //     const internalIds = setup.internal_ids.map(id => id); // Trim and filter out empty strings
+        //     if (internalIds.length > 0) {
+        //         for (const id of internalIds) {
+        //             await pool.query(`UPDATE pool_info SET run_id = $1 WHERE internal_id = $2`, [run_id, id]);
+        //             await pool.query(`UPDATE master_sheet SET under_seq = $1 , location = $2 WHERE internal_id = $3`, ['Yes', 'under_seq' ,id]);
+        //             // await pool.query(`INSERT INTO audit_logs (internal_id , comments, change_by, change_date) VALUES ($1, $2, $3, NOW())`, [id, `Run setup created with run_id: ${run_id}`, setup.change_by]);
+        //         }
+        //     }
+        // }
 
         response.push({
             message: "Run setup inserted successfully.",
@@ -191,7 +191,7 @@ export async function POST(request) {
         return NextResponse.json(response);
     }
     catch (error) {
-        // console.log('error', error);
+        console.log('error', error);
         return NextResponse.json({
             error: "An error occurred while processing your request.",
             details: error.message
