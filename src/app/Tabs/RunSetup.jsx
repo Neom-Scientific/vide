@@ -933,7 +933,7 @@ const RunSetup = () => {
                               form.setValue("final_pool_conc_vol_2nm_next_seq_550", 0);
                               form.setValue("nfw_vol_2nm_next_seq_550", 0);
                               form.setValue("dinatured_lib_next_seq_550", 20);
-                              form.setValue("total_volume_next_seq_550", 0);
+                              form.setValue("total_volume_next_seq_550", 1500);
                               form.setValue("loading_conc_550", 0);
                               form.setValue("lib_required_next_seq_550", 0);
                               form.setValue("buffer_volume_next_seq_550", 0);
