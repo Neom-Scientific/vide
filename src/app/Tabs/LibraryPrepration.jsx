@@ -96,9 +96,10 @@ const LibraryPrepration = () => {
     { key: 'size', label: 'Size (bp)' },
     { key: 'nm_conc', label: 'nM conc' },
     { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
-    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 20nM' },
-    { key: 'nfw_volu_for_2nm', label: 'NFW Volume For 20nM' },
-    { key: 'total_vol_for_2nm', label: 'Total Volume For 20nM' },
+    { key: 'lib_vol_for_20nm', label: 'Volume from Stock library for 20nM' },
+    { key: 'nfw_volu_for_20nm', label: 'NFW Volume For 20nM' },
+    { key: 'total_vol_for_20nm', label: 'Total Volume For 20nM' },
+    { key: 'pool_5ul_myeloid', label: 'Pool (5ul Each)' },
     { key: 'pool_dna_rna_10ul', label: 'Pool DNA/RNA 10ul' },
     { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool' },
     { key: 'tapestation_size', label: 'Average bp  Size' },
@@ -106,20 +107,35 @@ const LibraryPrepration = () => {
     { key: 'data_required', label: 'Data Required(GB)' },
     { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
+    { key: 'lib_qubit_for_2nm', label: 'Batch Qubit (ng/ul)' },
+    { key: 'size_for_2nm', label: 'Average Size' },
+    { key: 'nm_conc_for_2nm', label: 'nM Conc' },
+    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 2nM' },
+    { key: 'nfw_vol_for_2nm', label: 'NFW Volume For 2nM' },
+    { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
     { key: 'remarks', label: 'Remarks' },
     { key: 'clinical_history', label: 'Clinical History' },
 
   ];
 
 
+  const batchedColumns = [
+    "lib_qubit_for_2nm",
+    "size_for_2nm",
+    "nm_conc_for_2nm",
+    "lib_vol_for_2nm",
+    "nfw_vol_for_2nm",
+    "total_vol_for_2nm",
+  ]
+
   const pooledColumns = [
     "pool_conc",
     "size",
     "nm_conc",
     // "one_tenth_of_nm_conc",
-    "lib_vol_for_2nm",
-    "nfw_volu_for_2nm",
-    "total_vol_for_2nm",
+    "lib_vol_for_20nm",
+    "nfw_volu_for_20nm",
+    "total_vol_for_20nm",
   ];
 
   const finalPoolingColumns = ["vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool"];
@@ -159,17 +175,18 @@ const LibraryPrepration = () => {
         "sample_type",
         "qubit_dna",
         "conc_rxn",
-        // "plate_designation",
-        "barcode",
+        "plate_designation",
+        "well",
         "i5_index_forward",
         "i5_index_reverse",
         "i7_index",
         "size",
         "lib_qubit",
         "nm_conc",
-        "total_vol_for_2nm",
-        "lib_vol_for_2nm",
-        "nfw_volu_for_2nm",
+        "total_vol_for_20nm",
+        "lib_vol_for_20nm",
+        "nfw_volu_for_20nm",
+        "pool_5ul_myeloid",
         "pool_dna_rna_10ul",
         "tapestation_conc",
         "tapestation_size",
@@ -371,7 +388,8 @@ const LibraryPrepration = () => {
     "NeoAmp-A", "NeoAmp-B", "NeoAmp-C", "NeoAmp-D",
     "1-NDI", "2-NDI", "3-NDI", "4-NDI",
     '5-NDI (WES)', '6-NDI (SGS)',
-    "HLA-1", "HLA-2", "HLA-3", "HLA-4"
+    "HLA-1", "HLA-2", "HLA-3", "HLA-4",
+    "Myeloid-1", "Myeloid-2", "Myeloid-3", "Myeloid-4",
   ];
 
   // A01 - H12
@@ -416,9 +434,9 @@ const LibraryPrepration = () => {
           .map((column) => {
             let headerLabel = column.label;
             if (testName === "Myeloid") {
-              if (column.key === 'total_vol_for_2nm') headerLabel = "Total Volume For 2nM";
-              if (column.key === 'lib_vol_for_2nm') headerLabel = "Volume from Stock library for 2nM";
-              if (column.key === 'nfw_volu_for_2nm') headerLabel = "NFW Volume For 2nM";
+              if (column.key === 'total_vol_for_20nm') headerLabel = "Total Volume For 2nM";
+              if (column.key === 'lib_vol_for_20nm') headerLabel = "Volume from Stock library for 2nM";
+              if (column.key === 'nfw_volu_for_20nm') headerLabel = "NFW Volume For 2nM";
             }
             return {
               accessorKey: column.key,
@@ -439,7 +457,7 @@ const LibraryPrepration = () => {
                 if (column.key === 'well' || column.key === 'plate_designation') {
                   return (
                     <select
-                      className="border-2 border-orange-300 rounded-lg p-2"
+                      className="border-2 w-[100px] border-orange-300 rounded-lg p-2"
                       value={value || ""}
                       onChange={e => {
                         const newValue = e.target.value;
@@ -608,8 +626,8 @@ const LibraryPrepration = () => {
             const updatedRow = { ...row, [columnId]: value };
 
             // Apply formulas dynamically
-            const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-            const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+            const total_vol_for_20nm = parseFloat(updatedRow.total_vol_for_20nm) || 0;
+            const lib_vol_for_20nm = parseFloat(updatedRow.lib_vol_for_20nm) || 0;
             const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
             const volume = parseFloat(updatedRow.volume) || 0;
             const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
@@ -629,29 +647,29 @@ const LibraryPrepration = () => {
               return updatedRow;
             }
 
-            if (columnId === "total_vol_for_2nm") {
-              updatedRow.lib_vol_for_2nm = parseFloat((2 * total_vol_for_2nm / nm_conc).toFixed(2));
-              if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
-                updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
+            if (columnId === "total_vol_for_20nm") {
+              updatedRow.lib_vol_for_20nm = parseFloat((2 * total_vol_for_20nm / nm_conc).toFixed(2));
+              if (updatedRow.lib_vol_for_20nm > total_vol_for_20nm) {
+                updatedRow.lib_vol_for_20nm = total_vol_for_20nm;
               }
-              updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+              updatedRow.nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - updatedRow.lib_vol_for_20nm).toFixed(2));
               return updatedRow;
             }
 
-            if (columnId === "total_vol_for_2nm" || columnId === "vol_for_40nm_percent_pooling") {
-              const totalVol = columnId === "total_vol_for_2nm"
+            if (columnId === "total_vol_for_20nm" || columnId === "vol_for_40nm_percent_pooling") {
+              const totalVol = columnId === "total_vol_for_20nm"
                 ? parseFloat(value) || 0
-                : parseFloat(updatedRow.total_vol_for_2nm) || 0;
+                : parseFloat(updatedRow.total_vol_for_20nm) || 0;
               const percent = columnId === "vol_for_40nm_percent_pooling"
                 ? parseFloat(value) || 0
                 : parseFloat(updatedRow.vol_for_40nm_percent_pooling) || 0;
               updatedRow.volume_from_40nm_for_total_25ul_pool = (totalVol * (percent / 100)).toFixed(2);
 
-              // If you have other logic for total_vol_for_2nm, keep it here:
-              if (columnId === "total_vol_for_2nm") {
-                updatedRow.nfw_volu_for_2nm =
-                  updatedRow.lib_vol_for_2nm && value
-                    ? parseFloat((parseFloat(value) - parseFloat(updatedRow.lib_vol_for_2nm)).toFixed(2))
+              // If you have other logic for total_vol_for_20nm, keep it here:
+              if (columnId === "total_vol_for_20nm") {
+                updatedRow.nfw_volu_for_20nm =
+                  updatedRow.lib_vol_for_20nm && value
+                    ? parseFloat((parseFloat(value) - parseFloat(updatedRow.lib_vol_for_20nm)).toFixed(2))
                     : "";
               }
               return updatedRow;
@@ -703,6 +721,13 @@ const LibraryPrepration = () => {
               updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (100 / qubit_lib_qc_ng_ul).toFixed(2) : "";
             }
 
+            if (columnId === "lib_qubit_for_2nm" || columnId === "size_for_2nm") {
+              const libQubit2nm = parseFloat(updatedRow.lib_qubit_for_2nm) || 0;
+              const size2nm = parseFloat(updatedRow.size_for_2nm) || 0
+              updatedRow.nm_conc_for_2nm = libQubit2nm > 0 ? (libQubit2nm / (size2nm * 660)) * 1000000 : 0;
+              updatedRow.nm_conc_for_2nm = parseFloat(updatedRow.nm_conc_for_2nm.toFixed(2));
+            }
+
             if (columnId === 'pool_conc' || columnId === 'size') {
               updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
             }
@@ -752,7 +777,7 @@ const LibraryPrepration = () => {
         ...firstRow,
         ...pooledValues,
         pool_no: poolNo,
-        total_vol_for_2nm: pooledValues.total_vol_for_2nm ?? firstRow.total_vol_for_2nm ?? "",
+        total_vol_for_20nm: pooledValues.total_vol_for_20nm ?? firstRow.total_vol_for_20nm ?? "",
       };
 
       // 1. Assign pool_no to selected rows
@@ -867,18 +892,18 @@ const LibraryPrepration = () => {
   };
 
   function calculateLibVolFor2nm(row, testName) {
-    const total_vol_for_2nm = parseFloat(row.total_vol_for_2nm) || 0;
+    const total_vol_for_20nm = parseFloat(row.total_vol_for_20nm) || 0;
     const nm_conc = parseFloat(row.nm_conc) || 0;
-    let lib_vol_for_2nm = "";
-    let nfw_volu_for_2nm = "";
+    let lib_vol_for_20nm = "";
+    let nfw_volu_for_20nm = "";
 
-    if (nm_conc > 0 && total_vol_for_2nm > 0) {
+    if (nm_conc > 0 && total_vol_for_20nm > 0) {
       const multiplier = testName === "Myeloid" ? 2.5 : 20;
-      lib_vol_for_2nm = parseFloat(((multiplier * total_vol_for_2nm) / nm_conc).toFixed(2));
-      if (lib_vol_for_2nm > total_vol_for_2nm) lib_vol_for_2nm = total_vol_for_2nm;
-      nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - lib_vol_for_2nm).toFixed(2));
+      lib_vol_for_20nm = parseFloat(((multiplier * total_vol_for_20nm) / nm_conc).toFixed(2));
+      if (lib_vol_for_20nm > total_vol_for_20nm) lib_vol_for_20nm = total_vol_for_20nm;
+      nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - lib_vol_for_20nm).toFixed(2));
     }
-    return { lib_vol_for_2nm, nfw_volu_for_2nm };
+    return { lib_vol_for_20nm, nfw_volu_for_20nm };
   }
 
   const editableColumns = allColumns
@@ -1011,7 +1036,7 @@ const LibraryPrepration = () => {
     return (
       <Input
         ref={inputRef}
-        className={`border border-orange-300 rounded p-1 text-xs w-[200px] ${isSelected ? "ring-2 ring-orange-500 bg-orange-50" : ""}`}
+        className={`border border-orange-300 rounded p-1 text-xs w-[100px] text-center ${isSelected ? "ring-2 ring-orange-500 bg-orange-50" : ""}`}
         value={value}
         type="text"
         placeholder={`${columnLabel}...`}
@@ -1086,8 +1111,8 @@ const LibraryPrepration = () => {
 
               // --- Apply your formulas here (copy from updateData) ---
               // Example (add all your formula logic here):
-              const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-              // const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+              const total_vol_for_20nm = parseFloat(updatedRow.total_vol_for_20nm) || 0;
+              // const lib_vol_for_20nm = parseFloat(updatedRow.lib_vol_for_20nm) || 0;
               const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
               const volume = parseFloat(updatedRow.volume) || 0;
               const qubit_lib_qc_ng_ul = parseFloat(updatedRow.qubit_lib_qc_ng_ul) || 0;
@@ -1103,37 +1128,37 @@ const LibraryPrepration = () => {
 
                 updatedRow.nm_conc = parseFloat(nm_conc.toFixed(2));
 
-                const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
+                const total_vol_for_20nm = parseFloat(updatedRow.total_vol_for_20nm) || 0;
 
-                if (nm_conc > 0 && total_vol_for_2nm > 0) {
-                  updatedRow.lib_vol_for_2nm = parseFloat(((20 * total_vol_for_2nm) / nm_conc).toFixed(2));
-                  if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
-                    updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
+                if (nm_conc > 0 && total_vol_for_20nm > 0) {
+                  updatedRow.lib_vol_for_20nm = parseFloat(((20 * total_vol_for_20nm) / nm_conc).toFixed(2));
+                  if (updatedRow.lib_vol_for_20nm > total_vol_for_20nm) {
+                    updatedRow.lib_vol_for_20nm = total_vol_for_20nm;
                   }
-                  updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+                  updatedRow.nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - updatedRow.lib_vol_for_20nm).toFixed(2));
                 } else {
-                  updatedRow.lib_vol_for_2nm = 0;
-                  updatedRow.nfw_volu_for_2nm = total_vol_for_2nm;
+                  updatedRow.lib_vol_for_20nm = 0;
+                  updatedRow.nfw_volu_for_20nm = total_vol_for_20nm;
                 }
               }
 
-              if (columnId === "nm_conc" || columnId === "total_vol_for_2nm") {
-                if (nm_conc > 0 && total_vol_for_2nm > 0) {
-                  updatedRow.lib_vol_for_2nm = parseFloat(((20 * total_vol_for_2nm) / nm_conc).toFixed(2));
-                  if (updatedRow.lib_vol_for_2nm > total_vol_for_2nm) {
-                    updatedRow.lib_vol_for_2nm = total_vol_for_2nm;
+              if (columnId === "nm_conc" || columnId === "total_vol_for_20nm") {
+                if (nm_conc > 0 && total_vol_for_20nm > 0) {
+                  updatedRow.lib_vol_for_20nm = parseFloat(((20 * total_vol_for_20nm) / nm_conc).toFixed(2));
+                  if (updatedRow.lib_vol_for_20nm > total_vol_for_20nm) {
+                    updatedRow.lib_vol_for_20nm = total_vol_for_20nm;
                   }
-                  updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - updatedRow.lib_vol_for_2nm).toFixed(2));
+                  updatedRow.nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - updatedRow.lib_vol_for_20nm).toFixed(2));
                 } else {
-                  updatedRow.lib_vol_for_2nm = "";
-                  updatedRow.nfw_volu_for_2nm = "";
+                  updatedRow.lib_vol_for_20nm = "";
+                  updatedRow.nfw_volu_for_20nm = "";
                 }
               }
 
-              if (columnId === "total_vol_for_2nm") {
-                updatedRow.nfw_volu_for_2nm =
-                  updatedRow.lib_vol_for_2nm && value
-                    ? parseFloat((parseFloat(value) - parseFloat(updatedRow.lib_vol_for_2nm)).toFixed(2))
+              if (columnId === "total_vol_for_20nm") {
+                updatedRow.nfw_volu_for_20nm =
+                  updatedRow.lib_vol_for_20nm && value
+                    ? parseFloat((parseFloat(value) - parseFloat(updatedRow.lib_vol_for_20nm)).toFixed(2))
                     : "";
                 return updatedRow;
               }
@@ -1177,9 +1202,9 @@ const LibraryPrepration = () => {
                 updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
               }
 
-              const { lib_vol_for_2nm, nfw_volu_for_2nm } = calculateLibVolFor2nm(updatedRow, testName);
-              updatedRow.lib_vol_for_2nm = lib_vol_for_2nm;
-              updatedRow.nfw_volu_for_2nm = nfw_volu_for_2nm;
+              const { lib_vol_for_20nm, nfw_volu_for_20nm } = calculateLibVolFor2nm(updatedRow, testName);
+              updatedRow.lib_vol_for_20nm = lib_vol_for_20nm;
+              updatedRow.nfw_volu_for_20nm = nfw_volu_for_20nm;
 
               updatedRows[rowIndex] = updatedRow;
             }
@@ -1546,7 +1571,7 @@ const LibraryPrepration = () => {
       console.log('roundedPercents:', roundedPercents);
       // 2. Calculate initial (unscaled) volume for each pool using rounded percents
       const unscaled = poolsInBatch.map(({ pool, poolIdx }, i) => {
-        const totalVol = parseFloat(pool.values.total_vol_for_2nm) || 0;
+        const totalVol = parseFloat(pool.values.total_vol_for_20nm) || 0;
         const percent = roundedPercents[i];
         const vol = (totalVol * (percent / 100)) || 0;
 
@@ -1800,8 +1825,8 @@ const LibraryPrepration = () => {
 
                       // --- Formula logic (copy from updateData) ---
                       const updatedRow = { ...row };
-                      const total_vol_for_2nm = parseFloat(updatedRow.total_vol_for_2nm) || 0;
-                      // const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
+                      const total_vol_for_20nm = parseFloat(updatedRow.total_vol_for_20nm) || 0;
+                      // const lib_vol_for_20nm = parseFloat(updatedRow.lib_vol_for_20nm) || 0;
                       const per_rxn_gdna = parseFloat(updatedRow.per_rxn_gdna) || 0;
                       const volume = parseFloat(updatedRow.volume) || 0;
                       const qubit_dna = parseFloat(updatedRow.qubit_dna) || 0;
@@ -1815,15 +1840,15 @@ const LibraryPrepration = () => {
                       const gdna_volume_3x = parseFloat(updatedRow.gdna_volume_3x) || 0;
                       updatedRow.nfw = volume > 0 ? volume - gdna_volume_3x : "";
 
-                      // nfw_volu_for_2nm
-                      if (total_vol_for_2nm) {
-                        const lib_vol_for_2nm = parseFloat(updatedRow.lib_vol_for_2nm) || 0;
-                        updatedRow.nfw_volu_for_2nm = parseFloat((total_vol_for_2nm - lib_vol_for_2nm).toFixed(2));
+                      // nfw_volu_for_20nm
+                      if (total_vol_for_20nm) {
+                        const lib_vol_for_20nm = parseFloat(updatedRow.lib_vol_for_20nm) || 0;
+                        updatedRow.nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - lib_vol_for_20nm).toFixed(2));
                       }
 
-                      const { lib_vol_for_2nm, nfw_volu_for_2nm } = calculateLibVolFor2nm(updatedRow, testName);
-                      updatedRow.lib_vol_for_2nm = lib_vol_for_2nm;
-                      updatedRow.nfw_volu_for_2nm = nfw_volu_for_2nm;
+                      const { lib_vol_for_20nm, nfw_volu_for_20nm } = calculateLibVolFor2nm(updatedRow, testName);
+                      updatedRow.lib_vol_for_20nm = lib_vol_for_20nm;
+                      updatedRow.nfw_volu_for_20nm = nfw_volu_for_20nm;
 
                       return updatedRow;
                     });
@@ -1907,7 +1932,7 @@ const LibraryPrepration = () => {
                           const colKey = header.column.id;
                           let stickyClass = "";
                           let style = {};
-                          if (colKey === "lib_vol_for_2nm") style = { maxWidth: "120px", minWidth: "100px" };
+                          if (colKey === "lib_vol_for_20nm") style = { maxWidth: "120px", minWidth: "100px" };
                           if (colKey === "volume_from_40nm_for_total_25ul_pool") style = { maxWidth: "120px", minWidth: "100px" };
 
                           if (colKey === "id") stickyClass = "sticky left-0 z-40 w-[60px]";
@@ -1918,7 +1943,7 @@ const LibraryPrepration = () => {
                             <th
                               key={header.id}
                               onClick={header.column.getToggleSortingHandler()}
-                              className={`cursor-pointer table-header px-4 py-2 text-left border-b border-gray-200 sticky top-0 z-30 bg-orange-100 dark:bg-gray-800 ${stickyClass}`}
+                              className={`cursor-pointer table-header px-4 py-2 text-left border-b border-gray-200 border-s-1 border-s-orange-300 sticky top-0 z-30 bg-orange-100 dark:bg-gray-800 ${stickyClass}`}
                               style={style}
                             >
                               {header.isPlaceholder
@@ -1927,6 +1952,21 @@ const LibraryPrepration = () => {
                             </th>
                           );
                         })}
+                        {testName !== "Myeloid" && batchedColumns.map(colKey => (
+                          <th
+                            key={colKey}
+                            className="px-2 py-1 border border-gray-300 font-bold bg-orange-100 border-s-1 border-s-orange-300 sticky top-0 z-30"
+                            style={{
+                              whiteSpace: "normal",
+                              wordBreak: "break-word",
+                              maxWidth: "120px", // adjust as needed
+                              minWidth: "80px",  // adjust as needed
+                              textAlign: "center"
+                            }}
+                          >
+                            {allColumns.find(col => col.key === colKey)?.label || colKey}
+                          </th>
+                        ))}
                         <th className=""></th>
                       </tr>
                     ))}
@@ -2014,7 +2054,7 @@ const LibraryPrepration = () => {
                               }
 
                               if (testName === "Myeloid") {
-                                if (cell.column.id === "pool_dna_rna_10ul") {
+                                if (cell.column.id === "pool_dna_rna_10ul" || cell.column.id === "pool_5ul_myeloid") {
                                   // Find all RNA and DNA rows
                                   const rnaRows = arr.filter(r => r.original.sample_type === "RNA");
                                   const dnaRows = arr.filter(r => r.original.sample_type === "DNA");
@@ -2022,28 +2062,56 @@ const LibraryPrepration = () => {
                                   const isFirstDNA = row.original.sample_type === "DNA" && rowIndex === arr.findIndex(r => r.original.sample_type === "DNA");
 
                                   if (isFirstRNA) {
-                                    return (
-                                      <td
-                                        key={cell.column.id}
-                                        rowSpan={rnaRows.length}
-                                        className=" font-bold text-center align-middle"
-                                        style={{ verticalAlign: "middle" }}
-                                      >
-                                        1ul
-                                      </td>
-                                    );
+                                    if (cell.column.id === "pool_dna_rna_10ul") {
+                                      return (
+                                        <td
+                                          key={cell.column.id}
+                                          rowSpan={rnaRows.length}
+                                          className=" font-bold text-center align-middle border-s-1 border-y-1"
+                                          style={{ verticalAlign: "middle" }}
+                                        >
+                                          1ul
+                                        </td>
+                                      );
+                                    }
+                                    if (cell.column.id === "pool_5ul_myeloid") {
+                                      return (
+                                        <td
+                                          key={cell.column.id}
+                                          rowSpan={rnaRows.length}
+                                          className=" font-bold text-center align-middle border-s-1 border-y-1"
+                                          style={{ verticalAlign: "middle" }}
+                                        >
+                                          RNA POOL
+                                        </td>
+                                      );
+                                    }
                                   }
                                   if (isFirstDNA) {
-                                    return (
-                                      <td
-                                        key={cell.column.id}
-                                        rowSpan={dnaRows.length}
-                                        className=" font-bold text-center align-middle"
-                                        style={{ verticalAlign: "middle" }}
-                                      >
-                                        8ul
-                                      </td>
-                                    );
+                                    if (cell.column.id === "pool_dna_rna_10ul") {
+                                      return (
+                                        <td
+                                          key={cell.column.id}
+                                          rowSpan={dnaRows.length}
+                                          className=" font-bold text-center align-middle border-s-1 border-y-1"
+                                          style={{ verticalAlign: "middle" }}
+                                        >
+                                          8ul
+                                        </td>
+                                      );
+                                    }
+                                    if (cell.column.id === "pool_5ul_myeloid") {
+                                      return (
+                                        <td
+                                          key={cell.column.id}
+                                          rowSpan={dnaRows.length}
+                                          className=" font-bold text-center align-middle border-s-1 border-y-1"
+                                          style={{ verticalAlign: "middle" }}
+                                        >
+                                          DNA POOL
+                                        </td>
+                                      );
+                                    }
                                   }
                                   // Other RNA/DNA rows: skip cell (covered by rowspan)
                                   if (row.original.sample_type === "RNA" || row.original.sample_type === "DNA") {
@@ -2071,7 +2139,7 @@ const LibraryPrepration = () => {
                                         className="align-middle px-2 py-1 border border-gray-300"
                                       >
                                         <input
-                                          className="border border-orange-300 rounded p-1 w-[150px]"
+                                          className="border border-orange-300 rounded p-1 text-center w-[150px]"
                                           value={row.original[cell.column.id] || ""}
                                           onChange={e => {
                                             const value = e.target.value;
@@ -2161,7 +2229,7 @@ const LibraryPrepration = () => {
                                       className="align-middle px-2 py-1 border border-gray-300"
                                     >
                                       <input
-                                        className="border border-orange-300 rounded p-1 w-[200px]"
+                                        className="border border-orange-300 rounded text-center p-1 w-[100px]"
                                         placeholder={cell.column.columnDef.header || cell.column.id}
                                         value={pool.values[cell.column.id] || ""}
                                         onChange={e => {
@@ -2173,9 +2241,9 @@ const LibraryPrepration = () => {
 
                                               // Always use the latest value if editing a dependency
                                               const totalVolFor2nm =
-                                                cell.column.id === "total_vol_for_2nm"
+                                                cell.column.id === "total_vol_for_20nm"
                                                   ? parseFloat(value) || 0
-                                                  : parseFloat(updated.total_vol_for_2nm) || 0;
+                                                  : parseFloat(updated.total_vol_for_20nm) || 0;
                                               const percentPooling =
                                                 cell.column.id === "vol_for_40nm_percent_pooling"
                                                   ? parseFloat(value) || 0
@@ -2195,8 +2263,8 @@ const LibraryPrepration = () => {
                                               updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
 
-                                              updated.lib_vol_for_2nm = (20 * totalVolFor2nm / nmConc).toFixed(2);
-                                              updated.nfw_volu_for_2nm = (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2);
+                                              updated.lib_vol_for_20nm = (20 * totalVolFor2nm / nmConc).toFixed(2);
+                                              updated.nfw_volu_for_20nm = (totalVolFor2nm - updated.lib_vol_for_20nm).toFixed(2);
 
                                               return { ...p, values: updated };
                                             })
@@ -2239,7 +2307,7 @@ const LibraryPrepration = () => {
                                     >
                                       {cell.column.id === "vol_for_40nm_percent_pooling" ? (
                                         <input
-                                          className="border border-orange-300 rounded p-1 w-[200px] mb-1 "
+                                          className="border border-orange-300 text-center rounded p-1 w-[100px] mb-1 "
                                           value={
                                             // Only show value if batch_id exists for this pool
                                             pool.sampleIndexes.every(idx => arr[idx]?.original?.batch_id)
@@ -2253,7 +2321,7 @@ const LibraryPrepration = () => {
                                                 if (p !== pool) return p;
                                                 const updated = { ...p.values, vol_for_40nm_percent_pooling: value };
 
-                                                const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
+                                                const totalVolFor2nm = parseFloat(updated.total_vol_for_20nm) || 0;
                                                 const percentPooling = parseFloat(value) || 0;
 
                                                 updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
@@ -2267,7 +2335,7 @@ const LibraryPrepration = () => {
                                         />
                                       ) : (
                                         <input
-                                          className="border border-orange-300 rounded p-1 w-[200px]"
+                                          className="border border-orange-300 rounded text-center p-1 w-[100px]"
                                           placeholder={cell.column.columnDef.header || cell.column.id}
                                           value={pool.values[cell.column.id] || ""}
                                           onChange={e => {
@@ -2279,9 +2347,9 @@ const LibraryPrepration = () => {
 
                                                 // Always use the latest value if editing a dependency
                                                 const totalVolFor2nm =
-                                                  cell.column.id === "total_vol_for_2nm"
+                                                  cell.column.id === "total_vol_for_20nm"
                                                     ? parseFloat(value) || 0
-                                                    : parseFloat(updated.total_vol_for_2nm) || 0;
+                                                    : parseFloat(updated.total_vol_for_20nm) || 0;
                                                 const percentPooling =
                                                   cell.column.id === "vol_for_40nm_percent_pooling"
                                                     ? parseFloat(value) || 0
@@ -2306,7 +2374,7 @@ const LibraryPrepration = () => {
                                 return (
                                   <td key={cell.column.id} rowSpan={pool.sampleIndexes.length} className="align-middle px-2 py-1 border border-gray-300">
                                     <input
-                                      className="border border-orange-300 rounded p-1 w-[200px] mb-1"
+                                      className="border text-center border-orange-300 rounded p-1 w-[100px] mb-1"
                                       value={pool.values.vol_for_40nm_percent_pooling || ""}
                                       onChange={e => {
                                         const value = e.target.value;
@@ -2314,7 +2382,7 @@ const LibraryPrepration = () => {
                                           prev.map(p => {
                                             if (p !== pool) return p;
                                             const updated = { ...p.values, vol_for_40nm_percent_pooling: value };
-                                            const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
+                                            const totalVolFor2nm = parseFloat(updated.total_vol_for_20nm) || 0;
                                             const percentPooling = parseFloat(value) || 0;
                                             updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
                                             return { ...p, values: updated };
@@ -2329,13 +2397,13 @@ const LibraryPrepration = () => {
                               }
 
                               if (cell.column.id === "volume_from_40nm_for_total_25ul_pool" && pool && isFirstOfPool) {
-                                const totalVolFor2nm = parseFloat(pool.values.total_vol_for_2nm) || 0;
+                                const totalVolFor2nm = parseFloat(pool.values.total_vol_for_20nm) || 0;
                                 const percentPooling = parseFloat(pool.values.vol_for_40nm_percent_pooling) || 0;
                                 const var_name = ((totalVolFor2nm * percentPooling) / 100).toFixed(2);
                                 return (
                                   <td key={cell.column.id} rowSpan={pool.sampleIndexes.length} className="align-middle px-2 py-1 border border-gray-300">
                                     <input
-                                      className="border border-orange-300 text-black dark:text-white rounded p-1 w-[200px]"
+                                      className="border text-center border-orange-300 text-black dark:text-white rounded p-1 w-[100px]"
                                       placeholder={cell.column.columnDef.header || cell.column.id}
                                       value={pool.values.volume_from_40nm_for_total_25ul_pool || ""}
                                       readOnly
@@ -2357,7 +2425,7 @@ const LibraryPrepration = () => {
                                     className="align-middle px-2 py-1 border border-gray-300"
                                   >
                                     <input
-                                      className="border border-orange-300 rounded p-1 w-[200px]"
+                                      className="border border-orange-300 rounded p-1 w-[100px]"
                                       placeholder={cell.column.columnDef.header || cell.column.id}
                                       value={pool?.values[cell.column.id] || ""}
                                       onChange={e => {
@@ -2369,9 +2437,9 @@ const LibraryPrepration = () => {
 
                                             // Always use the latest value if editing a dependency
                                             const totalVolFor2nm =
-                                              cell.column.id === "total_vol_for_2nm"
+                                              cell.column.id === "total_vol_for_20nm"
                                                 ? parseFloat(value) || 0
-                                                : parseFloat(updated.total_vol_for_2nm) || 0;
+                                                : parseFloat(updated.total_vol_for_20nm) || 0;
                                             const percentPooling =
                                               cell.column.id === "vol_for_40nm_percent_pooling"
                                                 ? parseFloat(value) || 0
@@ -2390,22 +2458,22 @@ const LibraryPrepration = () => {
                                             const nmConc = parseFloat(updated.nm_conc) || 0;
                                             updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
-                                            if (cell.column.id === "lib_vol_for_2nm" || cell.column.id === "nm_conc" || cell.column.id === "one_tenth_of_nm_conc") {
+                                            if (cell.column.id === "lib_vol_for_20nm" || cell.column.id === "nm_conc" || cell.column.id === "one_tenth_of_nm_conc") {
                                               const nmConc = parseFloat(updated.nm_conc) || 0;
-                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
+                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_20nm) || 0;
 
-                                              updated.total_vol_for_2nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
+                                              updated.total_vol_for_20nm = (updated.one_tenth_of_nm_conc && libVolFor2nm)
                                                 ? (parseFloat(updated.one_tenth_of_nm_conc) * libVolFor2nm / 2).toFixed(2)
                                                 : "";
 
-                                              updated.nfw_volu_for_2nm = (totalVolFor2nm && libVolFor2nm)
+                                              updated.nfw_volu_for_20nm = (totalVolFor2nm && libVolFor2nm)
                                                 ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
                                                 : "";
                                             }
 
-                                            if (cell.column.id === "total_vol_for_2nm") {
-                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_2nm) || 0;
-                                              updated.nfw_volu_for_2nm = (value && libVolFor2nm)
+                                            if (cell.column.id === "total_vol_for_20nm") {
+                                              const libVolFor2nm = parseFloat(updated.lib_vol_for_20nm) || 0;
+                                              updated.nfw_volu_for_20nm = (value && libVolFor2nm)
                                                 ? (parseFloat(value) - libVolFor2nm).toFixed(2)
                                                 : "";
                                             }
@@ -2438,7 +2506,7 @@ const LibraryPrepration = () => {
                                       className="align-middle px-2 py-1 border border-gray-300"
                                     >
                                       <input
-                                        className="border border-orange-300 text-black dark:text-white rounded p-1 w-[200px]"
+                                        className="border border-orange-300 text-black dark:text-white rounded p-1 w-[100px]"
                                         placeholder={cell.column.columnDef.header || cell.column.id}
                                         value={pool.values[cell.column.id] || ""}
                                         onChange={e => {
@@ -2450,9 +2518,9 @@ const LibraryPrepration = () => {
 
                                               // Always use the latest value if editing a dependency
                                               const totalVolFor2nm =
-                                                cell.column.id === "total_vol_for_2nm"
+                                                cell.column.id === "total_vol_for_20nm"
                                                   ? parseFloat(value) || 0
-                                                  : parseFloat(updated.total_vol_for_2nm) || 0;
+                                                  : parseFloat(updated.total_vol_for_20nm) || 0;
                                               const percentPooling =
                                                 cell.column.id === "vol_for_40nm_percent_pooling"
                                                   ? parseFloat(value) || 0
@@ -2488,6 +2556,97 @@ const LibraryPrepration = () => {
                                 </td>
                               );
                             })}
+
+                            {testName !== "Myeloid" && batchedColumns.map((colKey) => {
+                              if (isFirstOfBatch) {
+                                const batchRows = arr.filter(r => r.original.batch_id === currentBatchId);
+                                const firstBatchRow = batchRows[0];
+
+                                let value = firstBatchRow?.original[colKey] ?? "";
+                                if (colKey === "size_for_2nm") {
+                                  // Find all pools in this batch
+                                  const poolsInBatch = pooledRowData.filter(pool =>
+                                    pool.sampleIndexes.some(idx => arr[idx]?.original.batch_id === currentBatchId)
+                                  );
+                                  // Get all pool sizes (as numbers)
+                                  const poolSizes = poolsInBatch
+                                    .map(pool => parseFloat(pool.values.size))
+                                    .filter(size => !isNaN(size) && size > 0);
+                                  // Calculate average
+                                  const avgSize = poolSizes.length
+                                    ? (poolSizes.reduce((a, b) => a + b, 0) / poolSizes.length).toFixed(2)
+                                    : "";
+
+                                  // If the batchRows don't have the correct size_for_2nm, update them and recalculate nm_conc_for_2nm
+                                  if (avgSize && batchRows.some(r => r.original.size_for_2nm !== avgSize)) {
+                                    setTimeout(() => {
+                                      setTableRows(prevRows =>
+                                        prevRows.map(r => {
+                                          if (r.batch_id !== currentBatchId) return r;
+                                          const libQubitFor2nm = parseFloat(r.lib_qubit_for_2nm) || 0;
+                                          const sizeFor2nm = parseFloat(avgSize) || 0;
+                                          const nmConcFor2nm =
+                                            sizeFor2nm > 0 && libQubitFor2nm > 0
+                                              ? ((libQubitFor2nm / (sizeFor2nm * 660)) * 1000000).toFixed(2)
+                                              : "";
+                                          return {
+                                            ...r,
+                                            size_for_2nm: avgSize,
+                                            nm_conc_for_2nm: nmConcFor2nm,
+                                          };
+                                        })
+                                      );
+                                    }, 0);
+                                  }
+                                  value = avgSize;
+                                }
+                                return (
+                                  <td
+                                    key={colKey}
+                                    rowSpan={batchRows.length}
+                                    className="align-middle px-2 py-1 border border-gray-300"
+                                  >
+                                    <input
+                                      type='text'
+                                      className="border border-orange-300 text-center rounded p-1 w-[100px]"
+                                      placeholder={`${allColumns.find(col => col.key === colKey)?.label || colKey}`}
+                                      value={value}
+                                      readOnly={colKey === "size_for_2nm"}
+                                      onChange={colKey === "size_for_2nm" ? undefined : (e => {
+                                        const value = e.target.value;
+                                        setTableRows(prevRows =>
+                                          prevRows.map(r => {
+                                            if (r.batch_id !== currentBatchId) return r;
+                                            let updated = { ...r, [colKey]: value };
+
+                                            if (colKey === "lib_qubit_for_2nm" || colKey === "size_for_2nm") {
+                                              const libQubitFor2nm = parseFloat(updated.lib_qubit_for_2nm) || 0;
+                                              const sizeFor2nm = parseFloat(updated.size_for_2nm) || 0;
+                                              updated.nm_conc_for_2nm = (sizeFor2nm > 0 && libQubitFor2nm > 0)
+                                                ? ((libQubitFor2nm / (sizeFor2nm * 660)) * 1000000).toFixed(2)
+                                                : "";
+                                            }
+
+                                            if (colKey === "total_vol_for_2nm") {
+                                              const nmConcFor2nm = parseFloat(updated.nm_conc_for_2nm) || 0;
+                                              const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
+                                              updated.lib_vol_for_2nm = (nmConcFor2nm > 0 && totalVolFor2nm > 0)
+                                                ? (2 * (totalVolFor2nm / nmConcFor2nm)).toFixed(2)
+                                                : "";
+                                              updated.nfw_vol_for_2nm = (totalVolFor2nm - updated.lib_vol_for_2nm).toFixed(2);
+                                            }
+
+                                            return updated;
+                                          })
+                                        );
+                                      })}
+                                    />
+                                  </td>
+                                );
+                              }
+                              return null;
+                            })}
+
                             <td className="align-middle px-2 py-1 border border-gray-300">
                               <div className="flex items-center gap-2">
                                 {!row.original.pool_no && pooledRowData.length > 0 && (
@@ -2549,7 +2708,7 @@ const LibraryPrepration = () => {
                           }
                           {isLastOfBatch && currentBatchId && (
                             <tr>
-                              <td colSpan={columns.length} className="font-bold text-xl py-3 pe-[500px] text-right">
+                              <td colSpan={columns.length} className="font-bold text-xl py-3 pe-[1030px] text-right">
                                 Total Data: {batchSum}
                               </td>
                             </tr>

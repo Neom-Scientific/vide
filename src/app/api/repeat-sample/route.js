@@ -24,13 +24,13 @@ const integerFields = [
 
 // List all pool_info and run_setup columns here
 const poolFields = [
-    "conc_rxn", "i5_index_reverse", "i7_index", "lib_qubit", "nm_conc", "nfw_volu_for_2nm",
-    "total_vol_for_2nm", "barcode", "lib_vol_for_2nm", "sample_id", "test_name", "qubit_dna",
+    "conc_rxn", "i5_index_reverse", "i7_index", "lib_qubit", "nm_conc", "nfw_volu_for_20nm",
+    "total_vol_for_20nm", "barcode", "lib_vol_for_20nm", "sample_id", "test_name", "qubit_dna",
     "per_rxn_gdna", "volume", "gdna_volume_3x", "nfw", "plate_designation", "well",
     "qubit_lib_qc_ng_ul", "stock_ng_ul", "lib_vol_for_hyb", "gb_per_sample", "pool_no", "size",
     "i5_index_forward", "sample_volume", "pooling_volume", "pool_conc", "one_tenth_of_nm_conc",
     "data_required", "hospital_name", "run_id", "lib_prep_date", "internal_id", "batch_id",
-    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by","tapestation_size","tapestation_conc","dna_vol_for_dilution","buffer_vol_to_be_added","conc_of_amplicons","vol_for_fragmentation"
+    "vol_for_40nm_percent_pooling", "volume_from_40nm_for_total_25ul_pool", "done_by","tapestation_size","tapestation_conc","dna_vol_for_dilution","buffer_vol_to_be_added","conc_of_amplicons","vol_for_fragmentation", "lib_qubit_2nm","size_for_2nm", "nfw_vol_for_2nm", "lib_vol_for_2nm", "total_vol_for_2nm","nm_conc_for_2nm"
 ];
 
 const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_550",
@@ -45,8 +45,8 @@ const runSetupFields = ["buffer_volume_next_seq_550", "dinatured_lib_next_seq_55
     "final_pool_vol_ul", "table_data", "ht_buffer_next_seq_1000_2000", "run_remarks"]
 
 const floatFields = [
-    "pool_conc", "one_tenth_of_nm_conc", "lib_vol_for_2nm", "nfw_volu_for_2nm",
-    "total_vol_for_2nm", "lib_vol_for_hyb", "data_required", "sample_volume",
+    "pool_conc", "one_tenth_of_nm_conc", "lib_vol_for_20nm", "nfw_volu_for_20nm",
+    "total_vol_for_20nm", "lib_vol_for_hyb", "data_required", "sample_volume",
     "pooling_volume", "buffer_volume_next_seq_550", "dinatured_lib_next_seq_550",
     "lib_required_next_seq_550", "loading_conc_1000_2000", "total_volume_2nm_next_seq_550",
     "final_pool_vol_ul", "ht_buffer_next_seq_1000_2000", "vol_for_40nm_percent_pooling",
@@ -192,7 +192,7 @@ export async function POST(request) {
             // Only empty the specified columns, copy others from original
             const emptyFields = [
                 "lib_vol_for_hyb", "data_required", "pool_conc", "size", "nm_conc",
-                "one_tenth_of_nm_conc", "lib_vol_for_2nm", "nfw_volu_for_2nm", "total_vol_for_2nm"
+                "one_tenth_of_nm_conc", "lib_vol_for_20nm", "nfw_volu_for_20nm", "total_vol_for_20nm"
             ];
 
             poolFields.forEach(field => {

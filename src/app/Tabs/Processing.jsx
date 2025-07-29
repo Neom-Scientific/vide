@@ -102,10 +102,10 @@ const Processing = () => {
     { key: 'i7_index', label: 'I7 Index' },
     { key: 'lib_qubit', label: 'Lib Qubit' },
     { key: 'nm_conc', label: 'NM Conc' },
-    { key: 'nfw_volu_for_2nm', label: 'NFW Volu for 2nm' },
-    { key: 'total_vol_for_2nm', label: 'Total Vol for 2nm' },
+    { key: 'nfw_volu_for_20nm', label: 'NFW Volu for 2nm' },
+    { key: 'total_vol_for_20nm', label: 'Total Vol for 2nm' },
     { key: 'barcode', label: 'Barcode' },
-    { key: 'lib_vol_for_2nm', label: 'Lib Vol for 2nm' },
+    { key: 'lib_vol_for_20nm', label: 'Lib Vol for 2nm' },
     { key: 'qubit_dna', label: 'Qubit DNA' },
     { key: 'per_rxn_gdna', label: 'Per RXN GDNA' },
     { key: 'volume', label: 'Volume' },
@@ -153,6 +153,18 @@ const Processing = () => {
     { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
     { key: 'run_remarks', label: 'Run Remarks' },
+    { key: 'lib_qubit_for_2nm', label: 'Batch Qubit (ng/ul)' },
+    { key: 'size_for_2nm', label: 'Average Size' },
+    { key: 'nm_conc_for_2nm', label: 'nM Conc' },
+    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 2nM' },
+    { key: 'nfw_vol_for_2nm', label: 'NFW Volume For 2nM' },
+    { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
+    { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool' },
+    { key: 'tapestation_size', label: 'Average bp  Size' },
+    { key: 'dna_vol_for_dilution', label: 'DNA Vol for Dilution (40ng/ul)' },
+    { key: 'buffer_vol_to_be_added', label: 'Buffer Vol (ul)' },
+    { key: 'conc_of_amplicons', label: 'Conc of Amplicons (ng/ul)' },
+    { key: 'vol_for_fragmentation', label: 'Volume for Fragmentation (ul)' },
   ];
 
   const allTests = [
@@ -254,7 +266,7 @@ const Processing = () => {
       ),
       cell: ({ row }) => {
         const rowData = row.original;
-        const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.dna_isolation !== "Yes" ;
+        const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.dna_isolation !== "Yes";
         return disabled
           ? (
             <Checkbox
@@ -626,7 +638,7 @@ const Processing = () => {
       for: 'process'
     };
     // if (user && user.role !== "SuperAdmin") {
-      data.hospital_name = user.hospital_name; // Add hospital_name from user data
+    data.hospital_name = user.hospital_name; // Add hospital_name from user data
     // }
 
     try {
@@ -687,9 +699,9 @@ const Processing = () => {
     "size",
     "nm_conc",
     "one_tenth_of_nm_conc",
-    "total_vol_for_2nm",
-    "lib_vol_for_2nm",
-    "nfw_volu_for_2nm",
+    "total_vol_for_20nm",
+    "lib_vol_for_20nm",
+    "nfw_volu_for_20nm",
     "vol_for_40nm_percent_pooling",
     "volume_from_40nm_for_total_25ul_pool",
   ];
@@ -936,7 +948,7 @@ const Processing = () => {
     fetchInUseEffect();
   }, [])
 
-  const handleShowAudit = async (sampleId,internalId) => {
+  const handleShowAudit = async (sampleId, internalId) => {
     setAuditSampleId(sampleId);
     setShowAuditSidebar(true);
     try {
@@ -1000,6 +1012,7 @@ const Processing = () => {
               <DropdownMenuContent className="min-w-[250px]">
                 {/* Select All Option */}
                 <DropdownMenuItem
+                  onSelect={e => e.preventDefault()}
                   onClick={() => {
                     handleFilterChange('selectedTestNames', allTests);
                   }}
@@ -1009,6 +1022,7 @@ const Processing = () => {
                 </DropdownMenuItem>
                 {/* Deselect All Option */}
                 <DropdownMenuItem
+                  onSelect={e => e.preventDefault()}
                   onClick={() => {
                     handleFilterChange('selectedTestNames', []);
                   }}
@@ -1024,6 +1038,7 @@ const Processing = () => {
                   .map(test => (
                     <DropdownMenuItem
                       key={test}
+                      onSelect={e => e.preventDefault()} // <-- Add this line
                       onClick={() => {
                         if (selectedTestNames.includes(test)) return;
                         const updated = [...filters.selectedTestNames, test];
@@ -1249,7 +1264,13 @@ const Processing = () => {
                           <th
                             key={header.id}
                             onClick={header.column.getToggleSortingHandler()}
-                            className="cursor-pointer px-4 py-2 text-left border-b border-gray-200 bg-orange-100 dark:bg-gray-800 sticky top-0 z-20"
+                            className="cursor-pointer px-4 py-2 text-center border-b border-gray-200 bg-orange-100 dark:bg-gray-800 sticky top-0 z-20"
+                            style={{
+                              whiteSpace: "normal",
+                              wordBreak: "break-word",
+                              maxWidth: "180px", // adjust as needed
+                              minWidth: "80px",
+                            }}
                           >
                             {header.isPlaceholder
                               ? null
@@ -1312,7 +1333,7 @@ const Processing = () => {
                               }
                               // Normal rendering
                               return (
-                                <td key={cell.id + '-' + idx + '-' + cellIdx} className="px-4 py-2 border-b border-gray-100">
+                                <td key={cell.id + '-' + idx + '-' + cellIdx} className="px-4 py-2 border-b border-gray-100 text-center">
                                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                 </td>
                               );

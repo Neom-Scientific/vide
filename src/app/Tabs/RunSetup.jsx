@@ -393,7 +393,7 @@ const RunSetup = () => {
         if (tapestation && tapestation !== 0) {
           return tapestation;
         }
-        return Number(pool.size);
+        return Number(pool.size_for_2nm);
       });
 
     console.log('updatedSize', updatedSize);
