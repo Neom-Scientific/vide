@@ -418,7 +418,7 @@ const RunSetup = () => {
   };
 
   useEffect(() => {
-    const totalGbAvailable = Number(form.watch("total_gb_available"));
+    const totalGbAvailable = Number(form.watch("total_required"));
 
     if (totalGbAvailable > 0) {
       // Calculate unrounded percentages for each test
