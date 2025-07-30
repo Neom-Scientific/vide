@@ -327,6 +327,11 @@ export const SampleRegistration = () => {
         form.setValue('trf-upload', null);
         form.setValue('trf', '');
         form.setValue('trf_file', '');
+        form.setValue('selectedTestName', '');
+        form.setValue('sample_id', '');
+        setHasSelectedFirstTest(false);
+        setSelectedTests([]);
+        form.setValue('sample_name', '');
         localStorage.removeItem('sampleRegistrationForm');
       } else if (res.data[0].status === 400) {
         toast.error(res.data[0].message);
@@ -1858,7 +1863,7 @@ export const SampleRegistration = () => {
                 setTrfUrl('');
                 setEditButton(false);
                 setHasSelectedFirstTest(false);
-                localStorage.removeItem('sampleRegistrationData');
+                localStorage.removeItem('sampleRegistrationForm');
                 localStorage.removeItem('editRowData')
               }}
             >
