@@ -11,7 +11,6 @@ import { toast, ToastContainer } from 'react-toastify'
 import Dialogbox from '@/app/components/Dialogbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Cookies from 'js-cookie'
-import { setsEqual } from 'chart.js/dist/helpers/helpers.core'
 
 const cardioTests = [
   "Cardio Comprehensive (Screening)",
