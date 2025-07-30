@@ -238,7 +238,7 @@ export async function POST(request) {
                     `UPDATE master_sheet SET qubit_dna = $1, data_required = $2, conc_rxn = $3, well = $4,
                      i5_index_reverse = $5, i7_index = $6, lib_qubit = $7, nm_conc = $8,
                      lib_vol_for_20nm = $9, nfw_volu_for_20nm = $10, total_vol_for_20nm = $11,
-                     size = $12, pool_no = $16, lib_prep_date = $17 , batch_id = $18, vol_for_40nm_percent_pooling = $19, volume_from_40nm_for_total_25ul_pool=$20 , tapestation_size = $21 , tapestation_conc = $22, plate_desgination = $23 WHERE internal_id = $13 AND test_name = $14 AND hospital_name = $15`,
+                     size = $12, pool_no = $16, lib_prep_date = $17 , batch_id = $18, vol_for_40nm_percent_pooling = $19, volume_from_40nm_for_total_25ul_pool=$20 , tapestation_size = $21 , tapestation_conc = $22, plate_designation = $23 WHERE internal_id = $13 AND test_name = $14 AND hospital_name = $15`,
                     [sanitized.qubit_dna, sanitized.data_required, sanitized.conc_rxn, sanitized.well, sanitized.i5_index_reverse, sanitized.i7_index,
                     sanitized.lib_qubit, sanitized.nm_conc, sanitized.lib_vol_for_20nm, sanitized.nfw_volu_for_20nm, sanitized.total_vol_for_20nm,
                     sanitized.size, internal_id, testName, hospital_name, sanitized.pool_no, sanitized.lib_prep_date, batch_id, sanitized.vol_for_40nm_percent_pooling || null, sanitized.volume_from_40nm_for_total_25ul_pool || null, sanitized.tapestation_size || null, sanitized.tapestation_conc || null , plate_designation || null]
