@@ -11,6 +11,7 @@ import { toast, ToastContainer } from 'react-toastify'
 import Dialogbox from '@/app/components/Dialogbox'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import Cookies from 'js-cookie'
+import { setsEqual } from 'chart.js/dist/helpers/helpers.core'
 
 const cardioTests = [
   "Cardio Comprehensive (Screening)",
@@ -329,10 +330,27 @@ export const SampleRegistration = () => {
         form.setValue('trf_file', '');
         form.setValue('selectedTestName', '');
         form.setValue('sample_id', '');
+        setTestToRemove(null); // Reset
+        setCustomTestName('');
+        setShowRemoveModal(false);
         setHasSelectedFirstTest(false);
         setSelectedTests([]);
         form.setValue('sample_name', '');
         localStorage.removeItem('sampleRegistrationForm');
+
+        // setSelectedTests([]);
+        // setTrfUrl('');
+        // setEditButton(false);
+        // form.setValue('trf', '');
+        // form.setValue('trf_file', '');
+        // form.setValue('selectedTestName', '');
+        // form.setValue('sample_name', '');
+        // form.setValue('sample_id', '');
+        // setCustomTestName('');
+        // setTestToRemove('');
+        // setShowRemoveModal(false);
+        // setTestNameOptions([]);
+        // setHasSelectedFirstTest(false);
       } else if (res.data[0].status === 400) {
         toast.error(res.data[0].message);
         setProcessing(false);
@@ -1862,6 +1880,15 @@ export const SampleRegistration = () => {
                 setSelectedTests([]);
                 setTrfUrl('');
                 setEditButton(false);
+                form.setValue('trf', '');
+                form.setValue('trf_file', '');
+                form.setValue('selectedTestName', '');
+                form.setValue('sample_name', '');
+                form.setValue('sample_id', '');
+                setCustomTestName('');
+                setTestToRemove('');
+                setShowRemoveModal(false);
+                setTestNameOptions([]);
                 setHasSelectedFirstTest(false);
                 localStorage.removeItem('sampleRegistrationForm');
                 localStorage.removeItem('editRowData')
