@@ -649,9 +649,7 @@ const LibraryPrepration = () => {
 
             if (columnId === "total_vol_for_20nm") {
               updatedRow.lib_vol_for_20nm = parseFloat((2 * total_vol_for_20nm / nm_conc).toFixed(2));
-              if (updatedRow.lib_vol_for_20nm > total_vol_for_20nm) {
-                updatedRow.lib_vol_for_20nm = total_vol_for_20nm;
-              }
+
               updatedRow.nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - updatedRow.lib_vol_for_20nm).toFixed(2));
               return updatedRow;
             }
@@ -900,7 +898,7 @@ const LibraryPrepration = () => {
     if (nm_conc > 0 && total_vol_for_20nm > 0) {
       const multiplier = testName === "Myeloid" ? 2.5 : 20;
       lib_vol_for_20nm = parseFloat(((multiplier * total_vol_for_20nm) / nm_conc).toFixed(2));
-      if (lib_vol_for_20nm > total_vol_for_20nm) lib_vol_for_20nm = total_vol_for_20nm;
+      // if (lib_vol_for_20nm > total_vol_for_20nm) lib_vol_for_20nm = total_vol_for_20nm;
       nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - lib_vol_for_20nm).toFixed(2));
     }
     return { lib_vol_for_20nm, nfw_volu_for_20nm };
@@ -952,11 +950,12 @@ const LibraryPrepration = () => {
     }, [isSelected]);
 
     useEffect(() => {
-      setValue(initialValue);
+      setValue(initialValue || "");
     }, [initialValue]);
 
     const handleChange = (e) => {
       setValue(e.target.value);
+      updateData(rowIndex, columnId, e.target.value);
     };
 
     const handleBlur = () => {
@@ -1142,12 +1141,19 @@ const LibraryPrepration = () => {
                 }
               }
 
+              if (qubit_dna) {
+                updatedRow.dna_vol_for_dilution = qubit_dna > 0 ? (400 / qubit_dna).toFixed(2) : "";
+                updatedRow.buffer_vol_to_be_added = (10 - updatedRow.dna_vol_for_dilution).toFixed(2);
+              }
+
+              if (columnId === "conc_of_amplicons") {
+                updatedRow.vol_for_fragmentation = conc_of_amplicons > 0 ? (Math.round((250 / updatedRow.conc_of_amplicons) * 10) / 10).toFixed(1) : "";
+              }
+
               if (columnId === "nm_conc" || columnId === "total_vol_for_20nm") {
                 if (nm_conc > 0 && total_vol_for_20nm > 0) {
                   updatedRow.lib_vol_for_20nm = parseFloat(((20 * total_vol_for_20nm) / nm_conc).toFixed(2));
-                  if (updatedRow.lib_vol_for_20nm > total_vol_for_20nm) {
-                    updatedRow.lib_vol_for_20nm = total_vol_for_20nm;
-                  }
+
                   updatedRow.nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - updatedRow.lib_vol_for_20nm).toFixed(2));
                 } else {
                   updatedRow.lib_vol_for_20nm = "";
@@ -1771,6 +1777,16 @@ const LibraryPrepration = () => {
     });
   };
 
+  const myeloidTotal = testName === "Myeloid"
+    ? (Array.isArray(tableRows) ? tableRows : []).reduce((sum, row) => sum + (parseFloat(row.data_required) || 0), 0)
+    : 0;
+
+  const visibleColumns = columns.filter(
+    col => table.getState().columnVisibility[col.accessorKey] !== false
+  );
+  const dataRequiredVisibleIdx = visibleColumns.findIndex(
+    col => col.accessorKey === "data_required"
+  );
   return (
     <div className="p-4 ">
       {!message ?
@@ -1872,7 +1888,7 @@ const LibraryPrepration = () => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-72 overflow-y-auto w-64">
                 <DropdownMenuCheckboxItem
-                onSelect={(e) => e.preventDefault()} // Prevent default behavior
+                  onSelect={(e) => e.preventDefault()} // Prevent default behavior
                   checked={Object.values(table.getState().columnVisibility).every(Boolean)} // Check if all are visible
                   onCheckedChange={(value) =>
                     table.getAllLeafColumns().forEach((column) => column.toggleVisibility(!!value))
@@ -1881,7 +1897,7 @@ const LibraryPrepration = () => {
                   Select All
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
-                  onSelect={(e) => e.preventDefault()} 
+                  onSelect={(e) => e.preventDefault()}
                   onClick={() => {
                     const visibleCols = getDefaultVisible(testName); // <-- get the correct default columns here
                     table.getAllLeafColumns().forEach((column) => {
@@ -1900,7 +1916,7 @@ const LibraryPrepration = () => {
                     <DropdownMenuCheckboxItem
                       key={column.id}
                       checked={column.getIsVisible()}
-                      onSelect={(e)=>e.preventDefault()}
+                      onSelect={(e) => e.preventDefault()}
                       onCheckedChange={(value) => column.toggleVisibility(!!value)}
                     >
                       {column.columnDef.header}
@@ -1957,7 +1973,7 @@ const LibraryPrepration = () => {
                         {testName !== "Myeloid" && batchedColumns.map(colKey => (
                           <th
                             key={colKey}
-                            className="px-2 py-1 border border-gray-300 font-bold bg-orange-100 border-s-1 border-s-orange-300 sticky top-0 z-30"
+                            className="px-2 py-1 border border-gray-300 font-bold bg-orange-100 border-s-1 border-s-orange-300 sticky top-0 z-30 dark:bg-gray-800 dark:text-white"
                             style={{
                               whiteSpace: "normal",
                               wordBreak: "break-word",
@@ -2447,6 +2463,8 @@ const LibraryPrepration = () => {
                                                 ? parseFloat(value) || 0
                                                 : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
 
+                                            const qubit_dna = parseFloat(updated.qubit_dna) || 0;
+
                                             updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
                                             const poolConc = parseFloat(updated.pool_conc) || 0;
@@ -2471,6 +2489,15 @@ const LibraryPrepration = () => {
                                               updated.nfw_volu_for_20nm = (totalVolFor2nm && libVolFor2nm)
                                                 ? (totalVolFor2nm - libVolFor2nm).toFixed(2)
                                                 : "";
+                                            }
+
+                                            if (qubit_dna) {
+                                              updated.dna_vol_for_dilution = qubit_dna > 0 ? (400 / qubit_dna).toFixed(2) : "";
+                                              updated.buffer_vol_to_be_added = (10 - updated.dna_vol_for_dilution).toFixed(2);
+                                            }
+
+                                            if (cell.column.id === "conc_of_amplicons") {
+                                              updated.vol_for_fragmentation = conc_of_amplicons > 0 ? (Math.round((250 / updated.conc_of_amplicons) * 10) / 10).toFixed(1) : "";
                                             }
 
                                             if (cell.column.id === "total_vol_for_20nm") {
@@ -2629,7 +2656,7 @@ const LibraryPrepration = () => {
                                                 : "";
                                             }
 
-                                            if (colKey === "total_vol_for_2nm") {
+                                            if (colKey === "total_vol_for_2nm" || colKey === "nm_conc_for_2nm") {
                                               const nmConcFor2nm = parseFloat(updated.nm_conc_for_2nm) || 0;
                                               const totalVolFor2nm = parseFloat(updated.total_vol_for_2nm) || 0;
                                               updated.lib_vol_for_2nm = (nmConcFor2nm > 0 && totalVolFor2nm > 0)
@@ -2708,11 +2735,21 @@ const LibraryPrepration = () => {
                             </tr>
                           )
                           }
+
                           {isLastOfBatch && currentBatchId && (
                             <tr>
-                              <td colSpan={columns.length} className="font-bold text-xl py-3 pe-[1030px] text-right">
-                                Total Data: {batchSum}
+                              {/* Empty cells before data_required */}
+                              {Array.from({ length: dataRequiredVisibleIdx }).map((_, idx) => (
+                                <td key={idx}></td>
+                              ))}
+                              {/* Total cell under data_required */}
+                              <td className="font-bold text-xl py-3 text-center">
+                                Total: {batchSum}
                               </td>
+                              {/* Empty cells after data_required */}
+                              {Array.from({ length: visibleColumns.length - dataRequiredVisibleIdx - 1 }).map((_, idx) => (
+                                <td key={dataRequiredVisibleIdx + 1 + idx}></td>
+                              ))}
                             </tr>
                           )}
 
@@ -2721,6 +2758,23 @@ const LibraryPrepration = () => {
                         </React.Fragment>
                       );
                     })}
+
+                    {testName === "Myeloid" && (
+                      <tr>
+                        {/* Empty cells before data_required */}
+                        {Array.from({ length: dataRequiredVisibleIdx }).map((_, idx) => (
+                          <td key={idx}></td>
+                        ))}
+                        {/* Total cell under data_required */}
+                        <td className="font-bold text-xl py-3 text-center">
+                          Total: {myeloidTotal}
+                        </td>
+                        {/* Empty cells after data_required */}
+                        {Array.from({ length: visibleColumns.length - dataRequiredVisibleIdx - 1 }).map((_, idx) => (
+                          <td key={dataRequiredVisibleIdx + 1 + idx}></td>
+                        ))}
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -2875,6 +2929,12 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo, user_hospit
       if (res.data[0].status === 200) {
         toast.success("Repeat sample created successfully!");
         const row = res.data[0].data;
+
+        const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
+        if (!selectedIds.includes(row.internal_id)) {
+          selectedIds.push(row.internal_id);
+          localStorage.setItem("selectedLibraryPrepSamples", JSON.stringify(selectedIds));
+        }
 
         // Remove the original sample (not the new repeat)
         const testName = rowInfo.test_name?.includes(" + Mito")

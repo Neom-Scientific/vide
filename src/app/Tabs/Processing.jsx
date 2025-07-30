@@ -907,11 +907,7 @@ const Processing = () => {
                 lib_prep: row.lib_prep === "Yes" ? "Yes" : "No",
                 under_seq: row.under_seq === "Yes" ? "Yes" : "No",
                 seq_completed: row.seq_completed === "Yes" ? "Yes" : "No",
-              }))
-              .filter(row => {
-                if (!filters.run_id) return true;
-                return row.run_id === filters.run_id;
-              });
+              }));
 
             // Deduplicate: keep only the latest occurrence (repeat if exists)
             const latestRows = Object.values(

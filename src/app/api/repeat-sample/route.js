@@ -68,33 +68,46 @@ const floatFields = [
 const jsonFields = ['table_data']
 
 // Helper to generate new internal_id (YYYYNNNNN)
-async function generateInternalId() {
+async function generateInternalId(test_name , sample_type) {
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
-
         const year = new Date().getFullYear();
-        const { rows } = await client.query(
-            `SELECT internal_id FROM master_sheet WHERE internal_id LIKE $1 ORDER BY internal_id DESC LIMIT 1 FOR UPDATE`,
-            [`${year}%`]
-        );
 
-        let nextSeq = 1;
-        if (rows.length > 0 && rows[0].internal_id) {
-            const lastSeq = parseInt(rows[0].internal_id.slice(4), 10);
-            nextSeq = lastSeq + 1;
+        if (test_name === "Myeloid") {
+            // Find the max numeric part for this year from the whole table
+            const maxInternalIdQuery = `
+                SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+                FROM master_sheet
+                WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+            `;
+            const maxInternalIdResult = await client.query(maxInternalIdQuery, [String(year)]);
+            const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+            const nextSeq = maxSeq + 1;
+            const numericPart = `${year}${String(nextSeq).padStart(5, '0')}`;
+            const newId = `${numericPart}-${sample_type}`;
+            // Double-check uniqueness
+            const { rows: check } = await client.query(`SELECT 1 FROM master_sheet WHERE internal_id = $1`, [newId]);
+            if (check.length > 0) throw new Error(`internal_id ${newId} already exists`);
+            await client.query('COMMIT');
+            return newId;
+        } else {
+            // Default logic for other test_names
+            const maxInternalIdQuery = `
+                SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+                FROM master_sheet
+                WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+            `;
+            const maxInternalIdResult = await client.query(maxInternalIdQuery, [String(year)]);
+            const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+            const nextSeq = maxSeq + 1;
+            const newId = `${year}${String(nextSeq).padStart(5, "0")}`;
+            // Double-check uniqueness
+            const { rows: check } = await client.query(`SELECT 1 FROM master_sheet WHERE internal_id = $1`, [newId]);
+            if (check.length > 0) throw new Error(`internal_id ${newId} already exists`);
+            await client.query('COMMIT');
+            return newId;
         }
-
-        let newId = `${year}${String(nextSeq).padStart(5, "0")}`;
-
-        // Just to double-check one last time
-        const { rows: check } = await client.query(`SELECT 1 FROM master_sheet WHERE internal_id = $1`, [newId]);
-        if (check.length > 0) {
-            throw new Error(`internal_id ${newId} already exists`);
-        }
-
-        await client.query('COMMIT');
-        return newId;
     } catch (err) {
         await client.query('ROLLBACK');
         throw err;
@@ -139,7 +152,7 @@ export async function POST(request) {
 
         if (repeat_type === "repeat_from_library") {
             // Keep internal_id, pool_no, batch_id
-            newSample.internal_id = await generateInternalId();
+            newSample.internal_id = await generateInternalId(newSample.test_name, newSample.sample_type);
             newSample.reference_internal_id = original.internal_id;
             newSample.dna_isolation = "Yes";
             newSample.lib_prep = "Yes";
@@ -178,7 +191,7 @@ export async function POST(request) {
             await pool.query(`UPDATE master_sheet SET is_repeated = 'True' WHERE internal_id = $1`, [original.internal_id]);
         } else if (repeat_type === "repeat_from_sequencing") {
             // Generate new internal_id, pool_no, batch_id
-            newSample.internal_id = await generateInternalId();
+            newSample.internal_id = await generateInternalId(newSample.test_name, newSample.sample_type);
             newSample.reference_internal_id = original.internal_id;
             newSample.pool_no = null;
             newSample.batch_id = null;
@@ -256,7 +269,7 @@ export async function POST(request) {
             await pool.query(`UPDATE master_sheet SET is_repeated = 'True' WHERE internal_id = $1`, [original.internal_id]);
         }
         else if (repeat_type === "repeat_from_extraction") {
-            newSample.internal_id = await generateInternalId();
+            newSample.internal_id = await generateInternalId(newSample.test_name, newSample.sample_type);
             newSample.reference_internal_id = original.internal_id;
             newSample.dna_isolation = "No";
             newSample.lib_prep = "No";

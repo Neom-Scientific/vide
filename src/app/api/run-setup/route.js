@@ -1,6 +1,11 @@
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+function getUniqueSampleCount(ids = []) {
+    const baseIds = ids.map(id => id.replace(/-DNA$/i, '').replace(/-RNA$/i, ''));
+    return new Set(baseIds).size;
+}
+
 export async function POST(request) {
     const body = await request.json();
     const { setup } = body;
@@ -88,7 +93,7 @@ export async function POST(request) {
                 setup.total_volume_2nm_next_seq_550,
                 setup.final_pool_conc_vol_2nm_next_seq_550,
                 setup.nfw_vol_2nm_next_seq_550,
-                setup.internal_ids.length,
+                getUniqueSampleCount(setup.internal_ids),
                 setup.table_data,
                 setup.ht_buffer_next_seq_1000_2000
             ]
@@ -154,7 +159,7 @@ export async function POST(request) {
                         setup.total_volume_2nm_next_seq_550,
                         setup.final_pool_conc_vol_2nm_next_seq_550,
                         setup.nfw_vol_2nm_next_seq_550,
-                        setup.internal_ids.length,
+                        getUniqueSampleCount(setup.internal_ids), ,
                         setup.table_data,
                         setup.ht_buffer_next_seq_1000_2000,
                         run_id,

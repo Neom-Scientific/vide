@@ -33,10 +33,10 @@ const getRunSetupSchema = (instrumentType) => z.object({
   }),
   ...(instrumentType === 'NextSeq_1000_2000' && {
     final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().min(1, 'Volulme for Final Pool conc 2nM is required'),
-    rsbetween_vol_2nm_next_seq_1000_2000: z.number().min(1, 'RS Between (2nM) is required'),
+    rsbetween_vol_2nm_next_seq_1000_2000: z.number().min(1, 'RSB tween-20 (2nM) is required'),
     total_volume_2nm_next_seq_1000_2000: z.number().min(1, 'Total Volume (2nM) is required'),
     vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of 2nM conc(600pM) is required'),
-    vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of RS Between(600pM) is required'),
+    vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of RSB tween-20 (600pM) is required'),
     total_volume_600pm_next_seq_1000_2000: z.number().min(1, 'Total Volume(600pM) is required'),
     loading_conc_1000_2000: z.number().min(1, 'Loading Concentration(pM) is required'),
   }),
@@ -65,28 +65,28 @@ const RunSetup = () => {
       seq_run_date: '',
       total_gb_available: '',
       instument_type: '',
-      pool_size: 0, // Ensure numeric default value
+      pool_size: '', // Ensure numeric default value
       pool_conc_run_setup: '',
-      nm_cal: 0,
-      total_required: 0,
-      final_pool_vol_ul: 0,
+      nm_cal: '',
+      total_required: '',
+      final_pool_vol_ul: '',
       selected_application: '',
       dinatured_lib_next_seq_550: 20,
       total_volume_next_seq_550: 1500, // Ensure numeric default value
-      loading_conc_550: 0, // Ensure numeric default value
-      lib_required_next_seq_550: 0, // Ensure numeric default value
-      buffer_volume_next_seq_550: 0, // Ensure numeric default value
-      final_pool_conc_vol_2nm_next_seq_1000_2000: 0, // Ensure numeric default value
-      rsbetween_vol_2nm_next_seq_1000_2000: 0, // Ensure numeric default value
-      total_volume_2nm_next_seq_1000_2000: 0, // Ensure numeric default value
-      vol_of_2nm_for_600pm_next_seq_1000_2000: 0, // Ensure numeric default value
-      vol_of_rs_between_for_600pm_next_seq_1000_2000: 0, // Ensure numeric default value
-      total_volume_600pm_next_seq_1000_2000: 0, // Ensure numeric default value
+      loading_conc_550: '', // Ensure numeric default value
+      lib_required_next_seq_550: '', // Ensure numeric default value
+      buffer_volume_next_seq_550: '', // Ensure numeric default value
+      final_pool_conc_vol_2nm_next_seq_1000_2000: '', // Ensure numeric default value
+      rsbetween_vol_2nm_next_seq_1000_2000: '', // Ensure numeric default value
+      total_volume_2nm_next_seq_1000_2000: '', // Ensure numeric default value
+      vol_of_2nm_for_600pm_next_seq_1000_2000: '', // Ensure numeric default value
+      vol_of_rs_between_for_600pm_next_seq_1000_2000: '', // Ensure numeric default value
+      total_volume_600pm_next_seq_1000_2000: '', // Ensure numeric default value
       loading_conc_1000_2000: 600,
-      total_volume_2nm_next_seq_550: 0, // Ensure numeric default value
-      final_pool_conc_vol_2nm_next_seq_550: 0, // Ensure numeric default value
-      nfw_vol_2nm_next_seq_550: 0, // Ensure numeric default value
-      ht_buffer_next_seq_1000_2000: 0, // Ensure numeric default value
+      total_volume_2nm_next_seq_550: '', // Ensure numeric default value
+      final_pool_conc_vol_2nm_next_seq_550: '', // Ensure numeric default value
+      nfw_vol_2nm_next_seq_550: '', // Ensure numeric default value
+      ht_buffer_next_seq_1000_2000: '', // Ensure numeric default value
       table_data: [],
     },
   });
@@ -287,7 +287,15 @@ const RunSetup = () => {
             }
           }
         });
+
+        const selectedLibraryPrepSamples = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
+        const updatedLibraryPrepSamples = selectedLibraryPrepSamples.filter(
+          id => !selectedInternalIds.includes(id)
+        );
+        localStorage.setItem("selectedLibraryPrepSamples", JSON.stringify(updatedLibraryPrepSamples));
+
         localStorage.setItem("libraryPreparationData", JSON.stringify(libraryData));
+
 
         setPoolData([]);
         fetchRunDetails(); // Fetch updated run details after submission
@@ -498,7 +506,10 @@ const RunSetup = () => {
     const updatedTableData = uniqueTestVariants.map((test) => {
       const filteredPoolData = poolData.filter(pool => pool.test_name === test);
 
-      const sampleCount = filteredPoolData.length;
+      let sampleCount = filteredPoolData.length;
+      if (test === "Myeloid") {
+        sampleCount = Math.ceil(sampleCount / 2);
+      }
       const totalDataRequiredForTest = filteredPoolData
         .reduce((sum, pool) => sum + (pool.data_required || 0), 0);
 
@@ -518,7 +529,7 @@ const RunSetup = () => {
       };
     });
 
-    form.setValue("table_data", JSON.stringify(updatedTableData));
+    form.setValue("table_data", updatedTableData);
   }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]);
 
   useEffect(() => {
@@ -886,11 +897,11 @@ const RunSetup = () => {
                     name="nm_cal"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="mb-2">Final Pool nM Calculation</FormLabel>
+                        <FormLabel className="mb-2">Final Pool nM Concentration</FormLabel>
                         <Input
                           required
                           {...field}
-                          value={field.value ?? 0}
+                          value={field.value === 0 ? "" : field.value || ""}
                           type="number"
                           placeholder="Enter nM calculation"
                           className="mb-2 w-full border-2 border-orange-300"
@@ -920,23 +931,23 @@ const RunSetup = () => {
 
                             // Clear instrument-specific fields
                             if (e.target.value === "NextSeq_550") {
-                              form.setValue("total_volume_2nm_next_seq_1000_2000", 0);
-                              form.setValue("final_pool_conc_vol_2nm_next_seq_1000_2000", 0);
-                              form.setValue("rsbetween_vol_2nm_next_seq_1000_2000", 0);
+                              form.setValue("total_volume_2nm_next_seq_1000_2000", '');
+                              form.setValue("final_pool_conc_vol_2nm_next_seq_1000_2000", '');
+                              form.setValue("rsbetween_vol_2nm_next_seq_1000_2000", '');
                               form.setValue("loading_conc_1000_2000", 600);
-                              form.setValue("total_volume_600pm_next_seq_1000_2000", 0);
-                              form.setValue("vol_of_2nm_for_600pm_next_seq_1000_2000", 0);
-                              form.setValue("vol_of_rs_between_for_600pm_next_seq_1000_2000", 0);
+                              form.setValue("total_volume_600pm_next_seq_1000_2000", '');
+                              form.setValue("vol_of_2nm_for_600pm_next_seq_1000_2000", '');
+                              form.setValue("vol_of_rs_between_for_600pm_next_seq_1000_2000", '');
                               // Optionally clear 550 fields too if you want a full reset
                             } else if (e.target.value === "NextSeq_1000_2000") {
-                              form.setValue("total_volume_2nm_next_seq_550", 0);
-                              form.setValue("final_pool_conc_vol_2nm_next_seq_550", 0);
-                              form.setValue("nfw_vol_2nm_next_seq_550", 0);
+                              form.setValue("total_volume_2nm_next_seq_550", '');
+                              form.setValue("final_pool_conc_vol_2nm_next_seq_550", '');
+                              form.setValue("nfw_vol_2nm_next_seq_550", '');
                               form.setValue("dinatured_lib_next_seq_550", 20);
                               form.setValue("total_volume_next_seq_550", 1500);
-                              form.setValue("loading_conc_550", 0);
-                              form.setValue("lib_required_next_seq_550", 0);
-                              form.setValue("buffer_volume_next_seq_550", 0);
+                              form.setValue("loading_conc_550", '');
+                              form.setValue("lib_required_next_seq_550", '');
+                              form.setValue("buffer_volume_next_seq_550", '');
                               // Optionally clear 1000/2000 fields too if you want a full reset
                             }
                           }}
@@ -963,7 +974,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value ?? ""}
+                              value={field.value === 0 ? "" : field.value || ""}
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume (2nM)"
                               className="mb-2 border-2 border-orange-300"
@@ -987,6 +998,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
+                              value={field.value === 0 ? "" : field.value || ""}
                               placeholder="Enter Volume for Final Pool conc 2nM"
                               className="mb-2 border-2 border-orange-300"
                             />
@@ -1004,6 +1016,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
+                              value={field.value === 0 ? "" : field.value || ""}
                               placeholder="Enter NFW (2nM)"
                               className="mb-2 border-2 border-orange-300"
                             />
@@ -1072,7 +1085,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value ?? ""}
+                              value={field.value === 0 ? "" : field.value || ""}
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Required Concentration"
                               className="mb-2 border-2 border-orange-300"
@@ -1090,6 +1103,7 @@ const RunSetup = () => {
                             <FormLabel className="mb-2">Volume from Stock</FormLabel>
                             <Input
                               {...field}
+                              value={field.value === 0 ? "" : field.value || ""}
                               type="number"
                               placeholder="Enter Volume from Stock"
                               className="mb-2 border-2 border-orange-300"
@@ -1108,6 +1122,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
+                              value={field.value === 0 ? "" : field.value || ""}
                               placeholder="Enter HT Buffer"
                               className="mb-2 border-2 border-orange-300"
                             />
@@ -1136,7 +1151,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid numeric value
+                              value={field.value === 0 ? "" : field.value || ""} // Ensure valid numeric value
                               onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} // Convert input to number
                               placeholder="Enter Total Volume (2nM)"
                               className="mb-2 border-2 border-orange-300"
@@ -1160,7 +1175,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid value
+                              value={field.value === 0 ? "" : field.value || ""} // Ensure valid value
                               onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
                               placeholder="Enter Volulme for Final Pool conc 2nM"
                               className="mb-2 border-2 border-orange-300"
@@ -1175,13 +1190,13 @@ const RunSetup = () => {
                         name='rsbetween_vol_2nm_next_seq_1000_2000'
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="mb-2">RS Between (2nM)</FormLabel>
+                            <FormLabel className="mb-2">RSB tween-20 (2nM)</FormLabel>
                             <Input
                               {...field}
                               type="number"
-                              value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid value
+                              value={field.value === 0 ? "" : field.value || ""} // Ensure valid value
                               onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))}
-                              placeholder="Enter RS Between (2nM)"
+                              placeholder="Enter RSB tween-20 (2nM)"
                               className="mb-2 border-2 border-orange-300"
                             />
                           </FormItem>
@@ -1217,7 +1232,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
-                              value={field.value ?? ""}
+                              value={field.value === 0 ? "" : field.value || ""}
                               onChange={e => field.onChange(e.target.value === "" ? "" : e.target.valueAsNumber)}
                               placeholder="Enter Total Volume(600pM)"
                               className="mb-2 border-2 border-orange-300"
@@ -1241,6 +1256,7 @@ const RunSetup = () => {
                             <Input
                               {...field}
                               type="number"
+                              value={field.value === 0 ? "" : field.value || ""}
                               placeholder="Enter Volume of 2nM conc(600pM)"
                               className="mb-2 border-2 border-orange-300"
                             />
@@ -1254,11 +1270,12 @@ const RunSetup = () => {
                         name='vol_of_rs_between_for_600pm_next_seq_1000_2000'
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="mb-2">Volume of RS Between(600pM)</FormLabel>
+                            <FormLabel className="mb-2">Volume of RSB tween-20 (600pM)</FormLabel>
                             <Input
                               {...field}
                               type="number"
-                              placeholder="Enter Volume of RS Between(600pM)"
+                              value={field.value === 0 ? "" : field.value || ""}
+                              placeholder="Enter Volume of RSB tween-20 (600pM)"
                               className="mb-2 border-2 border-orange-300"
                             />
                           </FormItem>
