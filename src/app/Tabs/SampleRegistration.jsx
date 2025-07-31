@@ -139,64 +139,64 @@ export const SampleRegistration = () => {
 
   const handleReset = () => {
     form.reset({
-       // hosptial and doctor information
-       hospital_name: user?.hospital_name || '',
-       hospital_id: user?.hospital_id || '',
-       doctor_name: '',
-       dept_name: '',
-       doctor_mobile: '',
-       email: '',
- 
-       // patient information
-       patient_name: '',
-       DOB: '',
-       age: '',
-       gender: '',
-       patient_mobile: '',
-       ethnicity: '',
-       father_mother_name: '',
-       address: '',
-       city: '',
-       state: '',
-       country: '',
-       client_id: '',
-       client_name: '',
-       spouse_name: '',
-       patient_email: '',
- 
-       // sample details
-       sample_name: '',
-       sample_id: '',
-       registration_date: currentDate,
-       trf: '',
-       sample_type: '',
-       collection_date_time: '',
-       sample_date: currentDate,
-       specimen_quality: '',
-       prority: '',
-       storage_condition: '',
-       vial_received: '',
-       test_name: '',
-       selectedTestName: '',
-       systolic_bp: '',
-       diastolic_bp: '',
-       total_cholesterol: '',
-       hdl_cholesterol: '',
-       ldl_cholesterol: '',
-       diabetes: '',
-       smoker: '',
-       hypertension_treatment: '',
-       statin: '',
-       aspirin_therapy: '',
-       remarks: '',
-       clinical_history: '',
-       repeat_required: '',
-       repeat_reason: '',
-       repeat_date: '',
-       trf_file: '',
-       trf_checkbox: 'No',
-       opd_notes_checkbox: 'No',
-       consent_form_checkbox: 'No',
+      // hosptial and doctor information
+      hospital_name: user?.hospital_name || '',
+      hospital_id: user?.hospital_id || '',
+      doctor_name: '',
+      dept_name: '',
+      doctor_mobile: '',
+      email: '',
+
+      // patient information
+      patient_name: '',
+      DOB: '',
+      age: '',
+      gender: '',
+      patient_mobile: '',
+      ethnicity: '',
+      father_mother_name: '',
+      address: '',
+      city: '',
+      state: '',
+      country: '',
+      client_id: '',
+      client_name: '',
+      spouse_name: '',
+      patient_email: '',
+
+      // sample details
+      sample_name: '',
+      sample_id: '',
+      registration_date: currentDate,
+      trf: '',
+      sample_type: '',
+      collection_date_time: '',
+      sample_date: currentDate,
+      specimen_quality: '',
+      prority: '',
+      storage_condition: '',
+      vial_received: '',
+      test_name: '',
+      selectedTestName: '',
+      systolic_bp: '',
+      diastolic_bp: '',
+      total_cholesterol: '',
+      hdl_cholesterol: '',
+      ldl_cholesterol: '',
+      diabetes: '',
+      smoker: '',
+      hypertension_treatment: '',
+      statin: '',
+      aspirin_therapy: '',
+      remarks: '',
+      clinical_history: '',
+      repeat_required: '',
+      repeat_reason: '',
+      repeat_date: '',
+      trf_file: '',
+      trf_checkbox: 'No',
+      opd_notes_checkbox: 'No',
+      consent_form_checkbox: 'No',
     });
     setSelectedTests([]);
     setTrfFiles(null);
@@ -1554,9 +1554,8 @@ export const SampleRegistration = () => {
                               placeholder="90-200"
                               type="number"
                               className="my-2 border-2 border-orange-300"
-                              min={90}
-                              max={200} />
-                            <p className="text-xs text-gray-500">Value must be between 90-200</p>
+                            />
+                            {/* <p className="text-xs text-gray-500">Value must be between 90-200</p> */}
                             {form.formState.errors.systolic_bp && (
                               <p className="text-red-500 text-sm">{form.formState.errors.systolic_bp.message}</p>
                             )}
@@ -1579,11 +1578,10 @@ export const SampleRegistration = () => {
                               className="my-2 border-2 border-orange-300"
                               placeholder="60-130"
                               type="number"
-                              min={60}
-                              max={130} />
-                            <p
+                            />
+                            {/* <p
                               className="text-xs text-gray-500"
-                            >Value must be between 60-130</p>
+                            >Value must be between 60-130</p> */}
                             {form.formState.errors.diastolic_bp && (
                               <p className="text-red-500 text-sm">{form.formState.errors.diastolic_bp.message}</p>
                             )}
@@ -1606,9 +1604,8 @@ export const SampleRegistration = () => {
                               placeholder="130-320"
                               className="my-2 border-2 border-orange-300"
                               type="number"
-                              min={130}
-                              max={320} />
-                            <p className="text-xs text-gray-500">Value must be between 130 - 320</p>
+                            />
+                            {/* <p className="text-xs text-gray-500">Value must be between 130 - 320</p> */}
                             {form.formState.errors.total_cholesterol && (
                               <p className="text-red-500 text-sm">{form.formState.errors.total_cholesterol.message}</p>
                             )}
@@ -1631,9 +1628,8 @@ export const SampleRegistration = () => {
                               className="my-2 border-2 border-orange-300"
                               placeholder="20-100"
                               type="number"
-                              min={20}
-                              max={100} />
-                            <p className="text-xs text-gray-500">Value must be between 20 - 100</p>
+                            />
+                            {/* <p className="text-xs text-gray-500">Value must be between 20 - 100</p> */}
                             {form.formState.errors.hdl_cholesterol && (
                               <p className="text-red-500 text-sm">{form.formState.errors.hdl_cholesterol.message}</p>
                             )}
@@ -1656,9 +1652,8 @@ export const SampleRegistration = () => {
                               className="my-2 border-2 border-orange-300"
                               placeholder="30-300"
                               type="number"
-                              min={30}
-                              max={300} />
-                            <p className="text-xs text-gray-500">Value must be between 30 - 300</p>
+                            />
+                            {/* <p className="text-xs text-gray-500">Value must be between 30 - 300</p> */}
                             {form.formState.errors.ldl_cholesterol && (
                               <p className="text-red-500 text-sm">{form.formState.errors.ldl_cholesterol.message}</p>
                             )}
