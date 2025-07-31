@@ -167,22 +167,22 @@ const Processing = () => {
     { key: 'vol_for_fragmentation', label: 'Volume for Fragmentation (ul)' },
   ];
 
-  const allTests = [
-    'WES',
-    'Carrier Screening',
-    'CES',
-    'Myeloid',
-    'HLA',
-    'SGS',
-    // 'WES + Mito',
-    'HCP',
-    'HRR',
-    // 'CES + Mito',
-    'SolidTumor Panel',
-    'Cardio Comprehensive (Screening)',
-    'Cardio Metabolic Syndrome (Screening)',
-    'Cardio Comprehensive Myopathy'
-  ];
+  // const allTests = [
+  //   'WES',
+  //   'Carrier Screening',
+  //   'CES',
+  //   'Myeloid',
+  //   'HLA',
+  //   'SGS',
+  //   // 'WES + Mito',
+  //   'HCP',
+  //   'HRR',
+  //   // 'CES + Mito',
+  //   'SolidTumor Panel',
+  //   'Cardio Comprehensive (Screening)',
+  //   'Cardio Metabolic Syndrome (Screening)',
+  //   'Cardio Comprehensive Myopathy'
+  // ];
 
   const testNameShortMap = {
     "Cardio Comprehensive Myopathy": { short: "CMP", full: "Cardio Comprehensive Myopathy" },
@@ -219,6 +219,7 @@ const Processing = () => {
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
   const [columnSearch, setColumnSearch] = useState("")
   const [sorting, setSorting] = useState([]);
+  const [allTests,setAllTests] = useState([]);
   const [rowSelection, setRowSelection] = useState(() => {
     const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
     return {};
@@ -609,6 +610,21 @@ const Processing = () => {
     }
   }, []);
 
+    // Fetch test names from API (like SampleRegistration)
+    useEffect(() => {
+      const fetchTestNames = async () => {
+        const user = JSON.parse(Cookies.get("user") || "{}");
+        const hospitalName = user?.hospital_name || 'default';
+        try {
+          const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);
+          setAllTests(res.data[0]?.values || []);
+        } catch (e) {
+          setAllTests([]);
+        }
+      };
+      fetchTestNames();
+    }, []);
+
   useEffect(() => {
     const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
     // Find row indices for selected internal_ids
@@ -948,7 +964,8 @@ const Processing = () => {
     setAuditSampleId(sampleId);
     setShowAuditSidebar(true);
     try {
-      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}?internal_id=${internalId}`);
+      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}&internal_id=${internalId}`);
+      console.log('res.data:', res.data); // Debugging audit data
       setAuditData(res.data[0]?.logs || []);
     } catch (e) {
       setAuditData([]);
@@ -1296,7 +1313,7 @@ const Processing = () => {
                           <tr
                             key={idx}
                             className={
-                              (row.original.prority === 'Urgent' ? 'bg-orange-600 ' : '') +
+                              (row.original.prority === 'urgent' ? 'bg-orange-600 ' : '') +
                               (row.original.is_repeated === 'True'
                                 ? 'bg-gray-500 '
                                 : row.original.location && row.original.location === 'seq_completed'

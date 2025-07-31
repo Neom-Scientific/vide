@@ -44,6 +44,7 @@ const Reports = () => {
   const [tableRows, setTableRows] = useState(rows);
   const [processing, setProcessing] = useState(false);
   const [user, setUser] = useState(null);
+  const [allTests, setAllTests] = useState([]);
   const [filters, setFilters] = useState({
     sample_id: "",
     test_name: "",
@@ -61,22 +62,22 @@ const Reports = () => {
       setUser(JSON.parse(CookieUser));
     }
   }, []);
-  const allTests = [
-    'WES',
-    'Carrier Screening',
-    'CES',
-    'Myeloid',
-    'HLA',
-    'SGS',
-    // 'WES + Mito',
-    'HCP',
-    'HRR',
-    // 'CES + Mito',
-    'SolidTumor Panel',
-    'Cardio Comprehensive (Screening)',
-    'Cardio Metabolic Syndrome (Screening)',
-    'Cardio Comprehensive Myopathy'
-  ];
+  // const allTests = [
+  //   'WES',
+  //   'Carrier Screening',
+  //   'CES',
+  //   'Myeloid',
+  //   'HLA',
+  //   'SGS',
+  //   // 'WES + Mito',
+  //   'HCP',
+  //   'HRR',
+  //   // 'CES + Mito',
+  //   'SolidTumor Panel',
+  //   'Cardio Comprehensive (Screening)',
+  //   'Cardio Metabolic Syndrome (Screening)',
+  //   'Cardio Comprehensive Myopathy'
+  // ];
 
   const allColumns = [
     { key: 'hospital_name', label: 'Organization Name' },
@@ -225,7 +226,7 @@ const Reports = () => {
       const updates = {
         report_releasing_date: reportReleasingDate,
         sample_status: "Reported",
-        location:'reported',
+        location: 'reported',
         tat_days: tatDays,
       };
 
@@ -242,13 +243,13 @@ const Reports = () => {
 
       if (response.data[0].status === 200) {
         toast.success(`Report (${isMito ? 'Mito' : 'Main'}) uploaded`);
-        const data= {
+        const data = {
           sample_id: sampleId,
           comments: `Report ${isMito ? 'Mito' : 'Main'} uploaded`,
           changed_by: user.email,
           changed_at: new Date().toISOString(),
         }
-        const res = await axios.post('/api/audit-logs',data);
+        const res = await axios.post('/api/audit-logs', data);
         setTableRows((prevRows) =>
           prevRows.map((row) => {
             if (row.sample_id === sampleId) {
@@ -426,6 +427,20 @@ const Reports = () => {
       ]
       : []),
   ];
+
+  useEffect(() => {
+    const fetchTestNames = async () => {
+      const user = JSON.parse(Cookies.get("user") || "{}");
+      const hospitalName = user?.hospital_name || 'default';
+      try {
+        const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);
+        setAllTests(res.data[0]?.values || []);
+      } catch (e) {
+        setAllTests([]);
+      }
+    };
+    fetchTestNames();
+  }, []);
 
   const defaultVisible = [
     'sno',
@@ -641,15 +656,37 @@ const Reports = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="min-w-[250px]">
+                {/* Select All Option */}
+                <DropdownMenuItem
+                  onSelect={e => e.preventDefault()}
+                  onClick={() => {
+                    handleFilterChange('selectedTestNames', allTests);
+                  }}
+                  disabled={selectedTestNames.length === allTests.length}
+                >
+                  <span className="text-sm font-semibold">Select All</span>
+                </DropdownMenuItem>
+                {/* Deselect All Option */}
+                <DropdownMenuItem
+                  onSelect={e => e.preventDefault()}
+                  onClick={() => {
+                    handleFilterChange('selectedTestNames', []);
+                  }}
+                  disabled={selectedTestNames.length === 0}
+                >
+                  <span className="text-sm font-semibold">Deselect All</span>
+                </DropdownMenuItem>
+                {/* Divider */}
+                <div className="border-b border-gray-200 my-1" />
+                {/* Individual Test Options */}
                 {allTests
                   .filter(test => !selectedTestNames.includes(test))
                   .map(test => (
                     <DropdownMenuItem
                       key={test}
+                      onSelect={e => e.preventDefault()} // <-- Add this line
                       onClick={() => {
-                        if (selectedTestNames.includes(test)) {
-                          return;
-                        }
+                        if (selectedTestNames.includes(test)) return;
                         const updated = [...filters.selectedTestNames, test];
                         handleFilterChange('selectedTestNames', updated);
                       }}
@@ -662,7 +699,7 @@ const Reports = () => {
           </div>
           <div>
             <label className="block font-semibold mb-1">Selected Test Name</label>
-            <div className="flex border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 min-h-[42px] w-full">
+            <div className="flex border-2 border-orange-300 flex-wrap gap-2 rounded-md p-2 dark:bg-gray-800 min-h-[42px] w-full overflow-y-auto max-h-20">
               {selectedTestNames.length === 0 && (
                 <span className="text-gray-400 dark:text-white">No test added</span>
               )}

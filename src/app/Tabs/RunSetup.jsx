@@ -854,7 +854,7 @@ const RunSetup = () => {
                           {...field}
                           type="number"
                           min="0"
-                          step="0.01"
+                          step="any"
                           value={field.value !== undefined && !isNaN(field.value) ? field.value.toString() : "0"} // Ensure valid value
                           onChange={(e) => field.onChange(e.target.value === "" ? "0" : e.target.value)} // Handle empty input
                           placeholder="Enter pool concentration"
@@ -875,7 +875,7 @@ const RunSetup = () => {
                         <Input
                           {...field}
                           type="number"
-                          step="0.01" // Allow decimal values
+                          step="any" // Allow decimal values
                           value={field.value !== undefined && !isNaN(field.value) ? field.value : ''} // Ensure valid value
                           onChange={(e) => field.onChange(e.target.value === "" ? 0 : parseFloat(e.target.value))} // Convert input to number
                           placeholder="Enter pool size"

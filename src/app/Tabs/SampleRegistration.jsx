@@ -137,6 +137,80 @@ export const SampleRegistration = () => {
     }
   })
 
+  const handleReset = () => {
+    form.reset({
+       // hosptial and doctor information
+       hospital_name: user?.hospital_name || '',
+       hospital_id: user?.hospital_id || '',
+       doctor_name: '',
+       dept_name: '',
+       doctor_mobile: '',
+       email: '',
+ 
+       // patient information
+       patient_name: '',
+       DOB: '',
+       age: '',
+       gender: '',
+       patient_mobile: '',
+       ethnicity: '',
+       father_mother_name: '',
+       address: '',
+       city: '',
+       state: '',
+       country: '',
+       client_id: '',
+       client_name: '',
+       spouse_name: '',
+       patient_email: '',
+ 
+       // sample details
+       sample_name: '',
+       sample_id: '',
+       registration_date: currentDate,
+       trf: '',
+       sample_type: '',
+       collection_date_time: '',
+       sample_date: currentDate,
+       specimen_quality: '',
+       prority: '',
+       storage_condition: '',
+       vial_received: '',
+       test_name: '',
+       selectedTestName: '',
+       systolic_bp: '',
+       diastolic_bp: '',
+       total_cholesterol: '',
+       hdl_cholesterol: '',
+       ldl_cholesterol: '',
+       diabetes: '',
+       smoker: '',
+       hypertension_treatment: '',
+       statin: '',
+       aspirin_therapy: '',
+       remarks: '',
+       clinical_history: '',
+       repeat_required: '',
+       repeat_reason: '',
+       repeat_date: '',
+       trf_file: '',
+       trf_checkbox: 'No',
+       opd_notes_checkbox: 'No',
+       consent_form_checkbox: 'No',
+    });
+    setSelectedTests([]);
+    setTrfFiles(null);
+    setTrfUrl('');
+    setCustomSampleType('');
+    setCustomTestName('');
+    setTestToRemove(null);
+    setShowRemoveModal(false);
+    setHasSelectedFirstTest(false);
+    // setTestNameOptions([]);
+    localStorage.removeItem('sampleRegistrationForm');
+    localStorage.removeItem('editRowData');
+  }
+
   useEffect(() => {
     const cookieUser = Cookies.get('user');
     if (cookieUser) {
@@ -293,10 +367,13 @@ export const SampleRegistration = () => {
     console.log('allData', allData);
 
     const trimmedData = Object.fromEntries(
-      Object.entries(allData).map(([key, value]) => [
-        key,
-        typeof value === "string" ? value.trim() : value
-      ])
+      Object.entries(allData).map(([key, value]) => {
+        if (key === "age" && typeof value === "string" && /^\d+$/.test(value.trim())) {
+          // If age is just an integer, append " year"
+          return [key, `${value.trim()} year`];
+        }
+        return [key, typeof value === "string" ? value.trim() : value];
+      })
     );
 
     // Prepare FormData for file + data
@@ -320,22 +397,7 @@ export const SampleRegistration = () => {
       if (res.data[0].status === 200) {
         toast.success('Sample registered successfully');
         form.reset();
-        setProcessing(false);
-        selectedTests.length = 0;
-        setTrfFiles(null);
-        setTrfUrl('');
-        form.setValue('trf-upload', null);
-        form.setValue('trf', '');
-        form.setValue('trf_file', '');
-        form.setValue('selectedTestName', '');
-        form.setValue('sample_id', '');
-        setTestToRemove(null); // Reset
-        setCustomTestName('');
-        setShowRemoveModal(false);
-        setHasSelectedFirstTest(false);
-        setSelectedTests([]);
-        form.setValue('sample_name', '');
-        localStorage.removeItem('sampleRegistrationForm');
+        handleReset(); // Reset form and state
 
         // setSelectedTests([]);
         // setTrfUrl('');
@@ -464,6 +526,7 @@ export const SampleRegistration = () => {
       if (res.status === 200) {
         toast.success('Sample updated successfully');
         form.reset();
+        handleReset(); // Reset form and state
         setProcessing(false);
         localStorage.removeItem('editRowData'); // Clear edit data from localStorage
         selectedTests.length = 0; // Clear selected tests
@@ -899,7 +962,7 @@ export const SampleRegistration = () => {
                         {...field}>
                         <option className='dark:text-white' value=''>Select Prority</option>
                         <option className='dark:text-white' value='routine'>Routine</option>
-                        <option className='dark:text-white' value='Urgent'>Urgent</option>
+                        <option className='dark:text-white' value='urgent'>Urgent</option>
 
                       </select>
                     </FormItem>
@@ -1338,7 +1401,7 @@ export const SampleRegistration = () => {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="min-w-[250px] mx-10">
-                            {selectedTests.length === testNameOptions.length ? (
+                            {testNameOptions.length > 0 && selectedTests.length === testNameOptions.length ? (
                               <DropdownMenuItem disabled>
                                 <span className="text-sm text-gray-500">All tests added</span>
                               </DropdownMenuItem>
@@ -1358,7 +1421,7 @@ export const SampleRegistration = () => {
                                       form.setValue('selectedTestName', updated.join(', '));
                                       toast.success(`${test} added`);
                                       setHasSelectedFirstTest(true);
-                                      form.setValue('test_name', '');// Reset if needed
+                                      form.setValue('test_name', '');
                                     }}
                                   >
                                     <span className="text-sm">{test}</span>
@@ -1876,21 +1939,7 @@ export const SampleRegistration = () => {
               className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'
               onClick={() => {
                 form.reset();
-                setSelectedTests([]);
-                setTrfUrl('');
-                setEditButton(false);
-                form.setValue('trf', '');
-                form.setValue('trf_file', '');
-                form.setValue('selectedTestName', '');
-                form.setValue('sample_name', '');
-                form.setValue('sample_id', '');
-                setCustomTestName('');
-                setTestToRemove('');
-                setShowRemoveModal(false);
-                setTestNameOptions([]);
-                setHasSelectedFirstTest(false);
-                localStorage.removeItem('sampleRegistrationForm');
-                localStorage.removeItem('editRowData')
+                handleReset();
               }}
             >
               Reset
