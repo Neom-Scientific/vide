@@ -896,7 +896,7 @@ const LibraryPrepration = () => {
     let nfw_volu_for_20nm = "";
 
     if (nm_conc > 0 && total_vol_for_20nm > 0) {
-      const multiplier = testName === "Myeloid" ? 2.5 : 20;
+      const multiplier = testName === "Myeloid" ? 2 : 20;
       lib_vol_for_20nm = parseFloat(((multiplier * total_vol_for_20nm) / nm_conc).toFixed(2));
       // if (lib_vol_for_20nm > total_vol_for_20nm) lib_vol_for_20nm = total_vol_for_20nm;
       nfw_volu_for_20nm = parseFloat((total_vol_for_20nm - lib_vol_for_20nm).toFixed(2));
@@ -1147,7 +1147,7 @@ const LibraryPrepration = () => {
               }
 
               if (columnId === "conc_of_amplicons") {
-                updatedRow.vol_for_fragmentation = conc_of_amplicons > 0 ? (Math.round((250 / updatedRow.conc_of_amplicons) * 10) / 10).toFixed(1) : "";
+                updatedRow.vol_for_fragmentation = updatedRow.conc_of_amplicons > 0 ? (Math.round((250 / updatedRow.conc_of_amplicons) * 10) / 10).toFixed(1) : "";
               }
 
               if (columnId === "nm_conc" || columnId === "total_vol_for_20nm") {
