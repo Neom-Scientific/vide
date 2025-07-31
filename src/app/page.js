@@ -28,17 +28,26 @@ const Page = () => {
   const [masterSheetData, setMasterSheetData] = useState([]);
   const [poolData, setPoolData] = useState([]);
   const [user, setUser] = useState(null);
-  const [selectedChartMonth, setSelectedChartMonth] = useState("");
-  // Multi-select states
-  const [selectedRunId, setSelectedRunId] = useState([]);
-  const [selectedTestName, setSelectedTestName] = useState([]);
-  const [selectedYear, setSelectedYear] = useState([]);
-  const [selectedChartRunId, setSelectedChartRunId] = useState([]);
 
-  // TAT chart multi-select
-  const [selectedTatTestName, setSelectedTatTestName] = useState([]);
-  const [selectedTatMonth, setSelectedTatMonth] = useState(tatMonthNames[new Date().getMonth()]);
-  const [selectedTatYear, setSelectedTatYear] = useState([]);
+  // Chart 1
+  const [selectedTestName1, setSelectedTestName1] = useState([]);
+  const [selectedMonth1, setSelectedMonth1] = useState("");
+  const [selectedYear1, setSelectedYear1] = useState([]);
+
+  // Chart 2
+  const [selectedRunId2, setSelectedRunId2] = useState([]);
+  const [selectedMonth2, setSelectedMonth2] = useState("");
+  const [selectedYear2, setSelectedYear2] = useState([]);
+
+  // Chart 3
+  const [selectedTatTestName3, setSelectedTatTestName3] = useState([]);
+  const [selectedTatMonth3, setSelectedTatMonth3] = useState(tatMonthNames[new Date().getMonth()]);
+  const [selectedTatYear3, setSelectedTatYear3] = useState([]);
+
+  // Chart 4
+  const [selectedTatTestName4, setSelectedTatTestName4] = useState([]);
+  const [selectedTatMonth4, setSelectedTatMonth4] = useState(tatMonthNames[new Date().getMonth()]);
+  const [selectedTatYear4, setSelectedTatYear4] = useState([]);
 
   const [tableData, setTableData] = useState([]);
 
@@ -53,6 +62,11 @@ const Page = () => {
   const chart2Instance = useRef(null);
   const chart3Instance = useRef(null);
   const chart4Instance = useRef(null);
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const previousYear = currentYear - 1;
+  const yearOptions = [currentYear.toString(), previousYear.toString()];
 
   // Fetch pool data
   useEffect(() => {
@@ -95,13 +109,41 @@ const Page = () => {
   }, []);
 
   // Extract unique values
-  const runIds = Array.from(new Set(poolData.map(item => item.run_id)))
-    .sort((a, b) => {
-      const numA = parseInt(a.split('_')[1], 10);
-      const numB = parseInt(b.split('_')[1], 10);
-      return numB - numA;
-    });
+  // Extract unique runIds and sort by seq_run_date (ascending)
 
+  function filterRunsByMonthYear(poolData, month, year) {
+    if (!month && !year) return poolData;
+    return poolData.filter(item => {
+      if (!item.seq_run_date) return false;
+      const date = new Date(item.seq_run_date);
+      const matchesMonth = month ? date.getMonth() === tatMonthNames.indexOf(month) : true;
+      const matchesYear = year ? date.getFullYear() === Number(year) : true;
+      return matchesMonth && matchesYear;
+    });
+  }
+
+  const filteredRuns = filterRunsByMonthYear(
+    poolData,
+    selectedMonth2,
+    selectedYear2.length === 1 ? selectedYear2[0] : undefined
+  );
+
+  const runIdWithDate = filteredRuns
+    .filter(item => item.run_id && item.seq_run_date)
+    .map(item => ({
+      run_id: item.run_id,
+      seq_run_date: new Date(item.seq_run_date)
+    }))
+    .sort((a, b) => a.seq_run_date - b.seq_run_date);
+
+  const runIds = runIdWithDate.map(item => item.run_id);
+
+  // If you want to include run_ids without seq_run_date at the end:
+  const runIdsWithNoDate = filteredRuns
+    .filter(item => item.run_id && !item.seq_run_date)
+    .map(item => item.run_id);
+
+  const allSortedRunIds = [...runIds, ...runIdsWithNoDate];
 
   // Normalize test names for uniqueTestNames
   const uniqueTestNames = Array.from(
@@ -115,13 +157,13 @@ const Page = () => {
     }).filter(Boolean))
   ).sort((a, b) => b - a);
 
-  // Update tableData when selectedRunId changes (multi-select)
+  // Update tableData when selectedRunId2 changes (multi-select)
   useEffect(() => {
     let runs;
-    if (!selectedRunId || selectedRunId.length === 0) {
+    if (!selectedRunId2 || selectedRunId2.length === 0) {
       runs = poolData; // Use all runs if none selected
     } else {
-      runs = poolData.filter(item => selectedRunId.includes(item.run_id));
+      runs = poolData.filter(item => selectedRunId2.includes(item.run_id));
     }
     let parsedTable = [];
     runs.forEach(run => {
@@ -137,14 +179,12 @@ const Page = () => {
         }
       }
     });
-    console.log('parsedTable', parsedTable);
     setTableData(parsedTable);
-  }, [selectedRunId, poolData]);
+  }, [selectedRunId2, poolData]);
 
   // --- Chart 2: Sample Count by Test Name (grouped by run_id) ---
-
-  const runIdXAxisLabels = selectedRunId.length > 0 ? selectedRunId : runIds;
-  const allTestNamesInRuns = uniqueTestNames; // or however you define your test names
+  const runIdXAxisLabels = selectedRunId2.length > 0 ? selectedRunId2 : allSortedRunIds;
+  const allTestNamesInRuns = uniqueTestNames;
 
   const runIdTestNameMap = {};
   tableData.forEach(item => {
@@ -169,16 +209,13 @@ const Page = () => {
     barPercentage: 0.7,
     categoryPercentage: 0.6,
     datalabels: {
-      anchor: 'end',
-      align: 'top',
+      anchor: 'center',
+      align: 'center',
       font: { weight: 'bold', size: 14 },
       color: '#22223b',
       formatter: v => v > 0 ? v : '',
     }
   }];
-
-
-
 
   // --- Chart 1: Test Name Distribution ---
   const filteredChartData = masterSheetData.filter(item => {
@@ -187,10 +224,9 @@ const Page = () => {
     const date = new Date(dateStr);
     const monthName = tatMonthNames[date.getMonth()];
     return (
-      (selectedTestName.length === 0 || selectedTestName.map(n => n.trim()).includes((item.test_name || '').trim())) &&
-      (selectedYear.length === 0 || selectedYear.includes(String(date.getFullYear()))) &&
-      (selectedChartRunId.length === 0 || selectedChartRunId.includes(item.run_id)) &&
-      (!selectedChartMonth || selectedChartMonth === monthName)
+      (selectedTestName1.length === 0 || selectedTestName1.map(n => n.trim()).includes((item.test_name || '').trim())) &&
+      (selectedYear1.length === 0 || selectedYear1.includes(String(date.getFullYear()))) &&
+      (!selectedMonth1 || selectedMonth1 === monthName)
     );
   });
 
@@ -204,14 +240,16 @@ const Page = () => {
   let chart2XAxisLabels;
   let chart2Datasets;
 
-  if (selectedChartMonth) {
+  if (selectedMonth1) {
     // Show dates in the selected month
-    const monthIdx = tatMonthNames.indexOf(selectedChartMonth);
-    const year = selectedYear.length === 1 ? Number(selectedYear[0]) : new Date().getFullYear();
+    const monthIdx = tatMonthNames.indexOf(selectedMonth1);
+    const year = selectedYear1.length === 1 ? Number(selectedYear1[0]) : new Date().getFullYear();
     const daysInMonth = getDaysInMonth(monthIdx, year);
     chart2XAxisLabels = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
 
-    chart2Datasets = uniqueTestNames.map((testName, idx) => ({
+    const testNamesToShow = selectedTestName1.length > 0 ? selectedTestName1.map(n => n.trim()) : uniqueTestNames;
+
+    chart2Datasets = testNamesToShow.map((testName, idx) => ({
       label: testName,
       data: chart2XAxisLabels.map(day => {
         return filteredChartData.filter(item => {
@@ -233,19 +271,19 @@ const Page = () => {
       barPercentage: 0.7,
       categoryPercentage: 0.6,
       datalabels: {
-        anchor: 'end',
-        align: 'top',
+        anchor: 'center',
+        align: 'center',
         font: { weight: 'bold', size: 14 },
         color: '#22223b',
         formatter: v => v > 0 ? v : '',
       }
     }));
-  } else if (selectedYear.length === 1) {
+  } else if (selectedYear1.length === 1) {
     // Show months in the selected year
-    const year = Number(selectedYear[0]);
+    const year = Number(selectedYear1[0]);
     chart2XAxisLabels = tatMonthNames;
 
-    chart2Datasets = uniqueTestNames.map((testName, idx) => ({
+    chart2Datasets = (selectedTestName1.length > 0 ? selectedTestName1 : uniqueTestNames).map((testName, idx) => ({
       label: testName,
       data: chart2XAxisLabels.map((monthName, monthIdx) => {
         return filteredChartData.filter(item => {
@@ -266,8 +304,8 @@ const Page = () => {
       barPercentage: 0.7,
       categoryPercentage: 0.6,
       datalabels: {
-        anchor: 'end',
-        align: 'top',
+        anchor: 'center',
+        align: 'center',
         font: { weight: 'bold', size: 14 },
         color: '#22223b',
         formatter: v => v > 0 ? v : '',
@@ -275,8 +313,8 @@ const Page = () => {
     }));
   } else {
     // Default: show test names on x-axis
-    chart2XAxisLabels = selectedTestName.length > 0
-      ? selectedTestName.map(n => n.trim())
+    chart2XAxisLabels = selectedTestName1.length > 0
+      ? selectedTestName1.map(n => n.trim())
       : uniqueTestNames;
 
     chart2Datasets = chart2XAxisLabels.map((testName, idx) => ({
@@ -303,30 +341,30 @@ const Page = () => {
   }
 
   // --- Chart 3: TAT Days by Month (multi-select) ---
-  const filteredTatData = masterSheetData.filter(item =>
-    (selectedTatTestName.length === 0 || selectedTatTestName.includes(item.test_name)) &&
-    (selectedTatYear.length === 0 || selectedTatYear.includes(String((item.registration_date || item.created_at || '').slice(0, 4)))) &&
-    (!selectedTatMonth || (() => {
+  const filteredTatData3 = masterSheetData.filter(item =>
+    (selectedTatTestName3.length === 0 || selectedTatTestName3.includes(item.test_name)) &&
+    (selectedTatYear3.length === 0 || selectedTatYear3.includes(String((item.registration_date || item.created_at || '').slice(0, 4)))) &&
+    (!selectedTatMonth3 || (() => {
       const dateStr = item.registration_date || item.created_at;
       if (!dateStr) return false;
       const date = new Date(dateStr);
-      return selectedTatMonth === tatMonthNames[date.getMonth()];
+      return selectedTatMonth3 === tatMonthNames[date.getMonth()];
     })())
   );
 
-  let tatXAxisLabels = [];
-  let tatDatasets = [];
+  let tatXAxisLabels3 = [];
+  let tatDatasets3 = [];
 
-  if (selectedTatYear.length > 0 && selectedTatMonth) {
+  if (selectedTatYear3.length > 0 && selectedTatMonth3) {
     // Show dates in the selected month
-    const monthIdx = tatMonthNames.indexOf(selectedTatMonth);
-    const year = selectedTatYear.length === 1 ? Number(selectedTatYear[0]) : new Date().getFullYear();
+    const monthIdx = tatMonthNames.indexOf(selectedTatMonth3);
+    const year = selectedTatYear3.length === 1 ? Number(selectedTatYear3[0]) : new Date().getFullYear();
     const daysInMonth = getDaysInMonth(monthIdx, year);
-    tatXAxisLabels = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+    tatXAxisLabels3 = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
 
-    tatDatasets = (selectedTatTestName.length > 0 ? selectedTatTestName : uniqueTestNames).map(testName => {
-      const data = tatXAxisLabels.map(day => {
-        const arr = filteredTatData.filter(item => {
+    tatDatasets3 = (selectedTatTestName3.length > 0 ? selectedTatTestName3 : uniqueTestNames).map(testName => {
+      const data = tatXAxisLabels3.map(day => {
+        const arr = filteredTatData3.filter(item => {
           const dateStr = item.registration_date || item.created_at;
           if (!dateStr) return false;
           const date = new Date(dateStr);
@@ -341,11 +379,11 @@ const Page = () => {
       });
       return { label: testName, data };
     });
-  } else if (selectedTatTestName.length > 0) {
-    tatXAxisLabels = selectedTatTestName;
-    tatDatasets = (selectedTatYear.length > 0 ? selectedTatYear : uniqueYears).map(year => {
-      const data = selectedTatTestName.map(testName => {
-        const arr = filteredTatData.filter(item => {
+  } else if (selectedTatTestName3.length > 0) {
+    tatXAxisLabels3 = selectedTatTestName3;
+    tatDatasets3 = (selectedTatYear3.length > 0 ? selectedTatYear3 : uniqueYears).map(year => {
+      const data = selectedTatTestName3.map(testName => {
+        const arr = filteredTatData3.filter(item => {
           const dateStr = item.registration_date || item.created_at;
           if (!dateStr) return false;
           const date = new Date(dateStr);
@@ -357,11 +395,81 @@ const Page = () => {
       return { label: year, data };
     });
   } else {
-    tatXAxisLabels = tatMonthNames;
-    tatDatasets = [{
+    tatXAxisLabels3 = tatMonthNames;
+    tatDatasets3 = [{
       label: "TAT Days",
       data: tatMonthNames.map((month, idx) => {
-        const arr = filteredTatData.filter(item => {
+        const arr = filteredTatData3.filter(item => {
+          const dateStr = item.registration_date || item.created_at;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return date.getMonth() === idx;
+        }).map(item => Number(item.tat_days));
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      })
+    }];
+  }
+
+  // --- Chart 4: TAT Days by Month (multi-select, separate state) ---
+  const filteredTatData4 = masterSheetData.filter(item =>
+    (selectedTatTestName4.length === 0 || selectedTatTestName4.includes(item.test_name)) &&
+    (selectedTatYear4.length === 0 || selectedTatYear4.includes(String((item.registration_date || item.created_at || '').slice(0, 4)))) &&
+    (!selectedTatMonth4 || (() => {
+      const dateStr = item.registration_date || item.created_at;
+      if (!dateStr) return false;
+      const date = new Date(dateStr);
+      return selectedTatMonth4 === tatMonthNames[date.getMonth()];
+    })())
+  );
+
+  let tatXAxisLabels4 = [];
+  let tatDatasets4 = [];
+
+  if (selectedTatYear4.length > 0 && selectedTatMonth4) {
+    // Show dates in the selected month
+    const monthIdx = tatMonthNames.indexOf(selectedTatMonth4);
+    const year = selectedTatYear4.length === 1 ? Number(selectedTatYear4[0]) : new Date().getFullYear();
+    const daysInMonth = getDaysInMonth(monthIdx, year);
+    tatXAxisLabels4 = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+
+    tatDatasets4 = (selectedTatTestName4.length > 0 ? selectedTatTestName4 : uniqueTestNames).map(testName => {
+      const data = tatXAxisLabels4.map(day => {
+        const arr = filteredTatData4.filter(item => {
+          const dateStr = item.registration_date || item.created_at;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return (
+            item.test_name === testName &&
+            date.getMonth() === monthIdx &&
+            date.getFullYear() === year &&
+            date.getDate() === Number(day)
+          );
+        }).map(item => Number(item.tat_days));
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      });
+      return { label: testName, data };
+    });
+  } else if (selectedTatTestName4.length > 0) {
+    tatXAxisLabels4 = selectedTatTestName4;
+    tatDatasets4 = (selectedTatYear4.length > 0 ? selectedTatYear4 : uniqueYears).map(year => {
+      const data = selectedTatTestName4.map(testName => {
+        const arr = filteredTatData4.filter(item => {
+          const dateStr = item.registration_date || item.created_at;
+          if (!dateStr) return false;
+          const date = new Date(dateStr);
+          return item.test_name === testName &&
+            String(date.getFullYear()) === String(year);
+        }).map(item => Number(item.tat_days));
+        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+      });
+      return { label: year, data };
+    });
+  } else {
+    tatXAxisLabels4 = tatMonthNames;
+    tatDatasets4 = [{
+      label: "TAT Days",
+      data: tatMonthNames.map((month, idx) => {
+        const arr = filteredTatData4.filter(item => {
           const dateStr = item.registration_date || item.created_at;
           if (!dateStr) return false;
           const date = new Date(dateStr);
@@ -388,7 +496,6 @@ const Page = () => {
   useEffect(() => {
     // Chart 2: Grouped Bar
     if (chart1Instance.current) chart1Instance.current.destroy();
-    // console.log('runidchartdata', runIdChartData);
     chart1Instance.current = new Chart(chart1Ref.current, {
       type: 'bar',
       data: {
@@ -402,8 +509,8 @@ const Page = () => {
           barPercentage: 0.7,
           categoryPercentage: 0.6,
           datalabels: {
-            anchor: 'end',
-            align: 'top',
+            anchor: 'center',
+            align: 'center',
             font: { weight: 'bold', size: 14 },
             color: '#22223b',
             formatter: v => v > 0 ? v : '',
@@ -539,10 +646,10 @@ const Page = () => {
     // Chart 3: TAT Days by Month
     if (chart3Instance.current) chart3Instance.current.destroy();
     chart3Instance.current = new Chart(chart3Ref.current, {
-      type: 'line',
+      type: 'bar',
       data: {
-        labels: tatXAxisLabels,
-        datasets: tatDatasets.map((ds, idx) => ({
+        labels: tatXAxisLabels3,
+        datasets: tatDatasets3.map((ds, idx) => ({
           ...ds,
           borderColor: [
             '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
@@ -557,8 +664,8 @@ const Page = () => {
             '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
           ][idx % 8],
           datalabels: {
-            anchor: 'end',
-            align: 'top',
+            anchor: 'center',
+            align: 'center',
             font: { weight: 'bold', size: 14 },
             color: '#22223b',
             formatter: v => v > 0 ? v.toFixed(1) : '',
@@ -595,6 +702,100 @@ const Page = () => {
       plugins: [ChartDataLabels]
     });
 
+    //   // Chart 4: TAT Days by Month (separate state)
+    //   if (chart4Instance.current) chart4Instance.current.destroy();
+    //   chart4Instance.current = new Chart(chart4Ref.current, {
+    //     type: 'bar',
+    //     data: {
+    //       labels: tatXAxisLabels4,
+    //       datasets: tatDatasets4.map((ds, idx) => ({
+    //         ...ds,
+    //         borderColor: [
+    //           '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
+    //         ][idx % 8],
+    //         backgroundColor: [
+    //           '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
+    //         ][idx % 8] + '33',
+    //         borderWidth: 3,
+    //         tension: 0.3,
+    //         pointRadius: 5,
+    //         pointBackgroundColor: [
+    //           '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
+    //         ][idx % 8],
+    //         datalabels: {
+    //           anchor: 'center',
+    //           align: 'center',
+    //           font: { weight: 'bold', size: 14 },
+    //           color: '#22223b',
+    //           formatter: v => v > 0 ? v.toFixed(1) : '',
+    //         }
+    //       }))
+    //     },
+    //     options: {
+    //       responsive: true,
+    //       maintainAspectRatio: false,
+    //       plugins: {
+    //         legend: { display: true, position: 'right' },
+    //         tooltip: { enabled: true },
+    //         datalabels: { display: true }
+    //       },
+    //       scales: {
+    //         x: {
+    //           title: { display: true, text: "" },
+    //           ticks: { font: { size: 12, weight: 'bold' }, color: '#374151' },
+    //           grid: { display: false }
+    //         },
+    //         y: {
+    //           beginAtZero: true,
+    //           title: { display: true, text: "TAT Days" },
+    //           ticks: { font: { size: 14, weight: 'bold' }, color: '#374151' },
+    //           grid: {
+    //             color: '#e5e7eb',
+    //             borderDash: [4, 4],
+    //             drawTicks: false,
+    //             drawBorder: false,
+    //           }
+    //         }
+    //       }
+    //     },
+    //     plugins: [ChartDataLabels]
+    //   });
+
+    //   const canvas = chart1Ref.current;
+    //   const hideTooltip = () => {
+    //     const tooltipEl = document.getElementById('chartjs-tooltip');
+    //     if (tooltipEl) {
+    //       tooltipEl.style.opacity = 0;
+    //       tooltipEl.style.left = '-9999px';
+    //       tooltipEl.style.top = '-9999px';
+    //     }
+    //   };
+    //   if (canvas) {
+    //     canvas.addEventListener('mouseleave', hideTooltip);
+    //   }
+
+    //   // Cleanup
+    //   return () => {
+    //     if (chart1Instance.current) chart1Instance.current.destroy();
+    //     if (canvas) {
+    //       canvas.removeEventListener('mouseleave', hideTooltip);
+    //     }
+    //     // Remove tooltip element from DOM
+    //     const tooltipEl = document.getElementById('chartjs-tooltip');
+    //     if (tooltipEl) tooltipEl.remove();
+    //   };
+    // }, [
+    //   runIdXAxisLabels, runIdChartData,
+    //   chart2XAxisLabels, chart2Datasets,
+    //   tatXAxisLabels3, tatDatasets3,
+    //   tatXAxisLabels4, tatDatasets4,
+    //   funnelChartData,
+    //   selectedTestName1, selectedYear1, selectedMonth1,
+    //   selectedRunId2, selectedYear2, selectedMonth2,
+    //   selectedTatTestName3, selectedTatYear3, selectedTatMonth3,
+    //   selectedTatTestName4, selectedTatYear4, selectedTatMonth4
+    // ]);
+
     // Chart 4: Bar (Sample Funnel)
     if (chart4Instance.current) chart4Instance.current.destroy();
     chart4Instance.current = new Chart(chart4Ref.current, {
@@ -611,8 +812,8 @@ const Page = () => {
           barPercentage: 0.7,
           categoryPercentage: 0.6,
           datalabels: {
-            anchor: 'end',
-            align: 'top',
+            anchor: 'center',
+            align: 'center',
             font: { weight: 'bold', size: 16 },
             color: '#22223b',
             formatter: v => v > 0 ? v : '',
@@ -678,10 +879,13 @@ const Page = () => {
   }, [
     runIdXAxisLabels, runIdChartData,
     chart2XAxisLabels, chart2Datasets,
-    tatXAxisLabels, tatDatasets,
+    tatXAxisLabels3, tatDatasets3,
+    tatXAxisLabels4, tatDatasets4,
     funnelChartData,
-    selectedTestName,
-    selectedYear, selectedChartMonth
+    selectedTestName1, selectedYear1, selectedMonth1,
+    selectedRunId2, selectedYear2, selectedMonth2,
+    selectedTatTestName3, selectedTatYear3, selectedTatMonth3,
+    selectedTatTestName4, selectedTatYear4, selectedTatMonth4
   ]);
 
   // Dropdown rendering helper
@@ -746,29 +950,26 @@ const Page = () => {
       {/* Chart 1 */}
       <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
         <div className="flex w-full items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold text-gray-700 dark:text-white ml-2">
-            Test Name Distribution
-          </h2>
           {renderDropdowns([
             {
               label: "Select Test Name",
               options: uniqueTestNames,
-              value: selectedTestName,
-              onChange: setSelectedTestName,
-            },
-            {
-              label: "Select Year",
-              options: uniqueYears,
-              value: selectedYear,
-              onChange: setSelectedYear,
+              value: selectedTestName1,
+              onChange: setSelectedTestName1,
             },
             {
               label: "Select Month",
-              options: ["", ...tatMonthNames], // "" means all months
-              value: selectedChartMonth,
-              onChange: (val) => setSelectedChartMonth(val)
+              options: ["", ...tatMonthNames],
+              value: selectedMonth1,
+              onChange: setSelectedMonth1
+            },
+            {
+              label: "Select Year",
+              options: yearOptions,
+              value: selectedYear1,
+              onChange: setSelectedYear1,
             }
-          ], true)}
+          ], false)}
         </div>
         <div className="w-full h-[340px] flex items-center justify-center">
           <canvas ref={chart2Ref} className="!bg-transparent" />
@@ -778,70 +979,55 @@ const Page = () => {
       {/* Chart 2 */}
       <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
         <div className="flex w-full items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold text-gray-700 dark:text-white ml-2">
-            Sample Count by Runs
-          </h2>
           {renderDropdowns([
             {
               label: "Select Run Id",
               options: runIds,
-              value: selectedRunId,
-              onChange: setSelectedRunId,
+              value: selectedRunId2,
+              onChange: setSelectedRunId2,
+            },
+            {
+              label: "Select Month",
+              options: ["", ...tatMonthNames],
+              value: selectedMonth2,
+              onChange: setSelectedMonth2
+            },
+            {
+              label: "Select Year",
+              options: yearOptions,
+              value: selectedYear2,
+              onChange: setSelectedYear2
             }
           ])}
         </div>
         <div className="w-full h-[340px] flex items-center justify-center">
           <canvas ref={chart1Ref} className="!bg-transparent" />
         </div>
-        {/* {selectedRunId.length === 1 && (
-          <div className="mt-4">
-            <h3 className="font-semibold mb-2">Test Names in {selectedRunId[0]}</h3>
-            <table className="min-w-full bg-white border rounded shadow">
-              <thead>
-                <tr>
-                  <th className="px-4 py-2 text-left">Test Name</th>
-                  <th className="px-4 py-2 text-left">Sample Count</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(runIdTestNameMap[selectedRunId[0]] || {}).map(([testName, count]) => (
-                  <tr key={testName}>
-                    <td className="px-4 py-2">{testName}</td>
-                    <td className="px-4 py-2">{count}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )} */}
       </div>
 
       {/* Chart 3 */}
       <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
         <div className="flex w-full items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold text-gray-700 dark:text-white ml-2">
-            TAT Days by Month
-          </h2>
           {renderDropdowns([
             {
               label: "Select Test Name",
               options: uniqueTestNames,
-              value: selectedTatTestName,
-              onChange: setSelectedTatTestName
-            },
-            {
-              label: "Select Year",
-              options: uniqueYears,
-              value: selectedTatYear,
-              onChange: setSelectedTatYear
+              value: selectedTatTestName3,
+              onChange: setSelectedTatTestName3
             },
             {
               label: "Select Month",
               options: tatMonthNames,
-              value: selectedTatMonth,
-              onChange: (val) => setSelectedTatMonth(val)
+              value: selectedTatMonth3,
+              onChange: setSelectedTatMonth3
+            },
+            {
+              label: "Select Year",
+              options: yearOptions,
+              value: selectedTatYear3,
+              onChange: setSelectedTatYear3
             }
-          ], true)}
+          ], false)}
         </div>
         <div className="w-full h-[340px] flex items-center justify-center">
           <canvas ref={chart3Ref} className="!bg-transparent" />
@@ -851,9 +1037,26 @@ const Page = () => {
       {/* Chart 4 */}
       <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
         <div className="flex w-full items-center justify-between mb-2">
-          <h2 className="text-2xl font-bold text-gray-700 dark:text-white ml-2">
-            Sample Indicator
-          </h2>
+          {renderDropdowns([
+            {
+              label: "Select Test Name",
+              options: uniqueTestNames,
+              value: selectedTatTestName4,
+              onChange: setSelectedTatTestName4
+            },
+            {
+              label: "Select Month",
+              options: tatMonthNames,
+              value: selectedTatMonth4,
+              onChange: setSelectedTatMonth4
+            },
+            {
+              label: "Select Year",
+              options: yearOptions,
+              value: selectedTatYear4,
+              onChange: setSelectedTatYear4
+            }
+          ], false)}
         </div>
         <div className="w-full h-[400px] flex items-center justify-center">
           <canvas ref={chart4Ref} className="!bg-transparent" />

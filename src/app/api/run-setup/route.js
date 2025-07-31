@@ -32,6 +32,7 @@ export async function POST(request) {
                 nextRunNumber = parseInt(match[1], 10) + 1;
             }
         }
+        console.log('setup.table_data', setup.table_data);
         run_id = `run_${nextRunNumber}`;
         await pool.query(
             `INSERT INTO run_setup (
@@ -68,34 +69,34 @@ export async function POST(request) {
               $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28
             )`,
             [
-                run_id,
-                setup.selected_application,
-                setup.seq_run_date,
-                setup.total_gb_available,
-                setup.instument_type,
-                setup.pool_size,
-                setup.pool_conc_run_setup,
-                setup.nm_cal,
-                setup.total_required,
-                setup.dinatured_lib_next_seq_550,
-                setup.total_volume_next_seq_550,
-                setup.loading_conc_550,
-                setup.lib_required_next_seq_550,
-                setup.buffer_volume_next_seq_550,
-                setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
-                setup.rsbetween_vol_2nm_next_seq_1000_2000,
-                setup.total_volume_2nm_next_seq_1000_2000,
-                setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
-                setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
-                setup.total_volume_600pm_next_seq_1000_2000,
-                setup.loading_conc_1000_2000,
-                setup.hospital_name,
-                setup.total_volume_2nm_next_seq_550,
-                setup.final_pool_conc_vol_2nm_next_seq_550,
-                setup.nfw_vol_2nm_next_seq_550,
-                getUniqueSampleCount(setup.internal_ids),
-                setup.table_data,
-                setup.ht_buffer_next_seq_1000_2000
+                run_id,  //1
+                setup.selected_application, //2
+                setup.seq_run_date,//3
+                setup.total_gb_available,//4
+                setup.instument_type,//5
+                setup.pool_size,//6
+                setup.pool_conc_run_setup,//7
+                setup.nm_cal,//8
+                setup.total_required,//9
+                setup.dinatured_lib_next_seq_550,//10
+                setup.total_volume_next_seq_550,//11
+                setup.loading_conc_550,//12
+                setup.lib_required_next_seq_550,//13
+                setup.buffer_volume_next_seq_550,//14
+                setup.final_pool_conc_vol_2nm_next_seq_1000_2000,//15
+                setup.rsbetween_vol_2nm_next_seq_1000_2000,//16
+                setup.total_volume_2nm_next_seq_1000_2000,//17
+                setup.vol_of_2nm_for_600pm_next_seq_1000_2000,//18
+                setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,//19
+                setup.total_volume_600pm_next_seq_1000_2000,//20
+                setup.loading_conc_1000_2000,//21
+                setup.hospital_name,//22
+                setup.total_volume_2nm_next_seq_550,//23
+                setup.final_pool_conc_vol_2nm_next_seq_550,//24
+                setup.nfw_vol_2nm_next_seq_550,//25
+                getUniqueSampleCount(setup.internal_ids),//26
+                JSON.stringify(setup.table_data),//27
+                setup.ht_buffer_next_seq_1000_2000//28
             ]
         );
 
@@ -103,8 +104,8 @@ export async function POST(request) {
             for (const internalId of setup.internal_ids) {
                 await pool.query(
                     `UPDATE master_sheet SET 
-                    under_seq = 'Yes',
-                    location = 'under_seq',
+                  under_seq = 'Yes',
+                  location = 'under_seq',
                   selected_application = $1,
                   seq_run_date = $2,
                   total_gb_available = $3,
@@ -133,37 +134,37 @@ export async function POST(request) {
                   table_data = $26,
                   ht_buffer_next_seq_1000_2000 = $27,
                   run_id = $28
-                WHERE internal_id = $29`,
+                  WHERE internal_id = $29`,
                     [
-                        setup.selected_application,
-                        setup.seq_run_date,
-                        setup.total_gb_available,
-                        setup.instument_type,
-                        setup.pool_size,
-                        setup.pool_conc_run_setup,
-                        setup.nm_cal,
-                        setup.total_required,
-                        setup.dinatured_lib_next_seq_550,
-                        setup.total_volume_next_seq_550,
-                        setup.loading_conc_550,
-                        setup.lib_required_next_seq_550,
-                        setup.buffer_volume_next_seq_550,
-                        setup.final_pool_conc_vol_2nm_next_seq_1000_2000,
-                        setup.rsbetween_vol_2nm_next_seq_1000_2000,
-                        setup.total_volume_2nm_next_seq_1000_2000,
-                        setup.vol_of_2nm_for_600pm_next_seq_1000_2000,
-                        setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,
-                        setup.total_volume_600pm_next_seq_1000_2000,
-                        setup.loading_conc_1000_2000,
-                        setup.hospital_name,
-                        setup.total_volume_2nm_next_seq_550,
-                        setup.final_pool_conc_vol_2nm_next_seq_550,
-                        setup.nfw_vol_2nm_next_seq_550,
-                        getUniqueSampleCount(setup.internal_ids), ,
-                        setup.table_data,
-                        setup.ht_buffer_next_seq_1000_2000,
-                        run_id,
-                        internalId,
+                        setup.selected_application,//1
+                        setup.seq_run_date,//2
+                        setup.total_gb_available,//3
+                        setup.instument_type,//4
+                        setup.pool_size,//5
+                        setup.pool_conc_run_setup,//6
+                        setup.nm_cal,//7
+                        setup.total_required,//8
+                        setup.dinatured_lib_next_seq_550,//9
+                        setup.total_volume_next_seq_550,//10
+                        setup.loading_conc_550,//11
+                        setup.lib_required_next_seq_550,//12
+                        setup.buffer_volume_next_seq_550,//13
+                        setup.final_pool_conc_vol_2nm_next_seq_1000_2000,//14
+                        setup.rsbetween_vol_2nm_next_seq_1000_2000,//15
+                        setup.total_volume_2nm_next_seq_1000_2000,//16
+                        setup.vol_of_2nm_for_600pm_next_seq_1000_2000,//17
+                        setup.vol_of_rs_between_for_600pm_next_seq_1000_2000,//18
+                        setup.total_volume_600pm_next_seq_1000_2000,//19
+                        setup.loading_conc_1000_2000,//20
+                        setup.hospital_name,//21
+                        setup.total_volume_2nm_next_seq_550,//22
+                        setup.final_pool_conc_vol_2nm_next_seq_550,//23
+                        setup.nfw_vol_2nm_next_seq_550,//24
+                        getUniqueSampleCount(setup.internal_ids),//25
+                        JSON.stringify(setup.table_data),//26
+                        setup.ht_buffer_next_seq_1000_2000,//27
+                        run_id,//28
+                        internalId,//29
                     ]
                 );
 

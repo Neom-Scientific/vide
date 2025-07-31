@@ -230,11 +230,13 @@ const RunSetup = () => {
       const selectedSampleIds = filteredPoolData.map((pool) => pool.sample_id);
       const selectedInternalIds = filteredPoolData.map((pool) => pool.internal_id);
 
+      const table_data = form.getValues("table_data") || [];
+
       const response = await axios.post('/api/run-setup', {
         setup: {
           ...data,
           change_by: user.email,
-          table_data: data.table_data, // Use table_data from form state
+          table_data, // Use table_data from form state
           sample_ids: selectedSampleIds,
           hospital_name: user.hospital_name,
           internal_ids: selectedInternalIds,
@@ -385,21 +387,24 @@ const RunSetup = () => {
     setSelectedCheckboxes(updatedCheckboxes);
 
     // Use updatedPoolNos for calculation, not selectedPoolNos
-    const updatedSize = Array.from(new Set(
-      poolData
-        .filter(pool =>
-          updatedCheckboxes.includes(pool.test_name)
-        )
-        .map(pool => {
-          // Prefer tapestation_size if valid, else fallback to size
-          const tapestation = Number(pool.tapestation_size);
-          if (tapestation && tapestation !== 0) {
-            return tapestation;
-          }
-          return Number(pool.size_for_2nm);
-        })
-        .filter(size => !isNaN(size) && size > 0)
-    ));
+    const updatedSize = updatedCheckboxes.map(test => {
+      // Find all pools for this test
+      const pools = poolData.filter(
+        p => p.test_name === test || p.test_name === `${test} + Mito`
+      );
+      // Try to find the first pool with a valid tapestation_size
+      const poolWithTapestation = pools.find(
+        p => Number(p.tapestation_size) && Number(p.tapestation_size) !== 0
+      );
+      if (poolWithTapestation) {
+        return Number(poolWithTapestation.tapestation_size);
+      }
+      // Otherwise, use the first pool's size_for_2nm
+      if (pools.length > 0) {
+        return Number(pools[0].size_for_2nm);
+      }
+      return NaN;
+    }).filter(size => !isNaN(size) && size > 0);
 
     console.log('updatedSize', updatedSize);
     const avgSize = updatedSize.length > 0
@@ -425,6 +430,7 @@ const RunSetup = () => {
     // validateTotalGbAvailable();
   };
 
+
   useEffect(() => {
     const totalGbAvailable = Number(form.watch("total_required"));
 
@@ -437,20 +443,8 @@ const RunSetup = () => {
         return totalGbAvailable !== 0 ? (totalDataRequired / totalGbAvailable) * 100 : 0;
       });
 
-      // Round all but last, last = 100 - sum of previous
-      let roundedPercents = [];
-      let sumRounded = 0;
-      for (let i = 0; i < unroundedPercents.length; i++) {
-        if (i < unroundedPercents.length - 1) {
-          const rounded = Number(unroundedPercents[i].toFixed(2));
-          roundedPercents.push(rounded);
-          sumRounded += rounded;
-        } else {
-          // Last percentage: force to 100 - sum of previous
-          const last = Number((100 - sumRounded).toFixed(2));
-          roundedPercents.push(last);
-        }
-      }
+      // Round each percentage individually (no forceful 100%)
+      const roundedPercents = unroundedPercents.map(p => Number(p.toFixed(2)));
 
       const updatedPercentageData = selectedCheckboxes.map((test, idx) => ({
         test_name: test,
@@ -462,6 +456,44 @@ const RunSetup = () => {
       setPercentage([]);
     }
   }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
+
+  // useEffect(() => {
+  //   const totalGbAvailable = Number(form.watch("total_required"));
+
+  //   if (totalGbAvailable > 0) {
+  //     // Calculate unrounded percentages for each test
+  //     const unroundedPercents = selectedCheckboxes.map(test => {
+  //       const totalDataRequired = poolData
+  //         .filter(pool => pool.test_name === test || pool.test_name === `${test} + Mito`)
+  //         .reduce((sum, pool) => sum + (Number(pool.data_required) || 0), 0);
+  //       return totalGbAvailable !== 0 ? (totalDataRequired / totalGbAvailable) * 100 : 0;
+  //     });
+
+  //     // Round all but last, last = 100 - sum of previous
+  //     let roundedPercents = [];
+  //     let sumRounded = 0;
+  //     for (let i = 0; i < unroundedPercents.length; i++) {
+  //       if (i < unroundedPercents.length - 1) {
+  //         const rounded = Number(unroundedPercents[i].toFixed(2));
+  //         roundedPercents.push(rounded);
+  //         sumRounded += rounded;
+  //       } else {
+  //         // Last percentage: force to 100 - sum of previous
+  //         const last = Number((100 - sumRounded).toFixed(2));
+  //         roundedPercents.push(last);
+  //       }
+  //     }
+
+  //     const updatedPercentageData = selectedCheckboxes.map((test, idx) => ({
+  //       test_name: test,
+  //       percentage: roundedPercents[idx]
+  //     }));
+
+  //     setPercentage(updatedPercentageData);
+  //   } else {
+  //     setPercentage([]);
+  //   }
+  // }, [form.watch("total_gb_available"), selectedCheckboxes, poolData]);
 
   useEffect(() => {
     const subscription = form.watch((values) => {
@@ -528,6 +560,9 @@ const RunSetup = () => {
         final_pool_volume_ul: calculatedFinalPoolVolUl,
       };
     });
+
+    console.log('table_data', updatedTableData);
+    console.log('table_data.json', JSON.stringify(updatedTableData));
 
     form.setValue("table_data", updatedTableData);
   }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]);
@@ -669,7 +704,7 @@ const RunSetup = () => {
                           {...field}
                           type="number"
                           placeholder="Enter final pool volume (ul)"
-                          value={field.value !== undefined && !isNaN(field.value) ? field.value : 0} // Ensure valid numeric value
+                          value={field.value === 0 ? "" : field.value || ""} // Ensure valid numeric value
                           onChange={(e) => field.onChange(e.target.value === "" ? 0 : Number(e.target.value))} // Convert input to number
                           className="mb-2 border-2 w-full border-orange-300"
                           required
@@ -731,13 +766,13 @@ const RunSetup = () => {
                                       <TableRow key={test}>
                                         <TableCell>{test}</TableCell>
                                         <TableCell>
-                                          {totalDataRequiredForTest > 0 ? totalDataRequiredForTest : 'N/A'}
+                                          {totalDataRequiredForTest > 0 ? totalDataRequiredForTest.toFixed(2) : 'N/A'}
                                         </TableCell>
                                         <TableCell>
                                           {Math.abs(percentageForTest - 100) < 0.0000000000001 ? "100%" : percentageForTest.toFixed(2) + "%"}
                                         </TableCell>
                                         <TableCell>
-                                          {calculatedFinalPoolVolUl > 0 ? calculatedFinalPoolVolUl : 'N/A'}
+                                          {calculatedFinalPoolVolUl > 0 ? calculatedFinalPoolVolUl.toFixed(2) : 'N/A'}
                                         </TableCell>
                                         <TableCell>
                                           <Input

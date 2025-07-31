@@ -955,14 +955,50 @@ const LibraryPrepration = () => {
 
     const handleChange = (e) => {
       setValue(e.target.value);
-      updateData(rowIndex, columnId, e.target.value);
+      // updateData(rowIndex, columnId, e.target.value);
+    };
+
+    const handleKeyDown = (e) => {
+      const visibleColumns = columns.map(col => col.accessorKey);
+      const colIdx = visibleColumns.indexOf(columnId);
+
+      let nextRow = rowIndex;
+      let nextColIdx = colIdx;
+
+      if (e.key === "Enter" || e.key === "ArrowDown") {
+        updateData(rowIndex, columnId, value);
+        nextRow = rowIndex + 1;
+      } else if (e.key === "ArrowUp") {
+        updateData(rowIndex, columnId, value);
+        nextRow = rowIndex - 1;
+      } else if (e.key === "ArrowLeft") {
+        updateData(rowIndex, columnId, value);
+        nextColIdx = colIdx - 1;
+      } else if (e.key === "ArrowRight") {
+        updateData(rowIndex, columnId, value);
+        nextColIdx = colIdx + 1;
+      } else {
+        return;
+      }
+
+      // Only move if within bounds
+      if (nextRow >= 0 && nextRow < tableRows.length && nextColIdx >= 0 && nextColIdx < visibleColumns.length) {
+        setSelectedCells([{ rowIndex: nextRow, columnId: visibleColumns[nextColIdx] }]);
+        setTimeout(() => {
+          // Try to focus input first, then select if input not found
+          const selector = `[data-row="${nextRow}"][data-column="${visibleColumns[nextColIdx]}"]`;
+          let nextElem = document.querySelector(`input${selector}`) ||
+            document.querySelector(`select${selector}`);
+          if (nextElem) nextElem.focus();
+        }, 0);
+        e.preventDefault();
+      }
     };
 
     const handleBlur = () => {
       updateData(rowIndex, columnId, value);
     };
 
-    // Disable selection logic if we're clicking into the input for typing
     const handleMouseDown = (e) => {
       // Only prevent default if starting a selection (e.g., shift/ctrl or double click)
       const isAlreadySelected =
@@ -970,23 +1006,26 @@ const LibraryPrepration = () => {
         selectedCells[0].rowIndex === rowIndex &&
         selectedCells[0].columnId === columnId;
 
-      // Deselect if already selected
-      if (isAlreadySelected) {
-        e.preventDefault();
+      // If clicking the same cell (single click, no modifiers), deselect
+      if (
+        isAlreadySelected &&
+        !(e.shiftKey || e.ctrlKey || e.metaKey || e.detail > 1)
+      ) {
         setSelectedCells([]);
         setIsSelecting(false);
         setSelectionStart(null);
+        // Allow input/select to be focused
         return;
       }
 
+      // If clicking a different cell (single click, no modifiers), select it
       if (
-        selectedCells.length > 0 &&
         !(e.shiftKey || e.ctrlKey || e.metaKey || e.detail > 1)
       ) {
         setSelectedCells([{ rowIndex, columnId }]);
         setIsSelecting(false);
         setSelectionStart(null);
-        // Allow input to be focused for typing
+        // Allow input/select to be focused
         return;
       }
 
@@ -998,9 +1037,7 @@ const LibraryPrepration = () => {
         setSelectedCells([{ rowIndex, columnId }]);
         return;
       }
-
       // For single click, allow default (focus input for typing)
-      // Do not preventDefault here!
     };
 
     const handleMouseEnter = (e) => {
@@ -1035,6 +1072,8 @@ const LibraryPrepration = () => {
     return (
       <Input
         ref={inputRef}
+        data-row={rowIndex}
+        data-column={columnId}
         className={`border border-orange-300 rounded p-1 text-xs w-[100px] text-center ${isSelected ? "ring-2 ring-orange-500 bg-orange-50" : ""}`}
         value={value}
         type="text"
@@ -1044,6 +1083,7 @@ const LibraryPrepration = () => {
         onMouseDown={handleMouseDown}
         onMouseEnter={handleMouseEnter}
         onMouseUp={handleMouseUp}
+        onKeyDown={handleKeyDown}
       />
     );
   };
@@ -2339,8 +2379,14 @@ const LibraryPrepration = () => {
                                                 if (p !== pool) return p;
                                                 const updated = { ...p.values, vol_for_40nm_percent_pooling: value };
 
-                                                const totalVolFor2nm = parseFloat(updated.total_vol_for_20nm) || 0;
-                                                const percentPooling = parseFloat(value) || 0;
+                                                const totalVolFor2nm =
+                                                  cell.column.id === "total_vol_for_20nm"
+                                                    ? parseFloat(value) || 0
+                                                    : parseFloat(updated.total_vol_for_20nm) || 0;
+                                                const percentPooling =
+                                                  cell.column.id === "vol_for_40nm_percent_pooling"
+                                                    ? parseFloat(value) || 0
+                                                    : parseFloat(updated.vol_for_40nm_percent_pooling ?? 0) || 0;
 
                                                 updated.volume_from_40nm_for_total_25ul_pool = (totalVolFor2nm * (percentPooling / 100)).toFixed(2);
 
@@ -3004,7 +3050,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo, user_hospit
         pools = pools
           .map(pool => ({
             ...pool,
-            sampleInternalIds: (pool.sampleInternalIds || []).filter(id => id !== rowInfo.internal_id)
+            sampleInternalIds: (pool.sampleInternalIds || []).filter(id => id !== internal_id)
           }))
           .filter(pool => pool.sampleInternalIds.length > 0)
           .map(pool => ({
