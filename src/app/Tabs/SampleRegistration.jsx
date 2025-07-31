@@ -872,7 +872,11 @@ export const SampleRegistration = () => {
                               <DropdownMenuItem
                                 key={opt}
                                 onClick={() => {
-                                  field.onChange(opt);
+                                  // Map "Extracted DNA" -> "DNA", "Extracted RNA" -> "RNA"
+                                  let value = opt;
+                                  if (opt === "Extracted DNA") value = "DNA";
+                                  if (opt === "Extracted RNA") value = "RNA";
+                                  field.onChange(value);
                                   setCustomSampleType('');
                                 }}
                               >
