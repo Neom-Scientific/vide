@@ -14,6 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
+import RouteLoader from './components/RouteLoader';
 
 Chart.register(...registerables);
 Chart.register(FunnelController, TrapezoidElement);
@@ -946,124 +947,127 @@ const Page = () => {
   }
 
   return (
-    <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-      {/* Chart 1 */}
-      <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-        <div className="flex w-full items-center justify-between mb-2">
-          {renderDropdowns([
-            {
-              label: "Select Test Name",
-              options: uniqueTestNames,
-              value: selectedTestName1,
-              onChange: setSelectedTestName1,
-            },
-            {
-              label: "Select Month",
-              options: ["", ...tatMonthNames],
-              value: selectedMonth1,
-              onChange: setSelectedMonth1
-            },
-            {
-              label: "Select Year",
-              options: yearOptions,
-              value: selectedYear1,
-              onChange: setSelectedYear1,
-            }
-          ], false)}
+    <>
+      <RouteLoader />
+      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+        {/* Chart 1 */}
+        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+          <div className="flex w-full items-center justify-between mb-2">
+            {renderDropdowns([
+              {
+                label: "Select Test Name",
+                options: uniqueTestNames,
+                value: selectedTestName1,
+                onChange: setSelectedTestName1,
+              },
+              {
+                label: "Select Month",
+                options: ["", ...tatMonthNames],
+                value: selectedMonth1,
+                onChange: setSelectedMonth1
+              },
+              {
+                label: "Select Year",
+                options: yearOptions,
+                value: selectedYear1,
+                onChange: setSelectedYear1,
+              }
+            ], false)}
+          </div>
+          <div className="w-full h-[340px] flex items-center justify-center">
+            <canvas ref={chart2Ref} className="!bg-transparent" />
+          </div>
         </div>
-        <div className="w-full h-[340px] flex items-center justify-center">
-          <canvas ref={chart2Ref} className="!bg-transparent" />
-        </div>
-      </div>
 
-      {/* Chart 2 */}
-      <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-        <div className="flex w-full items-center justify-between mb-2">
-          {renderDropdowns([
-            {
-              label: "Select Run Id",
-              options: runIds,
-              value: selectedRunId2,
-              onChange: setSelectedRunId2,
-            },
-            {
-              label: "Select Month",
-              options: ["", ...tatMonthNames],
-              value: selectedMonth2,
-              onChange: setSelectedMonth2
-            },
-            {
-              label: "Select Year",
-              options: yearOptions,
-              value: selectedYear2,
-              onChange: setSelectedYear2
-            }
-          ])}
+        {/* Chart 2 */}
+        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+          <div className="flex w-full items-center justify-between mb-2">
+            {renderDropdowns([
+              {
+                label: "Select Run Id",
+                options: runIds,
+                value: selectedRunId2,
+                onChange: setSelectedRunId2,
+              },
+              {
+                label: "Select Month",
+                options: ["", ...tatMonthNames],
+                value: selectedMonth2,
+                onChange: setSelectedMonth2
+              },
+              {
+                label: "Select Year",
+                options: yearOptions,
+                value: selectedYear2,
+                onChange: setSelectedYear2
+              }
+            ])}
+          </div>
+          <div className="w-full h-[340px] flex items-center justify-center">
+            <canvas ref={chart1Ref} className="!bg-transparent" />
+          </div>
         </div>
-        <div className="w-full h-[340px] flex items-center justify-center">
-          <canvas ref={chart1Ref} className="!bg-transparent" />
-        </div>
-      </div>
 
-      {/* Chart 3 */}
-      <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-        <div className="flex w-full items-center justify-between mb-2">
-          {renderDropdowns([
-            {
-              label: "Select Test Name",
-              options: uniqueTestNames,
-              value: selectedTatTestName3,
-              onChange: setSelectedTatTestName3
-            },
-            {
-              label: "Select Month",
-              options: tatMonthNames,
-              value: selectedTatMonth3,
-              onChange: setSelectedTatMonth3
-            },
-            {
-              label: "Select Year",
-              options: yearOptions,
-              value: selectedTatYear3,
-              onChange: setSelectedTatYear3
-            }
-          ], false)}
+        {/* Chart 3 */}
+        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+          <div className="flex w-full items-center justify-between mb-2">
+            {renderDropdowns([
+              {
+                label: "Select Test Name",
+                options: uniqueTestNames,
+                value: selectedTatTestName3,
+                onChange: setSelectedTatTestName3
+              },
+              {
+                label: "Select Month",
+                options: tatMonthNames,
+                value: selectedTatMonth3,
+                onChange: setSelectedTatMonth3
+              },
+              {
+                label: "Select Year",
+                options: yearOptions,
+                value: selectedTatYear3,
+                onChange: setSelectedTatYear3
+              }
+            ], false)}
+          </div>
+          <div className="w-full h-[340px] flex items-center justify-center">
+            <canvas ref={chart3Ref} className="!bg-transparent" />
+          </div>
         </div>
-        <div className="w-full h-[340px] flex items-center justify-center">
-          <canvas ref={chart3Ref} className="!bg-transparent" />
-        </div>
-      </div>
 
-      {/* Chart 4 */}
-      <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-        <div className="flex w-full items-center justify-between mb-2">
-          {renderDropdowns([
-            {
-              label: "Select Test Name",
-              options: uniqueTestNames,
-              value: selectedTatTestName4,
-              onChange: setSelectedTatTestName4
-            },
-            {
-              label: "Select Month",
-              options: tatMonthNames,
-              value: selectedTatMonth4,
-              onChange: setSelectedTatMonth4
-            },
-            {
-              label: "Select Year",
-              options: yearOptions,
-              value: selectedTatYear4,
-              onChange: setSelectedTatYear4
-            }
-          ], false)}
+        {/* Chart 4 */}
+        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+          <div className="flex w-full items-center justify-between mb-2">
+            {renderDropdowns([
+              {
+                label: "Select Test Name",
+                options: uniqueTestNames,
+                value: selectedTatTestName4,
+                onChange: setSelectedTatTestName4
+              },
+              {
+                label: "Select Month",
+                options: tatMonthNames,
+                value: selectedTatMonth4,
+                onChange: setSelectedTatMonth4
+              },
+              {
+                label: "Select Year",
+                options: yearOptions,
+                value: selectedTatYear4,
+                onChange: setSelectedTatYear4
+              }
+            ], false)}
+          </div>
+          <div className="w-full h-[400px] flex items-center justify-center">
+            <canvas ref={chart4Ref} className="!bg-transparent" />
+          </div>
         </div>
-        <div className="w-full h-[400px] flex items-center justify-center">
-          <canvas ref={chart4Ref} className="!bg-transparent" />
-        </div>
+        <ToastContainer />
       </div>
-      <ToastContainer />
-    </div>
+    </>
   );
 };
 

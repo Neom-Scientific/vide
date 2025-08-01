@@ -879,7 +879,7 @@ const Processing = () => {
 
   useEffect(() => {
     const fetchInUseEffect = async () => {
-      setProcessing(true);
+      // setProcessing(true);
       const filters = JSON.parse(localStorage.getItem("processingFilters") || "{}");
       const data = {
         sample_id: filters.sample_id,
@@ -1176,9 +1176,10 @@ const Processing = () => {
             <Button
               type='submit'
               onClick={() => { handlesubmit() }}
+              disabled={processing}
               className="w-[240px] mt-[20px] bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
             >
-              Retrieve
+              {processing ? 'Retrieving...': 'Retrieve'}
             </Button>
           </div>
         </div>

@@ -57,6 +57,7 @@ const RunSetup = () => {
   const user = JSON.parse(Cookies.get('user') || '{}');
   const [runDetailsWithSampleIds, setRunDetailsWithSampleIds] = useState([]);
   const [selectedPoolNos, setSelectedPoolNos] = useState([]);
+  const [processing, setProcessing] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(getRunSetupSchema(InstrumentType)),
@@ -170,14 +171,14 @@ const RunSetup = () => {
       form.setValue("selected_application", updatedSelectedTestNames.join(", "));
 
       // --- NEW: Get sample_ids for this test_name ---
-      console.log('testNames', testNames);
+      // console.log('testNames', testNames);
       const testObj = testNames.find(t => t.test_name === selectedTestName);
-      console.log('testObj', testObj);
+      // console.log('testObj', testObj);
       const internalIdsParam = testObj && testObj.internal_ids && testObj.internal_ids.length > 0
         ? testObj.internal_ids.join(',')
         : '';
 
-      console.log('internalIdsParam', internalIdsParam);
+      // console.log('internalIdsParam', internalIdsParam);
 
       // Fetch pool data for the selected test name and sample_ids
       const response = await axios.get(
@@ -186,7 +187,7 @@ const RunSetup = () => {
       // console.log('response', response.data);
       if (response.data[0].status === 200) {
         const poolDataForTest = response.data[0].data;
-        console.log('poolDataForTest', poolDataForTest);
+        // console.log('poolDataForTest', poolDataForTest);
         setPoolData((prev) => {
           // Remove any existing pool data for this test (and its + Mito variant)
           const filtered = prev.filter(
@@ -220,6 +221,7 @@ const RunSetup = () => {
   };
 
   const handleSubmit = async (data) => {
+    setProcessing(true); // Set processing state to true
     try {
       const filteredPoolData = poolData.filter((pool) =>
         selectedTestNames.some(
@@ -244,6 +246,7 @@ const RunSetup = () => {
       });
 
       if (response.data[0].status === 200) {
+        setProcessing(false); // Reset processing state
         toast.success("Run setup submitted successfully!");
         form.reset();
         form.setValue("total_gb_available", '0')
@@ -302,9 +305,11 @@ const RunSetup = () => {
         setPoolData([]);
         fetchRunDetails(); // Fetch updated run details after submission
       } else if (response.data[0].status === 404) {
+        setProcessing(false); // Reset processing state
         toast.error(response.data[0].message || "No data found for the provided Organization Name and test name");
       }
     } catch (error) {
+      setProcessing(false); // Reset processing state
       console.error("Error submitting form:", error);
       toast.error("An error occurred while submitting the form.");
     }
@@ -323,11 +328,11 @@ const RunSetup = () => {
 
   useEffect(() => {
     if (dinatured_lib_next_seq_550 && total_volume_next_seq_550 && loading_conc_550) {
-      console.log('dinatured_lib_next_seq_550', dinatured_lib_next_seq_550);
+      // console.log('dinatured_lib_next_seq_550', dinatured_lib_next_seq_550);
       const libReq = parseFloat((total_volume_next_seq_550 * loading_conc_550 / dinatured_lib_next_seq_550).toFixed(2));
       // console.log('libReq', libReq);
-      console.log('total_volume_next_seq_550', total_volume_next_seq_550);
-      console.log('loading_conc_550', loading_conc_550);
+      // console.log('total_volume_next_seq_550', total_volume_next_seq_550);
+      // console.log('loading_conc_550', loading_conc_550);
       form.setValue("lib_required_next_seq_550", libReq);
       const bufferVolume = parseFloat((total_volume_next_seq_550 - libReq).toFixed(2));
 
@@ -347,7 +352,7 @@ const RunSetup = () => {
 
   useEffect(() => {
     if (totalVolumeLoadingConc && loading_conc_1000_2000) {
-      console.log('loading_conc', loading_conc_1000_2000);
+      // console.log('loading_conc', loading_conc_1000_2000);
       const volOf2nmLoadingConc = parseFloat((loading_conc_1000_2000 * totalVolumeLoadingConc / 2000).toFixed(2));
       form.setValue("vol_of_2nm_for_600pm_next_seq_1000_2000", volOf2nmLoadingConc);
       const volOfRsBetweenLoadingConc = parseFloat((totalVolumeLoadingConc - volOf2nmLoadingConc).toFixed(2));
@@ -406,7 +411,7 @@ const RunSetup = () => {
       return NaN;
     }).filter(size => !isNaN(size) && size > 0);
 
-    console.log('updatedSize', updatedSize);
+    // console.log('updatedSize', updatedSize);
     const avgSize = updatedSize.length > 0
       ? parseFloat((updatedSize.reduce((sum, size) => sum + size, 0) / updatedSize.length).toFixed(2))
       : 0;
@@ -421,7 +426,7 @@ const RunSetup = () => {
         )
       )
       .reduce((sum, pool) => sum + (pool.data_required || 0), 0); // Sum up the data_required values
-    console.log('total_required', totalRequired);
+    // console.log('total_required', totalRequired);
 
     form.setValue("total_required", totalRequired); // Update the total_required field in the form
 
@@ -561,8 +566,8 @@ const RunSetup = () => {
       };
     });
 
-    console.log('table_data', updatedTableData);
-    console.log('table_data.json', JSON.stringify(updatedTableData));
+    // console.log('table_data', updatedTableData);
+    // console.log('table_data.json', JSON.stringify(updatedTableData));
 
     form.setValue("table_data", updatedTableData);
   }, [selectedTestNames, poolData, percentage, form.watch("final_pool_vol_ul")]);
@@ -609,7 +614,7 @@ const RunSetup = () => {
       // console.log('response', response.data);
       if (response.data[0].status === 200) {
         setRunDetails(response.data[0].data);
-        console.log('response.data[0].data', response.data[0].data);
+        // console.log('response.data[0].data', response.data[0].data);
       }
       if (response.data[0].status === 400) {
         toast.error(response.data[0].message || "No data found for the provided Organization Name");
@@ -630,7 +635,7 @@ const RunSetup = () => {
     try {
       const response = await axios.get(`/api/run-ids-data?runId=${runId}&hospital_name=${user.hospital_name}`);
       if (response.data[0].status === 200) {
-        console.log('response.data[0].data', response.data[0].data);
+        // console.log('response.data[0].data', response.data[0].data);
         setRunDetailsWithSampleIds(response.data[0].data);
       }
       else if (response.data[0].status === 404) {
@@ -1324,9 +1329,10 @@ const RunSetup = () => {
 
                   <Button
                     type="submit"
+                    disabled={processing} // Disable button when processing
                     className="w-full mt-7 bg-gray-700 text-white py-2 rounded hover:bg-gray-800 transition-colors"
                   >
-                    Submit
+                    {processing ? 'Submitting...' : 'Submit'}
                   </Button>
 
                 </div>

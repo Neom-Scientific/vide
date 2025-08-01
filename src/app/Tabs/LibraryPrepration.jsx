@@ -2837,8 +2837,9 @@ const LibraryPrepration = () => {
           <Button
             type="submit"
             onClick={handleSubmit}
+            disabled = {processing}
             className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12">
-            Save
+            {processing ? 'Saving...' : 'Save'}
           </Button>
         </>
         )

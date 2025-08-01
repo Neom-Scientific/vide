@@ -395,6 +395,7 @@ export const SampleRegistration = () => {
         toast.success('Sample registered successfully');
         form.reset();
         handleReset(); // Reset form and state
+        setProcessing(false); // <-- Add this line to reset processing state
 
         // setSelectedTests([]);
         // setTrfUrl('');
@@ -529,8 +530,10 @@ export const SampleRegistration = () => {
         selectedTests.length = 0; // Clear selected tests
       } else {
         toast.error('Sample update failed');
+        setProcessing(false);
       }
     } catch (error) {
+      setProcessing(false);
       console.error('Error updating sample:', error);
       toast.error('Sample update failed');
     }
@@ -1905,38 +1908,45 @@ export const SampleRegistration = () => {
               />
             </div>
 
-            {!editButton && (
-              <Button
-                type='submit'
-                className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4'
-              >
-                Submit
-              </Button>
-            )}
-
-            {
-              user && user.role !== 'NormalUser' && editButton && (
+            <div className='flex justify-start'>
+              {!editButton ? (
                 <Button
-                  type='button'
-                  className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 ml-2'
-                  onClick={handleUpdate}
+                  type='submit'
+                  disabled={processing}
+                  className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 flex items-center gap-2'
                 >
-                  Update
+                  {processing && (
+                    <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                  )}
+                  {processing ? 'Submitting...' : 'Submit'}
                 </Button>
-              )
-            }
+              ) : (
+                user && user.role !== 'NormalUser' && (
+                  <Button
+                    type='button'
+                    disabled={processing}
+                    onClick={handleUpdate}
+                    className='bg-orange-400 text-white cursor-pointer hover:bg-orange-500 my-4 ml-2 flex items-center gap-2'
+                  >
+                    {processing && (
+                      <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    )}
+                    {processing ? 'Updating...' : 'Update'}
+                  </Button>
+                )
+              )}
 
-            <Button
-              type='reset'
-              className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'
-              onClick={() => {
-                form.reset();
-                handleReset();
-              }}
-            >
-              Reset
-            </Button>
-            {/* </div> */}
+              <Button
+                type='reset'
+                className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'
+                onClick={() => {
+                  form.reset();
+                  handleReset();
+                }}
+              >
+                Reset
+              </Button>
+            </div>
 
 
           </form >

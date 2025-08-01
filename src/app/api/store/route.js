@@ -73,7 +73,7 @@ export async function POST(request) {
             consent_form_checkbox,
         } = fields;
 
-        console.log('fields.dept_name', dept_name);
+        // console.log('fields.dept_name', dept_name);
 
         const today = new Date(registration_date || Date.now());
         const todayStr = today.toISOString().slice(0, 10);
@@ -172,7 +172,7 @@ export async function POST(request) {
                 supportsAllDrives: true,
                 driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
             });
-            console.log('response.data', response.data);
+            // console.log('response.data', response.data);
             trf_file_id = response.data.id;
         }
 
