@@ -1526,6 +1526,15 @@ const LibraryPrepration = () => {
     }
   };
 
+  function safeParse(json, fallback = {}) {
+    try {
+      if (!json) return fallback;
+      return JSON.parse(json);
+    } catch {
+      return fallback;
+    }
+  }
+
   const selectedRows = table.getRowModel().rows.filter(r => rowSelection[r.id]);
   const lastSelectedIndex = selectedRows.length > 0
     ? selectedRows[selectedRows.length - 1].index
@@ -1675,7 +1684,7 @@ const LibraryPrepration = () => {
 
 
   const filteredTestNames = getTheTestNames.filter(testName => {
-    const storedData = JSON.parse(localStorage.getItem("libraryPreparationData") || {});
+    const storedData = safeParse(localStorage.getItem("libraryPreparationData"), {});
     const testData = storedData[testName];
     if (!testData) return false;
     if (Array.isArray(testData)) {
@@ -2837,9 +2846,22 @@ const LibraryPrepration = () => {
           <Button
             type="submit"
             onClick={handleSubmit}
-            disabled = {processing}
+            disabled={processing}
             className="bg-gray-700 hover:bg-gray-800 mt-5 text-white cursor-pointer min-w-[120px] h-12">
             {processing ? 'Saving...' : 'Save'}
+          </Button>
+
+          <Button
+            type='button'
+            className='text-white ms-2 bg-red-600 hover:bg-red-700 mt-5 cursor-pointer min-w-[120px] h-12'
+            onClick={() => {
+              setActiveTab("processing");
+              localStorage.removeItem('libraryPreparationData');
+              localStorage.removeItem('selectedLibraryPrepSamples');
+              setMessage(1);
+            }}
+          >
+            Remove All
           </Button>
         </>
         )

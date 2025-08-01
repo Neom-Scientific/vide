@@ -23,6 +23,7 @@ import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { set } from "lodash";
 
 const Processing = () => {
   const user = JSON.parse(Cookies.get("user") || "{}");
@@ -723,6 +724,7 @@ const Processing = () => {
   ];
 
   const handleSendForLibraryPreparation = async () => {
+    setProcessing(true);
     const validRows = selectedRows.filter(row => row.specimen_quality !== 'Not Accepted');
     if (validRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
@@ -815,6 +817,7 @@ const Processing = () => {
 
     // Navigate
     dispatch(setActiveTab("library-prepration"));
+    setProcessing(false);
   };
 
   const handleSaveToExcel = async () => {
@@ -1382,10 +1385,11 @@ const Processing = () => {
 
             {selectedRows && (
               <Button
+              disabled={processing}
                 className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (selectedRows ? "" : "opacity-50")}
                 onClick={handleSendForLibraryPreparation}
               >
-                Send for Library Preparation
+                {processing ? 'Sending...' : 'Send for Library Preparation'}
               </Button>
             )}
 
