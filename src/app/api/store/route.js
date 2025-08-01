@@ -172,6 +172,7 @@ export async function POST(request) {
                 supportsAllDrives: true,
                 driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
             });
+            console.log('response.data', response.data);
             trf_file_id = response.data.id;
         }
 
@@ -258,7 +259,7 @@ export async function POST(request) {
             registration_date || null,
             sample_date || null,
             sample_type,
-            JSON.stringify(trf_file_id) || null,
+            trf_file_id || null,
             collection_date_time || null,
             storage_condition,
             prority,

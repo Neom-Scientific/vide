@@ -55,7 +55,7 @@ const getFormSchema = (selectedTests) => {
 
 export const SampleRegistration = () => {
   const [showRemoveModal, setShowRemoveModal] = useState(false);
-  const [trfFiles, setTrfFiles] = useState([]);
+  const [trfFiles, setTrfFiles] = useState(null);
   const [trfUrl, setTrfUrl] = useState('');
   const [selectedTests, setSelectedTests] = useState([]);
   const [hasSelectedFirstTest, setHasSelectedFirstTest] = useState(false);
@@ -382,11 +382,8 @@ export const SampleRegistration = () => {
       formData.append(key, value ?? '');
     });
 
-    // Attach the TRF file if present
-    if (trfFiles && trfFiles.length > 0) {
-      trfFiles.forEach(file => {
-        formData.append('files', file); // Use 'files' as the key for multiple files
-      });
+    if (trfFiles) {
+      formData.append('file', trfFiles);
     }
 
     try {
