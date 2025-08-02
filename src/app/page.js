@@ -26,6 +26,12 @@ const tatMonthNames = [
 ];
 
 const Page = () => {
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const previousYear = currentYear - 1;
+  const yearOptions = [currentYear.toString(), previousYear.toString()];
+
   const [masterSheetData, setMasterSheetData] = useState([]);
   const [poolData, setPoolData] = useState([]);
   const [user, setUser] = useState(null);
@@ -38,17 +44,17 @@ const Page = () => {
   // Chart 2
   const [selectedRunId2, setSelectedRunId2] = useState([]);
   const [selectedMonth2, setSelectedMonth2] = useState("");
-  const [selectedYear2, setSelectedYear2] = useState([]);
+  const [selectedYear2, setSelectedYear2] = useState([currentYear.toString()]);
 
   // Chart 3
   const [selectedTatTestName3, setSelectedTatTestName3] = useState([]);
   const [selectedTatMonth3, setSelectedTatMonth3] = useState(tatMonthNames[new Date().getMonth()]);
-  const [selectedTatYear3, setSelectedTatYear3] = useState([]);
+  const [selectedTatYear3, setSelectedTatYear3] = useState([currentYear.toString()]);
 
   // Chart 4
   const [selectedTatTestName4, setSelectedTatTestName4] = useState([]);
   const [selectedTatMonth4, setSelectedTatMonth4] = useState(tatMonthNames[new Date().getMonth()]);
-  const [selectedTatYear4, setSelectedTatYear4] = useState([]);
+  const [selectedTatYear4, setSelectedTatYear4] = useState([currentYear.toString()]);
 
   const [tableData, setTableData] = useState([]);
 
@@ -63,11 +69,6 @@ const Page = () => {
   const chart2Instance = useRef(null);
   const chart3Instance = useRef(null);
   const chart4Instance = useRef(null);
-
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const previousYear = currentYear - 1;
-  const yearOptions = [currentYear.toString(), previousYear.toString()];
 
   // Fetch pool data
   useEffect(() => {
@@ -332,8 +333,8 @@ const Page = () => {
       barPercentage: 0.7,
       categoryPercentage: 0.6,
       datalabels: {
-        anchor: 'end',
-        align: 'top',
+        anchor: 'center',
+        align: 'center',
         font: { weight: 'bold', size: 14 },
         color: '#22223b',
         formatter: v => v > 0 ? v : '',
@@ -612,7 +613,52 @@ const Page = () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: true, position: 'right' },
+          legend: {
+            display: true,
+            position: 'right',
+            onClick: (e, legendItem, legend) => {
+              const chart = legend.chart;
+              const datasets = chart.data.datasets;
+              const clickedIndex = legendItem.datasetIndex;
+
+              if (legendItem.showAll) {
+                // Show all datasets
+                datasets.forEach((ds, i) => {
+                  chart.setDatasetVisibility(i, true);
+                });
+                chart.update();
+                return;
+              }
+
+              // Hide all datasets except the clicked one
+              datasets.forEach((ds, i) => {
+                chart.setDatasetVisibility(i, i === clickedIndex);
+              });
+              chart.update();
+            },
+            labels: {
+              font: { weight: 'bold' },
+              color: '#22223b',
+              generateLabels: function (chart) {
+                const datasets = chart.data.datasets;
+                // Add "Show All" at the top
+                const showAllItem = {
+                  text: 'Show All',
+                  fillStyle: 'transparent',
+                  hidden: false,
+                  datasetIndex: null,
+                  showAll: true // Custom flag
+                };
+                const datasetItems = datasets.map((ds, i) => ({
+                  text: ds.label,
+                  fillStyle: ds.backgroundColor,
+                  hidden: !chart.isDatasetVisible(i),
+                  datasetIndex: i
+                }));
+                return [showAllItem, ...datasetItems];
+              }
+            }
+          },
           tooltip: { enabled: true },
           datalabels: { display: true }
         },
@@ -621,6 +667,7 @@ const Page = () => {
             title: { display: true, text: "" },
             stacked: false,
             ticks: {
+              // display: false,
               font: { size: 12, weight: 'bold' },
               color: '#374151',
               maxRotation: 0,
@@ -639,6 +686,9 @@ const Page = () => {
               drawBorder: false,
             }
           }
+        },
+        onHover: (event, chartElement) => {
+          event.native.target.style.cursor = chartElement.length ? 'pointer' : 'default';
         }
       },
       plugins: [ChartDataLabels]
