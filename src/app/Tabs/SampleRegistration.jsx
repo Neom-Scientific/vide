@@ -1812,7 +1812,7 @@ export const SampleRegistration = () => {
                                 d="M12 4v16m8-8H4"
                               />
                             </svg>
-                            Upload TRF
+                            Upload Document
                           </Button>
                           <input
                             id="trf-upload"
@@ -1832,7 +1832,7 @@ export const SampleRegistration = () => {
                             disabled={!trfUrl}
                             variant="outline"
                           >
-                            Preview TRF
+                            Preview
                           </Button>
                           {/* )} */}
                         </div>
@@ -1871,7 +1871,7 @@ export const SampleRegistration = () => {
                   render={({ field }) => (
                     <FormItem className='my-2'>
                       <div className="flex justify-between items-center">
-                        <FormLabel>TRF File Name <span className='text-red-500'>*</span></FormLabel>
+                        <FormLabel>Document File Name <span className='text-red-500'>*</span></FormLabel>
                         {form.formState.errors.trf && (
                           <p className='text-red-500 text-sm'>
                             {form.formState.errors.trf.message}
