@@ -25,6 +25,23 @@ const tatMonthNames = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
+const testNameShortMap = {
+  "Cardio Comprehensive Myopathy": { short: "CMP", full: "Cardio Comprehensive Myopathy" },
+  "Cardio Metabolic Syndrome (Screening)": { short: "CMS", full: "Cardio Metabolic Syndrome" },
+  "Cardio Comprehensive (Screening)": { short: "CCS", full: "Cardio Comprehensive (Screening)" },
+  "SolidTumor Panel": { short: "STP", full: "SolidTumor Panel" },
+  "WES": { short: "WES", full: "Whole Exome Sequencing" },
+  "Carrier Screening": { short: "CS", full: "Carrier Screening" },
+  "CES": { short: "CES", full: "Clinical Exome Sequencing" },
+  "Myeloid": { short: "Myeloid", full: "Myeloid" },
+  "HCP": { short: "HCP", full: "Hereditary Cancer Panel" },
+  "HRR": { short: "HRR", full: "Hereditary Retinal Disorders" },
+  "SGS": { short: "SGS", full: "Shallow Genome Sequencing" },
+  "HLA": { short: "HLA", full: "Human Leukocyte Antigen" },
+  "WES + Mito": { short: "WES + Mito", full: "Whole Exome Sequencing + Mitochondrial" },
+  "CES + Mito": { short: "CES + Mito", full: "Clinical Exome Sequencing + Mitochondrial" },
+};
+
 const Page = () => {
 
   const now = new Date();
@@ -315,31 +332,44 @@ const Page = () => {
     }));
   } else {
     // Default: show test names on x-axis
-    chart2XAxisLabels = selectedTestName1.length > 0
+    chart2XAxisLabels = (selectedTestName1.length > 0
       ? selectedTestName1.map(n => n.trim())
-      : uniqueTestNames;
+      : uniqueTestNames
+    ).map(name => testNameShortMap[name]?.short || name);
 
-    chart2Datasets = chart2XAxisLabels.map((testName, idx) => ({
-      label: testName,
-      data: chart2XAxisLabels.map((label, i) =>
-        label === testName
-          ? filteredChartData.filter(item => (item.test_name || '').trim() === testName).length
-          : 0
-      ),
-      backgroundColor: [
-        '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
-      ][idx % 8],
-      borderRadius: 8,
-      barPercentage: 0.7,
-      categoryPercentage: 0.6,
-      datalabels: {
-        anchor: 'center',
-        align: 'center',
-        font: { weight: 'bold', size: 14 },
-        color: '#22223b',
-        formatter: v => v > 0 ? v : '',
-      }
-    }));
+    chart2Datasets = chart2XAxisLabels.map((shortName, idx) => {
+      // Find the full test name for this short name
+      const fullName = Object.entries(testNameShortMap).find(
+        ([key, val]) => val.short === shortName
+      )?.[0] || shortName;
+
+      return {
+        label: shortName,
+        data: chart2XAxisLabels.map((label, i) => {
+          // Find the full test name for this label
+          const labelFullName = Object.entries(testNameShortMap).find(
+            ([key, val]) => val.short === label
+          )?.[0] || label;
+
+          return label === shortName
+            ? filteredChartData.filter(item => (item.test_name || '').trim() === fullName).length
+            : 0;
+        }),
+        backgroundColor: [
+          '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
+        ][idx % 8],
+        borderRadius: 8,
+        barPercentage: 0.7,
+        categoryPercentage: 0.6,
+        datalabels: {
+          anchor: 'center',
+          align: 'center',
+          font: { weight: 'bold', size: 14 },
+          color: '#22223b',
+          formatter: v => v > 0 ? v : '',
+        }
+      };
+    });
   }
 
   // --- Chart 3: TAT Days by Month (multi-select) ---
@@ -667,7 +697,7 @@ const Page = () => {
             title: { display: true, text: "" },
             stacked: false,
             ticks: {
-              // display: false,
+              autoSkip: false,
               font: { size: 12, weight: 'bold' },
               color: '#374151',
               maxRotation: 0,
