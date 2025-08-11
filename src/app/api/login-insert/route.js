@@ -1,7 +1,25 @@
 import { pool } from "@/lib/db";
 import { NextResponse } from "next/server";
 
+export async function OPTIONS(request) {
+    return NextResponse.json({}, {
+        status: 200,
+        headers: {
+            "Access-Control-Allow-Origin": "*", // Use your frontend domain in production
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        },
+    });
+}
+
 export async function POST(request) {
+
+    const corsHeaders = {
+        "Access-Control-Allow-Origin": "*", // Use your frontend domain in production
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    };
+    
     const body = await request.json();
     const { username, password } = body;
     try {
