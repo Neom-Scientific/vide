@@ -35,7 +35,8 @@ export async function POST(request) {
         let username = getUsername(todayCount + 1);
 
         // Check if email exists
-        if (rows.length > 0) {
+        const emailRows = await pool.query('SELECT * FROM request_form WHERE email = $1', [email]);
+        if (emailRows.rows.length > 0) {
             response.push({
                 status: 400,
                 message: 'Email already exists',
