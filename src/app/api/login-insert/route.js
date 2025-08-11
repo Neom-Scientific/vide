@@ -13,13 +13,12 @@ export async function OPTIONS(request) {
 }
 
 export async function POST(request) {
-
     const corsHeaders = {
         "Access-Control-Allow-Origin": "*", // Use your frontend domain in production
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
     };
-    
+
     const body = await request.json();
     const { username, password } = body;
     try {
@@ -31,17 +30,16 @@ export async function POST(request) {
                 status: 401,
                 message: 'Username does not exist',
             });
-            return NextResponse.json(response);
+            return NextResponse.json(response, { headers: corsHeaders });
         }
         const userData = await pool.query('SELECT * FROM request_form WHERE username = $1', [username]);
-        // console.log('rows', userData.rows);
         const isPasswordValid = userData.rows[0].password === password;
         if (!isPasswordValid) {
             response.push({
                 status: 401,
                 message: 'Invalid password',
             });
-            return NextResponse.json(response);
+            return NextResponse.json(response, { headers: corsHeaders });
         }
         const userEnable = userData.rows[0].status;
         if (userEnable === 'disable') {
@@ -49,7 +47,7 @@ export async function POST(request) {
                 status: 401,
                 message: 'Contact admin to enable your account',
             });
-            return NextResponse.json(response);
+            return NextResponse.json(response, { headers: corsHeaders });
         }
         const result = await pool.query(
             'INSERT INTO login_data (username, password) VALUES ($1, $2)',
@@ -72,17 +70,17 @@ export async function POST(request) {
                 },
                 message: 'Login successful',
             });
-            return NextResponse.json(response);
+            return NextResponse.json(response, { headers: corsHeaders });
         } else {
             response.push({
                 status: 500,
                 message: 'Failed to login',
             });
-            return NextResponse.json(response)
+            return NextResponse.json(response, { headers: corsHeaders });
         }
     }
     catch (error) {
         console.error('Error executing query', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500, headers: corsHeaders });
     }
 }
