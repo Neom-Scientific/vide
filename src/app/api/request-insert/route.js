@@ -2,7 +2,25 @@ import { pool } from "@/lib/db";
 import { sendMail } from "@/lib/send-mail";
 import { NextResponse } from "next/server";
 
+export async function OPTIONS(request) {
+    return NextResponse.json({}, {
+        status: 200,
+        headers: {
+            "Access-Control-Allow-Origin": "*", // Use your frontend domain in production
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        },
+    });
+}
+
 export async function POST(request) {
+
+    const corsHeaders = {
+        "Access-Control-Allow-Origin": "*", // Use your frontend domain in production
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+    };
+    
     const body = await request.json();
     const { name, hospital_name, email, password, phone_no } = body.data;
     try {
@@ -22,7 +40,7 @@ export async function POST(request) {
                 status: 400,
                 message: 'Email already exists',
             });
-            return NextResponse.json(response);
+            return NextResponse.json(response, { headers: corsHeaders });
         }
 
         // Check required fields
@@ -31,7 +49,7 @@ export async function POST(request) {
                 status: 400,
                 message: 'All fields are required',
             });
-            return NextResponse.json(response);
+            return NextResponse.json(response, { headers: corsHeaders });
         }
 
         // Check if hospital_name exists and assign hospital_id
@@ -104,7 +122,7 @@ export async function POST(request) {
             });
 
         }
-        return NextResponse.json(response)
+            return NextResponse.json(response, { headers: corsHeaders });
     }
     catch (error) {
         console.error('Error executing query', error);
