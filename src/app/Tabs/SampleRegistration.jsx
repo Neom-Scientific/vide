@@ -684,6 +684,109 @@ export const SampleRegistration = () => {
             </div> */}
 
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 mb-4 dark:border dark:border-orange-50">
+              <h1 className=' font-bold text-2xl text-orange-400 mb-2'>Document Uploadation</h1>
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+              <div>
+                <FormField
+                  control={form.control}
+                  name='trf'
+                  render={({ field }) => (
+                    <FormItem className='mt-3'>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          className="bg-gray-700 hover:bg-gray-700 cursor-pointer text-white flex items-center gap-2"
+                          onClick={() => document.getElementById('trf-upload').click()}
+                        >
+                          <svg
+                            xmlns="http:www.w3.org/2000/svg"
+                            className="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            strokeWidth={2}
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M12 4v16m8-8H4"
+                            />
+                          </svg>
+                          Upload Document
+                        </Button>
+                        <input
+                          id="trf-upload"
+                          type="file"
+                          accept=".pdf"
+                          className="hidden"
+                          onChange={e => {
+                            uploadTrf(e.target.files[0]);
+                            e.target.value = ""; // Reset input value
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          className="ml-2"
+                          onClick={() => window.open(trfUrl, '_blank')}
+                          disabled={!trfUrl}
+                          variant="outline"
+                        >
+                          Preview
+                        </Button>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                <div className="mt-3 flex flex-wrap gap-2 justify-start text-sm">
+                  <input
+                    type='checkbox'
+                    name='trf_checkbox'
+                    className='cursor-pointer'
+                    checked={form.watch('trf_checkbox') === 'Yes'}
+                    onChange={e => form.setValue('trf_checkbox', e.target.checked ? 'Yes' : 'No')}
+                  /> TRF
+                  <input
+                    type='checkbox'
+                    name='opd_notes_checkbox'
+                    className='cursor-pointer'
+                    checked={form.watch('opd_notes_checkbox') === 'Yes'}
+                    onChange={e => form.setValue('opd_notes_checkbox', e.target.checked ? 'Yes' : 'No')}
+                  /> OPD Notes
+                  <input
+                    type='checkbox'
+                    name='consent_form_checkbox'
+                    className='cursor-pointer'
+                    checked={form.watch('consent_form_checkbox') === 'Yes'}
+                    onChange={e => form.setValue('consent_form_checkbox', e.target.checked ? 'Yes' : 'No')}
+                  /> Consent Form
+                </div>
+              </div>
+
+                <FormField
+                  control={form.control}
+                  name='trf_file'
+                  render={({ field }) => (
+                    <FormItem className='my-2'>
+                      <div className="flex justify-between items-center">
+                        <FormLabel>Document File Name <span className='text-red-500'>*</span></FormLabel>
+                        {form.formState.errors.trf && (
+                          <p className='text-red-500 text-sm'>
+                            {form.formState.errors.trf.message}
+                          </p>
+                        )}
+                      </div>
+                      <Input
+                        disabled
+                        {...field}
+                        className='my-2 border-2 border-orange-300'
+                      />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 mb-4 dark:border dark:border-orange-50">
               <h1 className=' font-bold text-2xl text-orange-400 mb-2'>Sample Information</h1>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
 
@@ -1787,7 +1890,7 @@ export const SampleRegistration = () => {
                 </div> */}
 
                   {/* upload trf */}
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name='trf'
                     render={({ field }) => (
@@ -1824,7 +1927,6 @@ export const SampleRegistration = () => {
                               e.target.value = ""; // Reset input value
                             }}
                           />
-                          {/* {trfUrl && ( */}
                           <Button
                             type="button"
                             className="ml-2"
@@ -1834,7 +1936,6 @@ export const SampleRegistration = () => {
                           >
                             Preview
                           </Button>
-                          {/* )} */}
                         </div>
                       </FormItem>
                     )}
@@ -1861,11 +1962,11 @@ export const SampleRegistration = () => {
                       checked={form.watch('consent_form_checkbox') === 'Yes'}
                       onChange={e => form.setValue('consent_form_checkbox', e.target.checked ? 'Yes' : 'No')}
                     /> Consent Form
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* trf file name */}
-                <FormField
+                {/* <FormField
                   control={form.control}
                   name='trf_file'
                   render={({ field }) => (
@@ -1882,11 +1983,10 @@ export const SampleRegistration = () => {
                         disabled
                         {...field}
                         className='my-2 border-2 border-orange-300'
-                      //value={trfFile ? trfFile.name : ''}
                       />
                     </FormItem>
                   )}
-                />
+                /> */}
 
               </div>
               {/* remarks */}
