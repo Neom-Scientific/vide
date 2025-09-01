@@ -628,6 +628,12 @@ const LibraryPrepration = () => {
                   );
                 }
 
+                if (column.key === 'internal_id'){
+                  // if row has the base_internal_id not null than show the base_internal_id value else internal_id value
+                  const base_internal_id = info.row.original.base_internal_id;
+                  return <span>{base_internal_id ? base_internal_id : value}</span> || "";
+                }
+
                 if (
                   column.key === "sample_id" ||
                   column.key === "test_name" ||

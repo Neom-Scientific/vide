@@ -340,7 +340,7 @@ const Processing = () => {
           enableSorting: true,
           cell: (info) => {
             const row = info.row.original;
-            return row.internal_id || "";
+            return row.base_internal_id ? row.base_internal_id : row.internal_id || "";
           },
         };
       }

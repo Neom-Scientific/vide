@@ -73,7 +73,7 @@ export async function POST(request) {
             consent_form_checkbox,
         } = fields;
 
-        // console.log('fields.dept_name', dept_name);
+        const testNames = (selectedTestName || "").split(",").map(t => t.trim()).filter(Boolean);
 
         const today = new Date(registration_date || Date.now());
         const todayStr = today.toISOString().slice(0, 10);
@@ -108,26 +108,54 @@ export async function POST(request) {
         }
 
 
-        const data = await pool.query('SELECT sample_id FROM master_sheet WHERE sample_id = $1', [sample_id])
+        const data = await pool.query('SELECT sample_id,test_name FROM master_sheet WHERE sample_id = $1', [sample_id])
+        if (data.rows.test_name === 'Myeloid' && data.rows.length >= 2) {
+            response.push({
+                message: 'Sample ID already exists for Myeloid test',
+                status: 400
+            })
+            return NextResponse.json(response)
+        }
+        else if (data.rows.length > 0 && data.rows.test_name !== 'Myeloid') {
+            response.push({
+                message: 'Sample ID already exists',
+                status: 400
+            })
+            return NextResponse.json(response)
+        }
 
-        let internal_id;
-        const date = new Date(registration_date || Date.now());
-        const year = date.getFullYear();
+        if (testNames.length === 1) {
+            let internal_id;
+            const date = new Date(registration_date || Date.now());
+            const year = date.getFullYear();
 
-        if (selectedTestName === "Myeloid") {
-            // Check if this sample_id already exists for Myeloid
-            const existing = await pool.query(
-                `SELECT internal_id FROM master_sheet WHERE sample_id = $1 AND test_name = $2`,
-                [sample_id, "Myeloid"]
-            );
+            if (selectedTestName === "Myeloid") {
+                // Check if this sample_id already exists for Myeloid
+                const existing = await pool.query(
+                    `SELECT internal_id FROM master_sheet WHERE sample_id = $1 AND test_name = $2`,
+                    [sample_id, "Myeloid"]
+                );
 
-            if (existing.rows.length > 0) {
-                // Use the same numeric part, but change the suffix to the new sample_type
-                const existingInternalId = existing.rows[0].internal_id;
-                const numericPart = existingInternalId.split('-')[0];
-                internal_id = `${numericPart}-${sample_type}`;
+                if (existing.rows.length > 0) {
+                    // Use the same numeric part, but change the suffix to the new sample_type
+                    const existingInternalId = existing.rows[0].internal_id;
+                    const numericPart = existingInternalId.split('-')[0];
+                    internal_id = `${numericPart}-${sample_type}`;
+                } else {
+                    // Find the max numeric part for this year from the whole table
+                    const maxInternalIdQuery = `
+                        SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+                        FROM master_sheet
+                        WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+                    `;
+                    const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
+                    const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+                    const nextSeq = maxSeq + 1;
+                    const numericPart = `${year}${String(nextSeq).padStart(5, '0')}`;
+                    internal_id = `${numericPart}-${sample_type}`;
+                }
             } else {
-                // Find the max numeric part for this year from the whole table
+                // Default logic for other test_names
                 const maxInternalIdQuery = `
                     SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
                     FROM master_sheet
@@ -136,57 +164,118 @@ export async function POST(request) {
                 const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
                 const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
                 const nextSeq = maxSeq + 1;
-                const numericPart = `${year}${String(nextSeq).padStart(5, '0')}`;
-                internal_id = `${numericPart}-${sample_type}`;
+                internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
             }
-        } else {
-            // Default logic for other test_names
-            const maxInternalIdQuery = `
-                SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
-                FROM master_sheet
-                WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+
+            let trf_file_id = null;
+            if (file && typeof file.arrayBuffer === "function") {
+                const fileBuffer = Buffer.from(await file.arrayBuffer());
+                const auth = new google.auth.GoogleAuth({
+                    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
+                    scopes: ["https://www.googleapis.com/auth/drive"],
+                });
+                const drive = google.drive({ version: "v3", auth });
+                const response = await drive.files.create({
+                    requestBody: {
+                        name: internal_id, // Use internal_id as file name
+                        parents: ["1xzTkB-k3PxEbGpvj4yoHXxBFgAtCLz1p"], // Your folder ID
+                    },
+                    media: {
+                        mimeType: file.type,
+                        body: Readable.from(fileBuffer),
+                    },
+                    supportsAllDrives: true,
+                    driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
+                });
+                // console.log('response.data', response.data);
+                trf_file_id = response.data.id;
+            }
+
+            const query = `
+                INSERT INTO master_sheet (
+                    hospital_name,
+                    dept_name,
+                    vial_received,
+                    specimen_quality,
+                    registration_date,
+                    sample_date,
+                    sample_type,
+                    trf,
+                    collection_date_time,
+                    storage_condition,
+                    prority,
+                    hospital_id,
+                    client_id,
+                    client_name,
+                    sample_id,
+                    patient_name,
+                    DOB,
+                    age,
+                    gender,
+                    ethnicity,
+                    father_mother_name,
+                    spouse_name,
+                    address,
+                    city,
+                    state,
+                    country,
+                    patient_mobile,
+                    doctor_mobile,
+                    doctor_name,
+                    email,
+                    test_name,
+                    remarks,
+                    clinical_history,
+                    repeat_required,
+                    repeat_reason,
+                    repeat_date,
+                    internal_id,
+                    systolic_bp,
+                    diastolic_bp,
+                    total_cholesterol,
+                    hdl_cholesterol,
+                    ldl_cholesterol,
+                    diabetes,
+                    smoker,
+                    hypertension_treatment,
+                    statin,
+                    aspirin_therapy,
+                    dna_isolation,
+                    lib_prep,
+                    under_seq,
+                    seq_completed,
+                    tantive_report_date,
+                    hpo_status,
+                    annotation,
+                    project_id,
+                    patient_email,
+                    sample_status,
+                    location,
+                    trf_checkbox,
+                    opd_notes_checkbox,
+                    consent_form_checkbox
+                )
+                VALUES (
+                    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                    $11, $12, $13, $14, $15, $16, $17, $18,
+                    $19, $20, $21, $22, $23, $24, $25,
+                    $26, $27, $28, $29, $30,
+                    $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
+                    $41, $42, $43, $44, $45, $46,$47, $48,
+                    $49, $50, $51, $52, $53, $54, $55, $56, $57,$58, $59,$60,$61
+                )
+                RETURNING *
             `;
-            const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
-            const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
-            const nextSeq = maxSeq + 1;
-            internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
-        }
-
-        let trf_file_id = null;
-        if (file && typeof file.arrayBuffer === "function") {
-            const fileBuffer = Buffer.from(await file.arrayBuffer());
-            const auth = new google.auth.GoogleAuth({
-                credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
-                scopes: ["https://www.googleapis.com/auth/drive"],
-            });
-            const drive = google.drive({ version: "v3", auth });
-            const response = await drive.files.create({
-                requestBody: {
-                    name: internal_id, // Use internal_id as file name
-                    parents: ["1xzTkB-k3PxEbGpvj4yoHXxBFgAtCLz1p"], // Your folder ID
-                },
-                media: {
-                    mimeType: file.type,
-                    body: Readable.from(fileBuffer),
-                },
-                supportsAllDrives: true,
-                driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
-            });
-            // console.log('response.data', response.data);
-            trf_file_id = response.data.id;
-        }
-
-        const query = `
-            INSERT INTO master_sheet (
+            const values = [
                 hospital_name,
-                dept_name,
+                dept_name || null,
                 vial_received,
                 specimen_quality,
-                registration_date,
-                sample_date,
+                registration_date || null,
+                sample_date || null,
                 sample_type,
-                trf,
-                collection_date_time,
+                trf_file_id || null,
+                collection_date_time || null,
                 storage_condition,
                 prority,
                 hospital_id,
@@ -194,7 +283,7 @@ export async function POST(request) {
                 client_name,
                 sample_id,
                 patient_name,
-                DOB,
+                DOB || null,
                 age,
                 gender,
                 ethnicity,
@@ -208,121 +297,251 @@ export async function POST(request) {
                 doctor_mobile,
                 doctor_name,
                 email,
-                test_name,
+                selectedTestName,
                 remarks,
                 clinical_history,
                 repeat_required,
                 repeat_reason,
-                repeat_date,
+                repeat_date || null,
                 internal_id,
-                systolic_bp,
-                diastolic_bp,
-                total_cholesterol,
-                hdl_cholesterol,
-                ldl_cholesterol,
-                diabetes,
-                smoker,
-                hypertension_treatment,
-                statin,
-                aspirin_therapy,
-                dna_isolation,
-                lib_prep,
-                under_seq,
-                seq_completed,
-                tantive_report_date,
-                hpo_status,
-                annotation,
+                systolic_bp || null,
+                diastolic_bp || null,
+                total_cholesterol || null,
+                hdl_cholesterol || null,
+                ldl_cholesterol || null,
+                diabetes || null,
+                smoker || null,
+                hypertension_treatment || null,
+                statin || null,
+                aspirin_therapy || null,
+                "No",
+                "No",
+                "No",
+                "No",
+                new Date(new Date(registration_date).getTime() + 7 * 24 * 60 * 60 * 1000) || null, // tantive_report_date = registration_date + 7 days
+                "No", // hpo_status
+                "No", // annotaion
                 project_id,
                 patient_email,
-                sample_status,
-                location,
-                trf_checkbox,
-                opd_notes_checkbox,
-                consent_form_checkbox
-            )
-            VALUES (
-                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                $11, $12, $13, $14, $15, $16, $17, $18,
-                $19, $20, $21, $22, $23, $24, $25,
-                $26, $27, $28, $29, $30,
-                $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
-                $41, $42, $43, $44, $45, $46,$47, $48,
-                $49, $50, $51, $52, $53, $54, $55, $56, $57,$58, $59,$60,$61
-            )
-            RETURNING *
-        `;
-        const values = [
-            hospital_name,
-            dept_name || null,
-            vial_received,
-            specimen_quality,
-            registration_date || null,
-            sample_date || null,
-            sample_type,
-            trf_file_id || null,
-            collection_date_time || null,
-            storage_condition,
-            prority,
-            hospital_id,
-            client_id,
-            client_name,
-            sample_id,
-            patient_name,
-            DOB || null,
-            age,
-            gender,
-            ethnicity,
-            father_mother_name,
-            spouse_name,
-            address,
-            city,
-            state,
-            country,
-            patient_mobile,
-            doctor_mobile,
-            doctor_name,
-            email,
-            selectedTestName,
-            remarks,
-            clinical_history,
-            repeat_required,
-            repeat_reason,
-            repeat_date || null,
-            internal_id,
-            systolic_bp || null,
-            diastolic_bp || null,
-            total_cholesterol || null,
-            hdl_cholesterol || null,
-            ldl_cholesterol || null,
-            diabetes || null,
-            smoker || null,
-            hypertension_treatment || null,
-            statin || null,
-            aspirin_therapy || null,
-            "No",
-            "No",
-            "No",
-            "No",
-            new Date(new Date(registration_date).getTime() + 7 * 24 * 60 * 60 * 1000) || null, // tantive_report_date = registration_date + 7 days
-            "No", // hpo_status
-            "No", // annotaion
-            project_id,
-            patient_email,
-            "processing",
-            "monitering",
-            trf_checkbox || 'No',
-            opd_notes_checkbox || 'No',
-            consent_form_checkbox || 'No'
-        ];
-        const result = await pool.query(query, values);
-        const insertedData = result.rows[0];
-        const insertedId = insertedData.id;
+                "processing",
+                "monitering",
+                trf_checkbox || 'No',
+                opd_notes_checkbox || 'No',
+                consent_form_checkbox || 'No'
+            ];
+            const result = await pool.query(query, values);
+            const insertedData = result.rows[0];
+            const insertedId = insertedData.id;
 
-        response.push({
-            status: 200,
-            message: "Data inserted successfully",
-            data: insertedId
-        });
+            console.log('response', response);
+            response.push({
+                status: 200,
+                message: "Data inserted successfully",
+                data: insertedId
+            });
+        }
+        else if (testNames.length > 1) {
+            // Generate base_internal_id ONCE
+            const date = new Date(registration_date || Date.now());
+            const year = date.getFullYear();
+
+            // Find the max numeric part for this year from the whole table
+            const maxInternalIdQuery = `
+                SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+                FROM master_sheet
+                WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+            `;
+            const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
+            const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+            const nextSeq = maxSeq + 1;
+            const base_internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
+
+            let trf_file_id = null;
+            if (file && typeof file.arrayBuffer === "function") {
+                const fileBuffer = Buffer.from(await file.arrayBuffer());
+                const auth = new google.auth.GoogleAuth({
+                    credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_KEY),
+                    scopes: ["https://www.googleapis.com/auth/drive"],
+                });
+                const drive = google.drive({ version: "v3", auth });
+                const response = await drive.files.create({
+                    requestBody: {
+                        name: base_internal_id, // Use base_internal_id as file name
+                        parents: ["1xzTkB-k3PxEbGpvj4yoHXxBFgAtCLz1p"], // Your folder ID
+                    },
+                    media: {
+                        mimeType: file.type,
+                        body: Readable.from(fileBuffer),
+                    },
+                    supportsAllDrives: true,
+                    driveId: "0AGcjkp59qA5iUk9PVA", // Your shared drive ID
+                });
+                trf_file_id = response.data.id;
+            }
+
+            for (const testName of testNames) {
+                let internal_id;
+                // Special handling for Myeloid
+                if (testName === "Myeloid") {
+                    // You must get myeloid_type (DNA/RNA) from frontend
+                    internal_id = `${base_internal_id}-${sample_type}`; // sample_type should be DNA/RNA
+                } else {
+                    internal_id = `${base_internal_id}-${testName.replace(/\s+/g, '').replace(/[^\w+]/g, '')}`;
+                }
+
+                const query = `
+                    INSERT INTO master_sheet (
+                        hospital_name,
+                        dept_name,
+                        vial_received,
+                        specimen_quality,
+                        registration_date,
+                        sample_date,
+                        sample_type,
+                        trf,
+                        collection_date_time,
+                        storage_condition,
+                        prority,
+                        hospital_id,
+                        client_id,
+                        client_name,
+                        sample_id,
+                        patient_name,
+                        DOB,
+                        age,
+                        gender,
+                        ethnicity,
+                        father_mother_name,
+                        spouse_name,
+                        address,
+                        city,
+                        state,
+                        country,
+                        patient_mobile,
+                        doctor_mobile,
+                        doctor_name,
+                        email,
+                        test_name,
+                        remarks,
+                        clinical_history,
+                        repeat_required,
+                        repeat_reason,
+                        repeat_date,
+                        internal_id,
+                        systolic_bp,
+                        diastolic_bp,
+                        total_cholesterol,
+                        hdl_cholesterol,
+                        ldl_cholesterol,
+                        diabetes,
+                        smoker,
+                        hypertension_treatment,
+                        statin,
+                        aspirin_therapy,
+                        dna_isolation,
+                        lib_prep,
+                        under_seq,
+                        seq_completed,
+                        tantive_report_date,
+                        hpo_status,
+                        annotation,
+                        project_id,
+                        patient_email,
+                        sample_status,
+                        location,
+                        trf_checkbox,
+                        opd_notes_checkbox,
+                        consent_form_checkbox,
+                        base_internal_id
+                    )
+                    VALUES (
+                        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+                        $11, $12, $13, $14, $15, $16, $17, $18,
+                        $19, $20, $21, $22, $23, $24, $25,
+                        $26, $27, $28, $29, $30,
+                        $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
+                        $41, $42, $43, $44, $45, $46,$47, $48,
+                        $49, $50, $51, $52, $53, $54, $55, $56, $57, $58,
+                        $59, $60, $61, $62
+                    )
+                    RETURNING *
+                `;
+                const values = [
+                    hospital_name,
+                    dept_name || null,
+                    vial_received,
+                    specimen_quality,
+                    registration_date || null,
+                    sample_date || null,
+                    sample_type,
+                    trf_file_id || null,
+                    collection_date_time || null,
+                    storage_condition,
+                    prority,
+                    hospital_id,
+                    client_id,
+                    client_name,
+                    sample_id,
+                    patient_name,
+                    DOB || null,
+                    age,
+                    gender,
+                    ethnicity,
+                    father_mother_name,
+                    spouse_name,
+                    address,
+                    city,
+                    state,
+                    country,
+                    patient_mobile,
+                    doctor_mobile,
+                    doctor_name,
+                    email,
+                    testName,
+                    remarks,
+                    clinical_history,
+                    repeat_required,
+                    repeat_reason,
+                    repeat_date || null,
+                    internal_id,
+                    systolic_bp || null,
+                    diastolic_bp || null,
+                    total_cholesterol || null,
+                    hdl_cholesterol || null,
+                    ldl_cholesterol || null,
+                    diabetes || null,
+                    smoker || null,
+                    hypertension_treatment || null,
+                    statin || null,
+                    aspirin_therapy || null,
+                    "No",
+                    "No",
+                    "No",
+                    "No",
+                    new Date(new Date(registration_date).getTime() + 7 * 24 * 60 * 60 * 1000) || null, // tantive_report_date = registration_date + 7 days
+                    "No", // hpo_status
+                    "No", // annotaion
+                    project_id,
+                    patient_email,
+                    "processing",
+                    "monitering",
+                    trf_checkbox || 'No',
+                    opd_notes_checkbox || 'No',
+                    consent_form_checkbox || 'No',
+                    base_internal_id
+                ];
+                const result = await pool.query(query, values);
+                const insertedData = result.rows[0];
+                const insertedId = insertedData.id;
+                response.push({
+                    status: 200,
+                    message: "Data inserted successfully",
+                    data: insertedId
+                });
+                console.log('response', response);
+            }
+        }
+
 
         return NextResponse.json(response);
 
