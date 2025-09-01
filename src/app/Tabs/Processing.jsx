@@ -101,6 +101,7 @@ const Processing = () => {
     { key: 'hpo_status', label: 'HPO Status' },
     { key: 'annotation', label: 'Annotation' },
     { key: 'report_link', label: 'Report Link' },
+    { key: 'mito_report_link', label: 'Mito Report Link' },
     { key: 'report_status', label: 'Report Status' },
     { key: 'report_releasing_date', label: 'Report Releasing Date' },
     { key: 'conc_rxn', label: 'Conc RXN' },
@@ -481,6 +482,22 @@ const Processing = () => {
             return (
               <a className="underline text-blue-500" href={`https://drive.google.com/file/d/${value}/view?usp=sharing`} target="_blank" rel="noopener noreferrer">
                 View TRF
+              </a>
+            );
+          },
+        };
+      }
+      if (col.key === "report_link" || col.key === "mito_report_link") {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const value = info.getValue();
+            if (!value) return "";
+            return (
+              <a className="underline text-blue-500" href={value} target="_blank" rel="noopener noreferrer">
+                View Report
               </a>
             );
           },
