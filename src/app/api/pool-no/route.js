@@ -8,7 +8,7 @@ export async function GET(request) {
     try {
         const response = [];
         if (id === 'pool_no') {
-            let pool_no = 'P_001';
+            let pool_no = 'P_1';
             const poolData = await pool.query('SELECT pool_no FROM pool_info WHERE pool_no IS NOT NULL and hospital_name = $1 ORDER BY pool_no DESC LIMIT 1 FOR UPDATE',[hospital_name]);
             // console.log('poolData:', poolData.rows);
             if (poolData.rows.length > 0) {
@@ -23,7 +23,7 @@ export async function GET(request) {
             return NextResponse.json(response);
         }
         if(id === 'batch_id'){
-            let batch_id = 'SBB_01';
+            let batch_id = 'SBB_1';
             const batchData = await pool.query('SELECT batch_id FROM pool_info WHERE batch_id IS NOT NULL and hospital_name = $1 ORDER BY batch_id DESC LIMIT 1 FOR UPDATE',[hospital_name]);
             // console.log('batchData:', batchData.rows);
             if (batchData.rows.length > 0) {

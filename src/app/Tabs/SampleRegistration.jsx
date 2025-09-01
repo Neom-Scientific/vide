@@ -525,6 +525,8 @@ export const SampleRegistration = () => {
         toast.success('Sample updated successfully');
         form.reset();
         handleReset(); // Reset form and state
+        // bring the submit button back
+        setEditButton(false);
         setProcessing(false);
         localStorage.removeItem('editRowData'); // Clear edit data from localStorage
         selectedTests.length = 0; // Clear selected tests
@@ -2041,6 +2043,9 @@ export const SampleRegistration = () => {
                 className='bg-gray-500 text-white cursor-pointer hover:bg-gray-600 my-4 ml-2'
                 onClick={() => {
                   form.reset();
+                  // bring the submit button back
+                  setEditButton(false);
+                  setSelectedTests([]);
                   handleReset();
                 }}
               >

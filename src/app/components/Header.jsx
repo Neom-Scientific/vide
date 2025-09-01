@@ -220,7 +220,7 @@ const Header = ({ activeTab, setActiveTab }) => {
                 </DropdownMenu>
               </div>
 
-              <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory Registration</TabsTrigger>
+              <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory</TabsTrigger>
 
               <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
 

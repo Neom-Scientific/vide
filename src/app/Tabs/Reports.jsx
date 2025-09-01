@@ -91,6 +91,16 @@ const Reports = () => {
     { key: 'patient_name', label: 'Patient Name' },
     { key: 'client_name', label: 'Client Name' },
     { key: 'seq_run_date', label: 'Sequencing Run Date' },
+    { key: 'hpo_id', label: 'HPO ID' },
+    { key: 'hpo_term', label: 'HPO Term' },
+    { key: 'q30', label: 'Q 30 >=' },
+    { key: 'raw_data_gen', label: 'Raw Data Genaration' },
+    { key: 'duplication_rate', label: 'Duplication Rate' },
+    { key: 'gc_control', label: 'GC Content' },
+    { key: 'data_qc', label: 'Data QC' },
+    { key: 'secondary_analysis', label: 'Secondary Analysis' },
+    { key: 'hpo_status', label: 'HPO Status' },
+    { key: 'annotation', label: 'Annotation' },
     { key: 'phenotype_rec_date', label: 'Phenotype Receiving Date' },
     { key: 'tantive_report_date', label: 'Tantive Report Date' },
     { key: 'report_releasing_date', label: 'Report Releasing Date' },
@@ -102,8 +112,6 @@ const Reports = () => {
     { key: 'report_link', label: 'Report Link' },
     { key: 'mito_report_link', label: 'Mito Report Link' },
     { key: 'upload_report', label: 'Upload Report' },
-    { key: 'hpo_status', label: 'HPO Status' },
-    { key: 'annotation', label: 'Annotation' },
     { key: 'doctor_name', label: 'Doctor Name' },
     { key: 'dept_name', label: 'Department Name' },
     { key: 'collection_date_time', label: 'Collection Date Time' },
@@ -197,7 +205,7 @@ const Reports = () => {
     }
   };
 
-  const handleFileUpload = async (file, sampleId, isMito = false) => {
+  const handleFileUpload = async (file, sampleId, testName, internalId, isMito = false) => {
     if (!file) {
       toast.error("No file selected");
       return;
@@ -206,65 +214,76 @@ const Reports = () => {
       // Prepare the form data
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("internal_id", internalId); // Append internal_id to the form data
+      formData.append("testName", testName); // Append isMito to the form data
       // Upload the file to the backend
-      // const uploadResponse = await axios.post("/api/upload", formData, {
-      //   headers: {
-      //     "Content-Type": "multipart/form-data",
-      //   },
-      // });
-
-      // if (uploadResponse.status === 200) {
-      //   const reportLink = uploadResponse.data.fileUrl; // Assuming the backend returns the file URL
-
-      // Prepare the updates object
-      const registrationDate = tableRows.find(row => row.sample_id === sampleId)?.registration_date;
-      const reportReleasingDate = new Date().toISOString();
-      const tatDays = Math.ceil(
-        (new Date(reportReleasingDate) - new Date(registrationDate)) / (1000 * 60 * 60 * 24)
-      );
-
-      const updates = {
-        report_releasing_date: reportReleasingDate,
-        sample_status: "Reported",
-        location: 'reported',
-        tat_days: tatDays,
-      };
-
-      if (isMito) {
-        updates["mito_report_link"] = file.name;
-      } else {
-        updates["report_link"] = file.name;
-      }
-
-      const response = await axios.put("/api/store", {
-        sample_id: sampleId,
-        updates,
+      const uploadResponse = await axios.post("/api/upload", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       });
 
-      if (response.data[0].status === 200) {
-        toast.success(`Report (${isMito ? 'Mito' : 'Main'}) uploaded`);
-        const data = {
-          sample_id: sampleId,
-          comments: `Report ${isMito ? 'Mito' : 'Main'} uploaded`,
-          changed_by: user.email,
-          changed_at: new Date().toISOString(),
-        }
-        const res = await axios.post('/api/audit-logs', data);
-        setTableRows((prevRows) =>
-          prevRows.map((row) => {
-            if (row.sample_id === sampleId) {
-              if (isMito && row.test_name && row.test_name.toLowerCase().includes("mito")) {
-                return { ...row, ...updates };
-              }
-              if (!isMito && (!row.test_name || !row.test_name.toLowerCase().includes("mito"))) {
-                return { ...row, ...updates };
-              }
-            }
-            return row;
-          })
+      console.log('uploadResponse:', uploadResponse);
+      if (uploadResponse.status === 200) {
+        const reportLink = uploadResponse.data[0].fileId; // Assuming the backend returns the file URL
+        // href={`https://drive.google.com/file/d/${value}/view?usp=sharing`}
+        const url = `https://drive.google.com/file/d/${reportLink}/view?usp=sharing`;
+        // console.log('Report URL:', url);
+
+        // Prepare the updates object
+        const registrationDate = tableRows.find(row => row.sample_id === sampleId)?.registration_date;
+        const reportReleasingDate = new Date().toISOString();
+        const tatDays = Math.ceil(
+          (new Date(reportReleasingDate) - new Date(registrationDate)) / (1000 * 60 * 60 * 24)
         );
-      } else {
-        toast.error(`Failed to update ${isMito ? 'mito' : 'main'} report`);
+
+        const updates = {
+          report_releasing_date: reportReleasingDate,
+          sample_status: "Reported",
+          // location: 'reported',
+          report_status: "Reported",
+          tat_days: tatDays,
+        };
+
+        if (isMito) {
+          updates["mito_report_link"] = url;
+        } else {
+          updates["report_link"] = url;
+        }
+
+        const response = await axios.put("/api/store", {
+          internal_id: internalId,
+          updates,
+        });
+
+        if (response.data[0].status === 200) {
+          toast.success(`Report (${isMito ? 'Mito' : 'Main'}) uploaded`);
+          const data = {
+            sample_id: sampleId,
+            comments: `Report ${isMito ? 'Mito' : 'Main'} uploaded`,
+            changed_by: user.email,
+            changed_at: new Date().toISOString(),
+          }
+          const res = await axios.post('/api/audit-logs', data);
+          setTableRows((prevRows) =>
+            prevRows.map((row) => {
+              if (row.sample_id === sampleId) {
+                if (isMito && row.test_name && row.test_name.toLowerCase().includes("mito")) {
+                  return { ...row, ...updates };
+                }
+                if (!isMito && (!row.test_name || !row.test_name.toLowerCase().includes("mito"))) {
+                  return { ...row, ...updates };
+                }
+              }
+              return row;
+            })
+          );
+        } else {
+          toast.error(`Failed to update ${isMito ? 'mito' : 'main'} report`);
+        }
+      }
+      else {
+        toast.error("File upload failed");
       }
 
     } catch (error) {
@@ -272,6 +291,34 @@ const Reports = () => {
       toast.error("Error during report upload");
     }
   };
+
+  const handleMetricChange = async (e,col_key,internal_id) => {
+    const value = e.target.value;
+    try {
+      const updates = {
+        [col_key]: value,
+      };
+      const response = await axios.put('/api/store', {
+        internal_id: internal_id,
+        updates,
+      });
+      if (response.data[0].status === 200) {
+        // toast.success(`Updated ${col_key} successfully!`);
+        setTableRows(prevRows =>
+          prevRows.map(row =>
+            row.internal_id === internal_id
+              ? { ...row, [col_key]: value }
+              : row
+          )
+        );
+      } else {
+        // toast.error(`Failed to update ${col_key}: ${response.data.message}`);
+      }
+    } catch (error) {
+      console.error("Error updating data:", error);
+      // toast.error("An error occurred while updating the data.");
+    }
+  }
 
   const isPrivilegedUser = user?.role === "SuperAdmin" || user?.role === "AdminUser";
 
@@ -338,7 +385,6 @@ const Reports = () => {
             cell: (info) => {
               const value = info.getValue();
               if (!value) return "";
-              console.log('value:', value); // Debugging TRF value
               return (
                 <a className="underline text-blue-500" href={`https://drive.google.com/file/d/${value}/view?usp=sharing`} target="_blank" rel="noopener noreferrer">
                   View TRF
@@ -348,8 +394,89 @@ const Reports = () => {
           };
         }
 
+        if (col.key === "q30" || col.key === "raw_data_gen" || col.key === "duplication_rate" || col.key === "gc_control") {
+          return {
+            accessorKey: col.key,
+            id: col.key,
+            header: col.label,
+            cell: info => {
+              const value = info.getValue();
+              if (!value) {
+                return (
+                  <input
+                    type="text"
+                    className='border border-orange-400 rounded-md w-20 p-1 text-center'
+                    placeholder={col.label}
+                    onBlur={e => handleMetricChange(e, col.key, info.row.original.internal_id)}
+                  />
+                )
+              }
+              return value;
+            },
+          };
+        }
+
+        if(col.key === "data_qc"){
+          return {
+            accessorKey: col.key,
+            id: col.key,
+            header: col.label,
+            cell: info => {
+              const value = info.getValue();
+              if (!value) {
+                return (
+                  <select
+                    className='border border-orange-400 rounded-md w-28 p-1 text-center'
+                    defaultValue=""
+                    onChange={e => handleMetricChange(e, col.key, info.row.original.internal_id)}
+                  >
+                    <option value="" disabled>Data QC</option>
+                    <option value="Pass">Pass</option>
+                    <option value="Fail">Fail</option>
+                  </select>
+                )
+              }
+              return value;
+            },
+          };
+        }
+
+        if (col.key === "report_link") {
+          return {
+            accessorKey: col.key,
+            header: col.label,
+            enableSorting: true,
+            cell: (info) => {
+              const value = info.getValue();
+              if (!value) return "";
+              return (
+                <a className="underline text-blue-500" href={value} target="_blank" rel="noopener noreferrer">
+                  View Report
+                </a>
+              );
+            },
+          };
+        }
+
+        if (col.key === "mito_report_link") {
+          return {
+            accessorKey: col.key,
+            header: col.label,
+            enableSorting: true,
+            cell: (info) => {
+              const value = info.getValue();
+              if (!value) return "";
+              return (
+                <a className="underline text-blue-500" href={value} target="_blank" rel="noopener noreferrer">
+                  View Mito Report
+                </a>
+              );
+            },
+          };
+        }
+
         // Checkboxes
-        if (col.key === "hpo_status" || col.key === "annotation") {
+        if (col.key === "hpo_status" || col.key === "annotation" || col.key === "secondary_analysis") {
           return {
             accessorKey: col.key,
             id: col.key,
@@ -385,6 +512,7 @@ const Reports = () => {
           cell: info => {
             const sampleId = info.row.original.sample_id;
             const testName = info.row.original.test_name;
+            const internalId = info.row.original.internal_id;
             // If test name contains "Mito", render two inputs with headers
             if (testName && testName.toLowerCase().includes("mito")) {
               return (
@@ -394,7 +522,7 @@ const Reports = () => {
                     <input
                       type="file"
                       className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
-                      onChange={e => handleFileUpload(e.target.files[0], sampleId, false)}
+                      onChange={e => handleFileUpload(e.target.files[0], sampleId, testName, internalId, false)}
                       accept=".pdf,.doc,.docx"
                     />
                   </div>
@@ -403,7 +531,7 @@ const Reports = () => {
                     <input
                       type="file"
                       className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
-                      onChange={e => handleFileUpload(e.target.files[0], sampleId, true)}
+                      onChange={e => handleFileUpload(e.target.files[0], sampleId, testName, internalId, true)}
                       accept=".pdf,.doc,.docx"
                     />
 
@@ -416,7 +544,7 @@ const Reports = () => {
               <input
                 type="file"
                 className="border-2 border-orange-300 rounded-md p-1 dark:bg-gray-800"
-                onChange={e => handleFileUpload(e.target.files[0], sampleId)}
+                onChange={e => handleFileUpload(e.target.files[0], sampleId, testName, internalId)}
                 accept=".pdf,.doc,.docx"
               />
             );
@@ -451,6 +579,14 @@ const Reports = () => {
     'patient_name',
     'client_name',
     'seq_run_date',
+    'hpo_id',
+    'hpo_term',
+    'q30',
+    'raw_data_gen',
+    'duplication_rate',
+    'gc_control',
+    'data_qc',
+    'secondary_analysis',
     'phenotype_rec_date',
     'tantive_report_date',
     'report_releasing_date',
@@ -508,7 +644,7 @@ const Reports = () => {
 
   const handleSubmit = async () => {
     const getValue = (name) => document.getElementsByName(name)[0]?.value || "";
-
+    setProcessing(true);
     const data = {
       sample_id: filters.sample_id,
       test_name: filters.selectedTestNames.join(","),
@@ -807,6 +943,16 @@ const Reports = () => {
             />
           </div>
           <div className="col-span-full">
+          {processing ? 
+            <Button
+              type='submit'
+              disabled
+              className="w-[240px] mt-[20px] bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
+            >
+              Retrieving...
+            </Button>
+           : 
+           
             <Button
               type='submit'
               onClick={() => { handleSubmit() }}
@@ -814,6 +960,7 @@ const Reports = () => {
             >
               Retrieve
             </Button>
+           }
           </div>
         </div>
       </div>
@@ -881,6 +1028,7 @@ const Reports = () => {
                             key={header.id}
                             onClick={header.column.getToggleSortingHandler()}
                             className="cursor-pointer px-4 py-2 text-left border-b border-gray-200 bg-orange-100 dark:bg-gray-800 sticky top-0 z-50 whitespace-nowrap"
+                            style={{ width: '140px', minWidth: '140px', maxWidth: '140px' }} // <-- fixed width
                           >
                             {header.isPlaceholder
                               ? null
@@ -895,8 +1043,23 @@ const Reports = () => {
                       table.getRowModel().rows.map((row) => (
                         <tr key={row.id ?? row.index}>
                           {row.getVisibleCells().map((cell) => (
-                            <td key={cell.id} className="px-4 py-2 border-b border-gray-100">
-                              {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                            <td
+                              key={cell.id}
+                              className="px-4 py-2 border-b border-gray-100"
+                              style={{ width: '400px', minWidth: '140px', maxWidth: '400px', padding: 0 }} // Remove padding for scroll
+                            >
+                              <div
+                                style={{
+                                  width: '400px',
+                                  minWidth: '140px',
+                                  maxWidth: '200px',
+                                  overflowX: 'auto',
+                                  whiteSpace: 'nowrap',
+                                  padding: '8px 16px', // add padding inside scrollable area
+                                }}
+                              >
+                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                              </div>
                             </td>
                           ))}
                         </tr>

@@ -20,7 +20,7 @@ export async function POST(request) {
         }
         // console.log('table_data', setup.table_data);
         const { rows } = await pool.query(
-            `SELECT run_id FROM run_setup WHERE hospital_name = $1 ORDER BY run_id DESC LIMIT 1`,
+            `SELECT run_id FROM run_setup WHERE hospital_name = $1 ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER) DESC LIMIT 1;`,
             [setup.hospital_name]
         );
 
@@ -226,7 +226,7 @@ export async function GET(request) {
             });
         }
         if (role === 'SuperAdmin') {
-            const { rows } = await pool.query(`SELECT run_id ,seq_run_date, instument_type ,total_required, total_gb_available, selected_application, run_remarks,table_data, count FROM run_setup ORDER BY run_id;`);
+            const { rows } = await pool.query(`SELECT run_id ,seq_run_date, instument_type ,total_required, total_gb_available, selected_application, run_remarks,table_data, count FROM run_setup ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER);`);
             if (rows.length === 0) {
                 response.push({
                     status: 404,
@@ -241,7 +241,7 @@ export async function GET(request) {
         }
         else {
             const { rows } = await pool.query(
-                `SELECT run_id, total_required, total_gb_available, selected_application,instument_type, table_data, seq_run_date,count,run_remarks FROM run_setup WHERE hospital_name = $1 ORDER BY run_id;`,
+                `SELECT run_id, total_required, total_gb_available, selected_application,instument_type, table_data, seq_run_date,count,run_remarks FROM run_setup WHERE hospital_name = $1 ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER);`,
                 [hospital_name]
             );
             if (rows.length === 0) {

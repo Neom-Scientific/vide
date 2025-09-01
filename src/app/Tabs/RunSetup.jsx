@@ -1327,15 +1327,32 @@ const RunSetup = () => {
                     </>
                   ) : ""}
 
-                  <Button
-                    type="submit"
-                    disabled={processing} // Disable button when processing
-                    className="w-full mt-7 bg-gray-700 text-white py-2 rounded hover:bg-gray-800 transition-colors"
-                  >
-                    {processing ? 'Submitting...' : 'Submit'}
-                  </Button>
 
                 </div>
+                  <div className='flex flex-row gap-4'>
+                    <Button
+                      type='reset'
+                      className="w-1/2 mt-7 bg-gray-500 cursor-pointer text-white py-2 rounded hover:bg-gray-600 transition-colors"
+                      onClick={() => {
+                        form.reset();
+                        setPoolData([]);
+                        setSelectedTestNames([]);
+                        setSelectedCheckboxes([]);
+                        setAvgSize(0);
+                        setInstrumentType('');
+                        setTestNames(allTestNames);
+                      }}
+                    >
+                      Clear
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={processing}
+                      className="w-1/2 mt-7 bg-gray-700 text-white py-2 rounded hover:bg-gray-800 transition-colors"
+                    >
+                      {processing ? 'Submitting...' : 'Submit'}
+                    </Button>
+                  </div>
               </div>
             </form>
           </Form>

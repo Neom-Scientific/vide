@@ -113,10 +113,10 @@ export async function GET(request) {
 
     const whereClause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     if (forParam === 'process') {
-      query = `SELECT * FROM master_sheet ${whereClause} ORDER BY registration_date`;
+      query = `SELECT * FROM master_sheet ${whereClause} ORDER BY registration_date DESC`;
     } else if (forParam === 'report') {
       const reportWhereClause = whereClause ? `${whereClause} AND seq_run_date IS NOT NULL` : `WHERE seq_run_date IS NOT NULL`;
-      query = `SELECT * FROM master_sheet ${reportWhereClause} ORDER BY registration_date`;
+      query = `SELECT * FROM master_sheet ${reportWhereClause} ORDER BY registration_date DESC`;
     }
 
     const data = await pool.query(query, values);

@@ -399,6 +399,83 @@ const LibraryPrepration = () => {
     return `${row}${col}`;
   });
 
+  function handleCellKeyDown(e, { rowIndex, columnId, value, updateData, columns, tableRows, setSelectedCells, editableColumns }) {
+    console.log("KeyDown:", e.key, "rowIndex:", rowIndex, "columnId:", columnId);
+
+    const visibleColumns = columns.map(col => col.accessorKey);
+    const visibleEditableColumns = visibleColumns.filter(col => editableColumns.includes(col));
+    const colIdx = visibleEditableColumns.indexOf(columnId);
+
+    let nextRow = rowIndex;
+    let nextColIdx = colIdx;
+
+    if (e.key === "Tab") {
+      updateData(rowIndex, columnId, value);
+      if (e.shiftKey) {
+        if (colIdx > 0) {
+          nextColIdx = colIdx - 1;
+          nextRow = rowIndex;
+        } else if (rowIndex > 0) {
+          nextRow = rowIndex - 1;
+          nextColIdx = visibleEditableColumns.length - 1;
+        } else {
+          return;
+        }
+      } else {
+        if (colIdx < visibleEditableColumns.length - 1) {
+          nextColIdx = colIdx + 1;
+          nextRow = rowIndex;
+        } else if (rowIndex < tableRows.length - 1) {
+          nextRow = rowIndex + 1;
+          nextColIdx = 0;
+        } else {
+          return;
+        }
+      }
+      setSelectedCells([{ rowIndex: nextRow, columnId: visibleEditableColumns[nextColIdx] }]);
+      setTimeout(() => {
+        const selector = `[data-row="${nextRow}"][data-column="${visibleEditableColumns[nextColIdx]}"]`;
+        let nextElem = document.querySelector(`input${selector}`) ||
+          document.querySelector(`select${selector}`);
+        if (nextElem) nextElem.focus();
+      }, 0);
+      e.preventDefault();
+      return;
+    }
+
+    // Handle Enter and Arrow keys
+    if (e.key === "Enter" || e.key === "ArrowDown") {
+      updateData(rowIndex, columnId, value);
+      nextRow = rowIndex + 1;
+    } else if (e.key === "ArrowUp") {
+      updateData(rowIndex, columnId, value);
+      nextRow = rowIndex - 1;
+    } else if (e.key === "ArrowLeft") {
+      updateData(rowIndex, columnId, value);
+      nextColIdx = colIdx - 1;
+    } else if (e.key === "ArrowRight") {
+      updateData(rowIndex, columnId, value);
+      nextColIdx = colIdx + 1;
+    } else {
+      return;
+    }
+
+    // Only move if within bounds
+    if (
+      nextRow >= 0 && nextRow < tableRows.length &&
+      nextColIdx >= 0 && nextColIdx < visibleEditableColumns.length
+    ) {
+      setSelectedCells([{ rowIndex: nextRow, columnId: visibleEditableColumns[nextColIdx] }]);
+      setTimeout(() => {
+        const selector = `[data-row="${nextRow}"][data-column="${visibleEditableColumns[nextColIdx]}"]`;
+        let nextElem = document.querySelector(`input${selector}`) ||
+          document.querySelector(`select${selector}`);
+        if (nextElem) nextElem.focus();
+      }, 0);
+      e.preventDefault();
+    }
+  }
+
   const columns = useMemo(() => {
     const cols = [];
     // Add checkbox column
@@ -529,6 +606,19 @@ const LibraryPrepration = () => {
                           }
                         });
                       }}
+                      onKeyDown={e =>
+                        handleCellKeyDown(e, {
+                          rowIndex: info.row.index,
+                          columnId: column.key,
+                          value,
+                          updateData: table.options.meta.updateData,
+                          columns,
+                          tableRows,
+                          setSelectedCells
+                        })
+                      }
+                      data-row={info.row.index}
+                      data-column={column.key}
                     >
                       <option value="">Select {column.key === 'well' ? 'Well' : 'Plate Designation'}</option>
                       {(column.key === 'well' ? wellNumberOptions : plateOptions).map(opt => (
@@ -567,6 +657,10 @@ const LibraryPrepration = () => {
                     columnId={column.key}
                     columnLabel={column.label}
                     updateData={table.options.meta.updateData}
+                    columns={columns}
+                    tableRows={tableRows}
+                    setSelectedCells={setSelectedCells}
+                    editableColumns={editableColumns} // <-- pass this prop
                   />
                 );
               },
@@ -958,43 +1052,6 @@ const LibraryPrepration = () => {
       // updateData(rowIndex, columnId, e.target.value);
     };
 
-    const handleKeyDown = (e) => {
-      const visibleColumns = columns.map(col => col.accessorKey);
-      const colIdx = visibleColumns.indexOf(columnId);
-
-      let nextRow = rowIndex;
-      let nextColIdx = colIdx;
-
-      if (e.key === "Enter" || e.key === "ArrowDown") {
-        updateData(rowIndex, columnId, value);
-        nextRow = rowIndex + 1;
-      } else if (e.key === "ArrowUp") {
-        updateData(rowIndex, columnId, value);
-        nextRow = rowIndex - 1;
-      } else if (e.key === "ArrowLeft") {
-        updateData(rowIndex, columnId, value);
-        nextColIdx = colIdx - 1;
-      } else if (e.key === "ArrowRight") {
-        updateData(rowIndex, columnId, value);
-        nextColIdx = colIdx + 1;
-      } else {
-        return;
-      }
-
-      // Only move if within bounds
-      if (nextRow >= 0 && nextRow < tableRows.length && nextColIdx >= 0 && nextColIdx < visibleColumns.length) {
-        setSelectedCells([{ rowIndex: nextRow, columnId: visibleColumns[nextColIdx] }]);
-        setTimeout(() => {
-          // Try to focus input first, then select if input not found
-          const selector = `[data-row="${nextRow}"][data-column="${visibleColumns[nextColIdx]}"]`;
-          let nextElem = document.querySelector(`input${selector}`) ||
-            document.querySelector(`select${selector}`);
-          if (nextElem) nextElem.focus();
-        }, 0);
-        e.preventDefault();
-      }
-    };
-
     const handleBlur = () => {
       updateData(rowIndex, columnId, value);
     };
@@ -1040,6 +1097,63 @@ const LibraryPrepration = () => {
       // For single click, allow default (focus input for typing)
     };
 
+    // const handleKeyDown = (e) => {
+    //   const visibleColumns = columns.map(col => col.accessorKey);
+    //   const colIdx = visibleColumns.indexOf(columnId);
+
+    //   let nextRow = rowIndex;
+    //   let nextColIdx = colIdx;
+
+    //   if (e.key === "Enter" || e.key === "ArrowDown") {
+    //     updateData(rowIndex, columnId, value);
+    //     nextRow = rowIndex + 1;
+    //   } else if (e.key === "ArrowUp") {
+    //     updateData(rowIndex, columnId, value);
+    //     nextRow = rowIndex - 1;
+    //   } else if (e.key === "Tab") {
+    //     updateData(rowIndex, columnId, value);
+    //     if (e.shiftKey) {
+    //       nextColIdx = colIdx - 1;
+    //     } else {
+    //       nextColIdx = colIdx + 1;
+    //     }
+    //     // Only move if within bounds
+    //     if (nextColIdx >= 0 && nextColIdx < visibleColumns.length) {
+    //       setSelectedCells([{ rowIndex, columnId: visibleColumns[nextColIdx] }]);
+    //       setTimeout(() => {
+    //         const selector = `[data-row="${rowIndex}"][data-column="${visibleColumns[nextColIdx]}"]`;
+    //         let nextElem = document.querySelector(`input${selector}`) ||
+    //           document.querySelector(`select${selector}`);
+    //         if (nextElem) nextElem.focus();
+    //       }, 0);
+    //       e.preventDefault();
+    //     }
+    //     return;
+    //   }
+    //   else if (e.key === "ArrowLeft") {
+    //     updateData(rowIndex, columnId, value);
+    //     nextColIdx = colIdx - 1;
+    //   } else if (e.key === "ArrowRight") {
+    //     updateData(rowIndex, columnId, value);
+    //     nextColIdx = colIdx + 1;
+    //   } else {
+    //     return;
+    //   }
+
+    //   // Only move if within bounds
+    //   if (nextRow >= 0 && nextRow < tableRows.length && nextColIdx >= 0 && nextColIdx < visibleColumns.length) {
+    //     setSelectedCells([{ rowIndex: nextRow, columnId: visibleColumns[nextColIdx] }]);
+    //     setTimeout(() => {
+    //       // Try to focus input first, then select if input not found
+    //       const selector = `[data-row="${nextRow}"][data-column="${visibleColumns[nextColIdx]}"]`;
+    //       let nextElem = document.querySelector(`input${selector}`) ||
+    //         document.querySelector(`select${selector}`);
+    //       if (nextElem) nextElem.focus();
+    //     }, 0);
+    //     e.preventDefault();
+    //   }
+    // };
+
     const handleMouseEnter = (e) => {
       e.preventDefault(); // Prevent default to avoid text selection
       if (isSelecting && selectionStart) {
@@ -1083,16 +1197,51 @@ const LibraryPrepration = () => {
         onMouseDown={handleMouseDown}
         onMouseEnter={handleMouseEnter}
         onMouseUp={handleMouseUp}
-        onKeyDown={handleKeyDown}
+        onKeyDown={e =>
+          handleCellKeyDown(e, {
+            rowIndex,
+            columnId,
+            value,
+            updateData,
+            columns,
+            tableRows,
+            setSelectedCells,
+            editableColumns // <-- pass here
+          })
+        }
       />
     );
   };
 
   useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      // Only trigger if a cell is selected and not already focused
+      if (
+        selectedCells.length === 1 &&
+        document.activeElement.tagName !== "INPUT" &&
+        document.activeElement.tagName !== "SELECT" &&
+        e.key.length === 1 // Only for character keys
+      ) {
+        setTimeout(() => {
+          const { rowIndex, columnId } = selectedCells[0];
+          const selector = `[data-row="${rowIndex}"][data-column="${columnId}"]`;
+          const input = document.querySelector(`input${selector}`);
+          if (input) {
+            input.focus();
+            input.value = ""; // Clear for new typing
+          }
+        }, 0);
+      }
+    };
+    window.addEventListener("keydown", handleGlobalKeyDown);
+    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+  }, [selectedCells]);
+
+  useEffect(() => {
     async function syncLastPoolNo() {
       const response = await axios.get(`/api/pool-no?id=pool_no&count=1&hospital_name=${user.hospital_name}`);
       if (response.data[0]?.pool_no) {
-        console.log('response.data[0]', response.data[0]);
+        // console.log('response.data[0]', response.data[0]);
         localStorage.setItem('lastPoolNo', response.data[0].pool_no);
       }
     }
@@ -1501,7 +1650,7 @@ const LibraryPrepration = () => {
         rows: syncedRows,
       };
 
-      console.log('payload:', payload);
+      // console.log('payload:', payload);
 
       const response = await axios.post('/api/pool-data', payload);
 
@@ -1623,14 +1772,14 @@ const LibraryPrepration = () => {
           roundedPercents.push(last);
         }
       }
-      console.log('roundedPercents:', roundedPercents);
+      // console.log('roundedPercents:', roundedPercents);
       // 2. Calculate initial (unscaled) volume for each pool using rounded percents
       const unscaled = poolsInBatch.map(({ pool, poolIdx }, i) => {
         const totalVol = parseFloat(pool.values.total_vol_for_20nm) || 0;
         const percent = roundedPercents[i];
         const vol = (totalVol * (percent / 100)) || 0;
 
-        console.log('percent:', percent, 'totalVol:', totalVol, 'vol:', vol);
+        // console.log('percent:', percent, 'totalVol:', totalVol, 'vol:', vol);
 
         // Update percent if needed
         const percentStr = percent.toFixed(2);
@@ -2516,7 +2665,7 @@ const LibraryPrepration = () => {
                                             const percentPooling =
                                               cell.column.id === "vol_for_40nm_percent_pooling"
                                                 ? parseFloat(value) || 0
-                                                : parseFloat(updated.vol_for_40nm_percent_pooling) || 0;
+                                                : parseFloat(updated.vol_for_40nm_percent_pooling ?? 0) || 0;
 
                                             const qubit_dna = parseFloat(updated.qubit_dna) || 0;
 
@@ -2836,13 +2985,13 @@ const LibraryPrepration = () => {
             </div>
 
           </div>
-          <Button
+          {/* <Button
             type="button"
             onClick={handleSaveAll}
             className="bg-green-600 hover:bg-green-700 mt-5 text-white cursor-pointer mx-2 min-w-[120px] h-12"
           >
             Save All
-          </Button>
+          </Button> */}
           <Button
             type="submit"
             onClick={handleSubmit}

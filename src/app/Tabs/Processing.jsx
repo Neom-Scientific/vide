@@ -23,7 +23,6 @@ import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { set } from "lodash";
 
 const Processing = () => {
   const user = JSON.parse(Cookies.get("user") || "{}");
@@ -93,6 +92,12 @@ const Processing = () => {
     { key: 'seq_completed', label: 'Sequencing Completed' },
     { key: 'seq_run_date', label: 'Seq Run Date' },
     { key: 'report_realising_date', label: 'Report Realising Date' },
+    { key: 'q30', label: 'Q 30 >=' },
+    { key: 'raw_data_gen', label: 'Raw Data Generated' },
+    { key: 'duplication_rate', label: 'Duplication Rate' },
+    { key: 'gc_control', label: 'GC Content' },
+    { key: 'data_qc', label: 'Data QC' },
+    { key: 'secondary_analysis', label: 'Secondary Analysis' },
     { key: 'hpo_status', label: 'HPO Status' },
     { key: 'annotation', label: 'Annotation' },
     { key: 'report_link', label: 'Report Link' },
@@ -220,7 +225,7 @@ const Processing = () => {
   const [selectedSampleIndicator, setSelectedSampleIndicator] = useState('');
   const [columnSearch, setColumnSearch] = useState("")
   const [sorting, setSorting] = useState([]);
-  const [allTests,setAllTests] = useState([]);
+  const [allTests, setAllTests] = useState([]);
   const [rowSelection, setRowSelection] = useState(() => {
     const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
     return {};
@@ -268,7 +273,10 @@ const Processing = () => {
       ),
       cell: ({ row }) => {
         const rowData = row.original;
-        const disabled = rowData.specimen_quality === 'Not Accepted' || rowData.dna_isolation !== "Yes";
+        const disabled =
+          rowData.specimen_quality === 'Not Accepted' ||
+          rowData.dna_isolation !== "Yes" ||
+          rowData.seq_completed === "Yes";
         return disabled
           ? (
             <Checkbox
@@ -606,25 +614,26 @@ const Processing = () => {
           return acc;
         }, {})
       );
-      setTableRows(latestRows);
-      localStorage.setItem("searchData", JSON.stringify(latestRows));
+      const sortedRows = latestRows.sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
+      setTableRows(sortedRows);
+      localStorage.setItem("searchData", JSON.stringify(sortedRows));
     }
   }, []);
 
-    // Fetch test names from API (like SampleRegistration)
-    useEffect(() => {
-      const fetchTestNames = async () => {
-        const user = JSON.parse(Cookies.get("user") || "{}");
-        const hospitalName = user?.hospital_name || 'default';
-        try {
-          const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);
-          setAllTests(res.data[0]?.values || []);
-        } catch (e) {
-          setAllTests([]);
-        }
-      };
-      fetchTestNames();
-    }, []);
+  // Fetch test names from API (like SampleRegistration)
+  useEffect(() => {
+    const fetchTestNames = async () => {
+      const user = JSON.parse(Cookies.get("user") || "{}");
+      const hospitalName = user?.hospital_name || 'default';
+      try {
+        const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);
+        setAllTests(res.data[0]?.values || []);
+      } catch (e) {
+        setAllTests([]);
+      }
+    };
+    fetchTestNames();
+  }, []);
 
   useEffect(() => {
     const selectedIds = JSON.parse(localStorage.getItem("selectedLibraryPrepSamples") || "[]");
@@ -688,9 +697,9 @@ const Processing = () => {
           }, {})
         );
         setProcessing(false);
-        console.log('latestRows:', latestRows); // Debugging mapped data
-        setTableRows(latestRows); // Update the tableRows state with the mapped data
-        localStorage.setItem("searchData", JSON.stringify(latestRows)); // Save to localStorage
+        const sortedRows = latestRows.sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
+        setTableRows(sortedRows); // Update the tableRows state with the mapped data
+        localStorage.setItem("searchData", JSON.stringify(sortedRows)); // Save to localStorage
       } else if (response.data[0].status === 400 || response.data[0].status === 404) {
         toast.error(response.data[0].message || "No data found for the given filters.");
         setProcessing(false);
@@ -728,6 +737,7 @@ const Processing = () => {
     const validRows = selectedRows.filter(row => row.specimen_quality !== 'Not Accepted');
     if (validRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
+      setProcessing(false);
       return;
     }
 
@@ -943,9 +953,10 @@ const Processing = () => {
               }, {})
             );
             setProcessing(false);
-            console.log('mappedData:', mappedData); // Debugging mapped data
-            setTableRows(latestRows); // Update the tableRows state with the mapped data
-            localStorage.setItem("searchData", JSON.stringify(latestRows)); // Save to localStorage
+            // console.log('mappedData:', mappedData); // Debugging mapped data
+            const sortedRows = latestRows.sort((a, b) => new Date(b.registration_date) - new Date(a.registration_date));
+            setTableRows(sortedRows); // Update the tableRows state with the mapped data
+            localStorage.setItem("searchData", JSON.stringify(sortedRows)); // Save to localStorage
           } else if (response.data[0].status === 400 || response.data[0].status === 404) {
             setProcessing(false);
             setTableRows([]);
@@ -1182,7 +1193,7 @@ const Processing = () => {
               disabled={processing}
               className="w-[240px] mt-[20px] bg-gray-700 hover:bg-gray-800 text-white cursor-pointer"
             >
-              {processing ? 'Retrieving...': 'Retrieve'}
+              {processing ? 'Retrieving...' : 'Retrieve'}
             </Button>
           </div>
         </div>
@@ -1320,7 +1331,7 @@ const Processing = () => {
                               (row.original.prority === 'urgent' ? 'bg-orange-600 ' : '') +
                               (row.original.is_repeated === 'True'
                                 ? 'bg-gray-500 '
-                                : row.original.location && row.original.location === 'seq_completed'
+                                : row.original.location && row.original.seq_completed === 'Yes'
                                   ? 'bg-gray-300 dark:text-black '
                                   : '')
                             }
@@ -1385,7 +1396,7 @@ const Processing = () => {
 
             {selectedRows && (
               <Button
-              disabled={processing}
+                disabled={processing}
                 className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (selectedRows ? "" : "opacity-50")}
                 onClick={handleSendForLibraryPreparation}
               >
