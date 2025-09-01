@@ -411,7 +411,14 @@ const Reports = () => {
                   />
                 )
               }
-              return value;
+              return (
+                <input
+                  type="text"
+                  className='border border-orange-400 rounded-md w-20 p-1 text-center'
+                  defaultValue={value}
+                  onBlur={e => handleMetricChange(e, col.key, info.row.original.internal_id)}
+                />
+              );
             },
           };
         }
@@ -436,7 +443,16 @@ const Reports = () => {
                   </select>
                 )
               }
-              return value;
+              return (
+                <select
+                  className='border border-orange-400 rounded-md w-28 p-1 text-center'
+                  defaultValue={value}
+                  onChange={e => handleMetricChange(e, col.key, info.row.original.internal_id)}
+                >
+                  <option value="Pass">Pass</option>
+                  <option value="Fail">Fail</option>
+                </select>
+              );
             },
           };
         }
@@ -873,25 +889,7 @@ const Reports = () => {
               <option value="reported">Reported</option>
             </select>
           </div>
-          <div>
-            <label className="block font-semibold mb-1">Sample Indicator</label>
-            <select
-              name='sample_indicator'
-              className="w-full border-2 border-orange-300 rounded-md p-2 dark:bg-gray-800"
-              value={filters.sample_indicator || ""}
-              onChange={e => {
-                const options = Array.from(e.target.selectedOptions, option => option.value);
-                setSelectedSampleIndicator(options);
-                handleFilterChange('sample_indicator', options);
-              }}
-            >
-              <option value="">Select the Sample Indicator</option>
-              <option value="dna_isolation">DNA Isolation</option>
-              <option value="lib_prep">Library Prep</option>
-              <option value="under_seq">Under sequencing</option>
-              <option value="seq_completed">Sequencing completed</option>
-            </select>
-          </div>
+
           <div>
             <label className="block font-semibold mb-1">From Date</label>
             <Input
