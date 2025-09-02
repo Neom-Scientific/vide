@@ -948,7 +948,7 @@ const Page = () => {
 
   return (
     <>
-      {processing ?
+      {(processing || !masterSheetData.length || !poolData.length) ?
         <div>
           {/* show the loading circle */}
           <div className="flex flex-col items-center justify-center min-h-[400px]">
