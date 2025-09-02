@@ -531,7 +531,15 @@ const Page = () => {
 
   // Chart rendering logic
   useEffect(() => {
-    if (processing) return;
+    if (
+      processing ||
+      !masterSheetData.length ||
+      !poolData.length ||
+      !chart1Ref.current ||
+      !chart2Ref.current ||
+      !chart3Ref.current ||
+      !chart4Ref.current
+    ) return;
     // Chart 2: Grouped Bar
     if (chart1Instance.current) chart1Instance.current.destroy();
     chart1Instance.current = new Chart(chart1Ref.current, {
@@ -940,134 +948,133 @@ const Page = () => {
 
   return (
     <>
-      { processing ?
-      <div>
-        {/* show the loading circle */}
-        <div className="flex flex-col items-center justify-center min-h-[400px]">
-          <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32 mb-4"></div>
-          <h2 className="text-center text-xl font-semibold">Processing data...</h2>
-          <p className="w-1/2 text-center">This may take a few moments depending on the size of your dataset. Please wait.</p>
-        </div>
-      </div>
-      :
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
-        {/* Chart 1 */}
-        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-          <div className="flex w-full items-center justify-between mb-2">
-            {renderDropdowns([
-              {
-                label: "Select Test Name",
-                options: uniqueTestNames,
-                value: selectedTestName1,
-                onChange: setSelectedTestName1,
-              },
-              {
-                label: "Select Month",
-                options: ["", ...tatMonthNames],
-                value: selectedMonth1,
-                onChange: setSelectedMonth1
-              },
-              {
-                label: "Select Year",
-                options: yearOptions,
-                value: selectedYear1,
-                onChange: setSelectedYear1,
-              }
-            ], false)}
-          </div>
-          <div className="w-full h-[340px] flex items-center justify-center">
-            <canvas ref={chart2Ref} className="!bg-transparent" />
+      {processing ?
+        <div>
+          {/* show the loading circle */}
+          <div className="flex flex-col items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-orange-500 mb-4"></div>
+            <span className="text-lg font-semibold text-gray-700 dark:text-white">Fetching data...</span>
           </div>
         </div>
+        :
+        <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+          {/* Chart 1 */}
+          <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+            <div className="flex w-full items-center justify-between mb-2">
+              {renderDropdowns([
+                {
+                  label: "Select Test Name",
+                  options: uniqueTestNames,
+                  value: selectedTestName1,
+                  onChange: setSelectedTestName1,
+                },
+                {
+                  label: "Select Month",
+                  options: ["", ...tatMonthNames],
+                  value: selectedMonth1,
+                  onChange: setSelectedMonth1
+                },
+                {
+                  label: "Select Year",
+                  options: yearOptions,
+                  value: selectedYear1,
+                  onChange: setSelectedYear1,
+                }
+              ], false)}
+            </div>
+            <div className="w-full h-[340px] flex items-center justify-center">
+              <canvas ref={chart2Ref} className="!bg-transparent" />
+            </div>
+          </div>
 
-        {/* Chart 2 */}
-        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-          <div className="flex w-full items-center justify-between mb-2">
-            {renderDropdowns([
-              {
-                label: "Select Run Id",
-                options: runIds,
-                value: selectedRunId2,
-                onChange: setSelectedRunId2,
-              },
-              {
-                label: "Select Month",
-                options: ["", ...tatMonthNames],
-                value: selectedMonth2,
-                onChange: setSelectedMonth2
-              },
-              {
-                label: "Select Year",
-                options: yearOptions,
-                value: selectedYear2,
-                onChange: setSelectedYear2
-              }
-            ])}
+          {/* Chart 2 */}
+          <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+            <div className="flex w-full items-center justify-between mb-2">
+              {renderDropdowns([
+                {
+                  label: "Select Run Id",
+                  options: runIds,
+                  value: selectedRunId2,
+                  onChange: setSelectedRunId2,
+                },
+                {
+                  label: "Select Month",
+                  options: ["", ...tatMonthNames],
+                  value: selectedMonth2,
+                  onChange: setSelectedMonth2
+                },
+                {
+                  label: "Select Year",
+                  options: yearOptions,
+                  value: selectedYear2,
+                  onChange: setSelectedYear2
+                }
+              ])}
+            </div>
+            <div className="w-full h-[340px] flex items-center justify-center">
+              <canvas ref={chart1Ref} className="!bg-transparent" />
+            </div>
           </div>
-          <div className="w-full h-[340px] flex items-center justify-center">
-            <canvas ref={chart1Ref} className="!bg-transparent" />
-          </div>
-        </div>
 
-        {/* Chart 3 */}
-        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-          <div className="flex w-full items-center justify-between mb-2">
-            {renderDropdowns([
-              {
-                label: "Select Test Name",
-                options: uniqueTestNames,
-                value: selectedTatTestName3,
-                onChange: setSelectedTatTestName3
-              },
-              {
-                label: "Select Month",
-                options: tatMonthNames,
-                value: selectedTatMonth3,
-                onChange: setSelectedTatMonth3
-              },
-              {
-                label: "Select Year",
-                options: yearOptions,
-                value: selectedTatYear3,
-                onChange: setSelectedTatYear3
-              }
-            ], false)}
+          {/* Chart 3 */}
+          <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+            <div className="flex w-full items-center justify-between mb-2">
+              {renderDropdowns([
+                {
+                  label: "Select Test Name",
+                  options: uniqueTestNames,
+                  value: selectedTatTestName3,
+                  onChange: setSelectedTatTestName3
+                },
+                {
+                  label: "Select Month",
+                  options: tatMonthNames,
+                  value: selectedTatMonth3,
+                  onChange: setSelectedTatMonth3
+                },
+                {
+                  label: "Select Year",
+                  options: yearOptions,
+                  value: selectedTatYear3,
+                  onChange: setSelectedTatYear3
+                }
+              ], false)}
+            </div>
+            <div className="w-full h-[340px] flex items-center justify-center">
+              <canvas ref={chart3Ref} className="!bg-transparent" />
+            </div>
           </div>
-          <div className="w-full h-[340px] flex items-center justify-center">
-            <canvas ref={chart3Ref} className="!bg-transparent" />
-          </div>
-        </div>
 
-        {/* Chart 4 */}
-        <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
-          <div className="flex w-full items-center justify-between mb-2">
-            {renderDropdowns([
-              {
-                label: "Select Test Name",
-                options: uniqueTestNames,
-                value: selectedTatTestName4,
-                onChange: setSelectedTatTestName4
-              },
-              {
-                label: "Select Month",
-                options: tatMonthNames,
-                value: selectedTatMonth4,
-                onChange: setSelectedTatMonth4
-              },
-              {
-                label: "Select Year",
-                options: yearOptions,
-                value: selectedTatYear4,
-                onChange: setSelectedTatYear4
-              }
-            ], false)}
+          {/* Chart 4 */}
+          <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
+            <div className="flex w-full items-center justify-between mb-2">
+              {renderDropdowns([
+                {
+                  label: "Select Test Name",
+                  options: uniqueTestNames,
+                  value: selectedTatTestName4,
+                  onChange: setSelectedTatTestName4
+                },
+                {
+                  label: "Select Month",
+                  options: tatMonthNames,
+                  value: selectedTatMonth4,
+                  onChange: setSelectedTatMonth4
+                },
+                {
+                  label: "Select Year",
+                  options: yearOptions,
+                  value: selectedTatYear4,
+                  onChange: setSelectedTatYear4
+                }
+              ], false)}
+            </div>
+            <div className="w-full h-[400px] flex items-center justify-center">
+              <canvas ref={chart4Ref} className="!bg-transparent" />
+            </div>
           </div>
-          <div className="w-full h-[400px] flex items-center justify-center">
-            <canvas ref={chart4Ref} className="!bg-transparent" />
-          </div>
+          <ToastContainer />
         </div>
-        <ToastContainer />
-      </div>
       }
     </>
   );
