@@ -44,6 +44,7 @@ const testNameShortMap = {
 
 const Page = () => {
 
+  const [processing, setProcessing] = useState(false);
   const now = new Date();
   const currentYear = now.getFullYear();
   const previousYear = currentYear - 1;
@@ -65,12 +66,12 @@ const Page = () => {
 
   // Chart 3
   const [selectedTatTestName3, setSelectedTatTestName3] = useState([]);
-  const [selectedTatMonth3, setSelectedTatMonth3] = useState(tatMonthNames[new Date().getMonth()]);
+  const [selectedTatMonth3, setSelectedTatMonth3] = useState("");
   const [selectedTatYear3, setSelectedTatYear3] = useState([currentYear.toString()]);
 
   // Chart 4
   const [selectedTatTestName4, setSelectedTatTestName4] = useState([]);
-  const [selectedTatMonth4, setSelectedTatMonth4] = useState(tatMonthNames[new Date().getMonth()]);
+  const [selectedTatMonth4, setSelectedTatMonth4] = useState("");
   const [selectedTatYear4, setSelectedTatYear4] = useState([currentYear.toString()]);
 
   const [tableData, setTableData] = useState([]);
@@ -90,6 +91,7 @@ const Page = () => {
   // Fetch pool data
   useEffect(() => {
     const cookieData = Cookies.get('vide_user');
+    setProcessing(true);
     if (cookieData) {
       const fetchPoolData = async () => {
         try {
@@ -97,6 +99,7 @@ const Page = () => {
           setUser(parsedData);
           const response = await axios.get(`/api/run-setup?role=${parsedData.role}&hospital_name=${parsedData.hospital_name}`);
           if (response.data[0].status === 200) {
+            setProcessing(false);
             const data = response.data[0].data || [];
             setPoolData(data);
           }
@@ -111,12 +114,14 @@ const Page = () => {
   // Fetch master sheet data
   useEffect(() => {
     const fetchMasterSheetData = async () => {
+      setProcessing(true);
       try {
         const cookieData = Cookies.get('vide_user');
         if (cookieData) {
           const parsedData = JSON.parse(cookieData);
           const response = await axios.get(`/api/store?role=${parsedData.role}&hospital_name=${parsedData.hospital_name}`);
           if (response.data[0].status === 200) {
+            setProcessing(false);
             setMasterSheetData(response.data[0].data || []);
           }
         }
@@ -526,6 +531,7 @@ const Page = () => {
 
   // Chart rendering logic
   useEffect(() => {
+    if (processing) return;
     // Chart 2: Grouped Bar
     if (chart1Instance.current) chart1Instance.current.destroy();
     chart1Instance.current = new Chart(chart1Ref.current, {
@@ -783,100 +789,6 @@ const Page = () => {
       plugins: [ChartDataLabels]
     });
 
-    //   // Chart 4: TAT Days by Month (separate state)
-    //   if (chart4Instance.current) chart4Instance.current.destroy();
-    //   chart4Instance.current = new Chart(chart4Ref.current, {
-    //     type: 'bar',
-    //     data: {
-    //       labels: tatXAxisLabels4,
-    //       datasets: tatDatasets4.map((ds, idx) => ({
-    //         ...ds,
-    //         borderColor: [
-    //           '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
-    //         ][idx % 8],
-    //         backgroundColor: [
-    //           '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
-    //         ][idx % 8] + '33',
-    //         borderWidth: 3,
-    //         tension: 0.3,
-    //         pointRadius: 5,
-    //         pointBackgroundColor: [
-    //           '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe', '#fbbf24', '#f87171', '#34d399', '#f472b6'
-    //         ][idx % 8],
-    //         datalabels: {
-    //           anchor: 'center',
-    //           align: 'center',
-    //           font: { weight: 'bold', size: 14 },
-    //           color: '#22223b',
-    //           formatter: v => v > 0 ? v.toFixed(1) : '',
-    //         }
-    //       }))
-    //     },
-    //     options: {
-    //       responsive: true,
-    //       maintainAspectRatio: false,
-    //       plugins: {
-    //         legend: { display: true, position: 'right' },
-    //         tooltip: { enabled: true },
-    //         datalabels: { display: true }
-    //       },
-    //       scales: {
-    //         x: {
-    //           title: { display: true, text: "" },
-    //           ticks: { font: { size: 12, weight: 'bold' }, color: '#374151' },
-    //           grid: { display: false }
-    //         },
-    //         y: {
-    //           beginAtZero: true,
-    //           title: { display: true, text: "TAT Days" },
-    //           ticks: { font: { size: 14, weight: 'bold' }, color: '#374151' },
-    //           grid: {
-    //             color: '#e5e7eb',
-    //             borderDash: [4, 4],
-    //             drawTicks: false,
-    //             drawBorder: false,
-    //           }
-    //         }
-    //       }
-    //     },
-    //     plugins: [ChartDataLabels]
-    //   });
-
-    //   const canvas = chart1Ref.current;
-    //   const hideTooltip = () => {
-    //     const tooltipEl = document.getElementById('chartjs-tooltip');
-    //     if (tooltipEl) {
-    //       tooltipEl.style.opacity = 0;
-    //       tooltipEl.style.left = '-9999px';
-    //       tooltipEl.style.top = '-9999px';
-    //     }
-    //   };
-    //   if (canvas) {
-    //     canvas.addEventListener('mouseleave', hideTooltip);
-    //   }
-
-    //   // Cleanup
-    //   return () => {
-    //     if (chart1Instance.current) chart1Instance.current.destroy();
-    //     if (canvas) {
-    //       canvas.removeEventListener('mouseleave', hideTooltip);
-    //     }
-    //     // Remove tooltip element from DOM
-    //     const tooltipEl = document.getElementById('chartjs-tooltip');
-    //     if (tooltipEl) tooltipEl.remove();
-    //   };
-    // }, [
-    //   runIdXAxisLabels, runIdChartData,
-    //   chart2XAxisLabels, chart2Datasets,
-    //   tatXAxisLabels3, tatDatasets3,
-    //   tatXAxisLabels4, tatDatasets4,
-    //   funnelChartData,
-    //   selectedTestName1, selectedYear1, selectedMonth1,
-    //   selectedRunId2, selectedYear2, selectedMonth2,
-    //   selectedTatTestName3, selectedTatYear3, selectedTatMonth3,
-    //   selectedTatTestName4, selectedTatYear4, selectedTatMonth4
-    // ]);
-
     // Chart 4: Bar (Sample Funnel)
     if (chart4Instance.current) chart4Instance.current.destroy();
     chart4Instance.current = new Chart(chart4Ref.current, {
@@ -1028,7 +940,16 @@ const Page = () => {
 
   return (
     <>
-      <RouteLoader />
+      { processing ?
+      <div>
+        {/* show the loading circle */}
+        <div className="flex flex-col items-center justify-center min-h-[400px]">
+          <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32 mb-4"></div>
+          <h2 className="text-center text-xl font-semibold">Processing data...</h2>
+          <p className="w-1/2 text-center">This may take a few moments depending on the size of your dataset. Please wait.</p>
+        </div>
+      </div>
+      :
       <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
         {/* Chart 1 */}
         <div className="bg-white dark:bg-gray-900 dark:text-white border-2 border-black dark:border-white rounded-lg p-4 shadow-md">
@@ -1147,6 +1068,7 @@ const Page = () => {
         </div>
         <ToastContainer />
       </div>
+      }
     </>
   );
 };
