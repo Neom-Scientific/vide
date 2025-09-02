@@ -212,7 +212,7 @@ export const SampleRegistration = () => {
   }
 
   useEffect(() => {
-    const cookieUser = Cookies.get('user');
+    const cookieUser = Cookies.get('vide_user');
     if (cookieUser) {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);

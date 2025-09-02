@@ -54,7 +54,7 @@ const RunSetup = () => {
   const [avgSize, setAvgSize] = useState(0);
   const [InstrumentType, setInstrumentType] = useState('');
   const [runDetails, setRunDetails] = useState([]);
-  const user = JSON.parse(Cookies.get('user') || '{}');
+  const user = JSON.parse(Cookies.get('vide_user') || '{}');
   const [runDetailsWithSampleIds, setRunDetailsWithSampleIds] = useState([]);
   const [selectedPoolNos, setSelectedPoolNos] = useState([]);
   const [processing, setProcessing] = useState(false);

@@ -57,7 +57,7 @@ const Reports = () => {
     selectedTestNames: [],
   });
   useEffect(() => {
-    const CookieUser = Cookies.get('user');
+    const CookieUser = Cookies.get('vide_user');
     if (CookieUser) {
       setUser(JSON.parse(CookieUser));
     }
@@ -587,7 +587,7 @@ const Reports = () => {
 
   useEffect(() => {
     const fetchTestNames = async () => {
-      const user = JSON.parse(Cookies.get("user") || "{}");
+      const user = JSON.parse(Cookies.get('vide_user') || "{}");
       const hospitalName = user?.hospital_name || 'default';
       try {
         const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);

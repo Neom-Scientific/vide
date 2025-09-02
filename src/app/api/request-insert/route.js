@@ -20,7 +20,7 @@ export async function POST(request) {
         "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type",
     };
-    
+
     const body = await request.json();
     const { name, hospital_name, email, password, phone_no } = body.data;
     try {
@@ -65,8 +65,8 @@ export async function POST(request) {
         }
 
         const result = await pool.query(
-            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status, role, user_login,created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())',
-            [name, hospital_name, hospital_id, username, password, phone_no, email, "disable", "NormalUser", 0]
+            'INSERT INTO request_form (name, hospital_name, hospital_id, username, password, phone_no, email, status, role, user_login, created_at, vide_counters , neovar_counters, pedigree_counters) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), $11, $12, $13)',
+            [name, hospital_name, hospital_id, username, password, phone_no, email, "disable", "NormalUser", 0, 10, 10, 10]
         );
 
 
@@ -123,7 +123,7 @@ export async function POST(request) {
             });
 
         }
-            return NextResponse.json(response, { headers: corsHeaders });
+        return NextResponse.json(response, { headers: corsHeaders });
     }
     catch (error) {
         console.error('Error executing query', error);
@@ -133,8 +133,8 @@ export async function POST(request) {
 
 export async function GET(request) {
     const { searchParams } = new URL(request.url);
-    const role = searchParams.get('role'); 
-    const username = searchParams.get('username'); 
+    const role = searchParams.get('role');
+    const username = searchParams.get('username');
     try {
         let response = [];
         if (role === 'SuperAdmin') {

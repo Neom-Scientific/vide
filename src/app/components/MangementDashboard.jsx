@@ -161,7 +161,7 @@ const MangementDashboard = () => {
   }, [yearSelection]);
 
   useEffect(() => {
-    const cookieData = Cookies.get('user');
+    const cookieData = Cookies.get('vide_user');
     if (cookieData) {
       const fetchRunData = async () => {
         try {

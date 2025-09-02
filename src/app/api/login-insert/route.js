@@ -20,7 +20,7 @@ export async function POST(request) {
     };
 
     const body = await request.json();
-    const { username, password } = body;
+    const { username, password,application_name } = body;
     try {
         let response = [];
 
@@ -49,10 +49,12 @@ export async function POST(request) {
             });
             return NextResponse.json(response, { headers: corsHeaders });
         }
+
         const result = await pool.query(
-            'INSERT INTO login_data (username, password) VALUES ($1, $2)',
-            [username, password]
+            'INSERT INTO login_data (username, password, application_name) VALUES ($1, $2, $3)',
+            [username, password, application_name]
         );
+        
         const query = 'UPDATE request_form SET user_login = $1 WHERE username = $2';
         await pool.query(query, [userData.rows[0].user_login + 1, username]);
         if (result.rowCount > 0) {

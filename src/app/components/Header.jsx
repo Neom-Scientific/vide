@@ -32,7 +32,7 @@ const Header = ({ activeTab, setActiveTab }) => {
   const [showTechnicianTabs, setShowTechnicianTabs] = useState(false);
 
   useEffect(() => {
-    const cookieUser = Cookies.get('user');
+    const cookieUser = Cookies.get('vide_user');
     if (cookieUser) {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);
@@ -309,7 +309,7 @@ const Header = ({ activeTab, setActiveTab }) => {
           </div>
           <button
             onClick={() => {
-              Cookies.remove('user');
+              Cookies.remove('vide_user');
               localStorage.removeItem('searchData');
               localStorage.removeItem('libraryPreparationData');
               localStorage.removeItem('runSetupForm');

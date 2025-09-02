@@ -76,7 +76,7 @@ const Inventory = () => {
   const [user, setUser] = useState([]);
 
   useEffect(() => {
-    const cookieData = Cookies.get('user');
+    const cookieData = Cookies.get('vide_user');
     if (cookieData) {
       const parsedData = JSON.parse(cookieData);
       setUser(parsedData);

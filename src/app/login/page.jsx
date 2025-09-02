@@ -18,7 +18,7 @@ const page = () => {
   const [activeTab, setActiveTab] = useState(user && user.role === 'SuperAdmin' ? 'Assign-User' : 'login');
 
   useEffect(() => {
-    const cookieUser = Cookies.get('user');
+    const cookieUser = Cookies.get('vide_user');
     if (cookieUser) {
       const parsedUser = JSON.parse(cookieUser);
       setUser(parsedUser);

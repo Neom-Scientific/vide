@@ -25,7 +25,7 @@ import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const Processing = () => {
-  const user = JSON.parse(Cookies.get("user") || "{}");
+  const user = JSON.parse(Cookies.get('vide_user') || "{}");
   const [processing, setProcessing] = useState(false);
   const [showAuditSidebar, setShowAuditSidebar] = useState(false);
   const [auditSampleId, setAuditSampleId] = useState("");
@@ -640,7 +640,7 @@ const Processing = () => {
   // Fetch test names from API (like SampleRegistration)
   useEffect(() => {
     const fetchTestNames = async () => {
-      const user = JSON.parse(Cookies.get("user") || "{}");
+      const user = JSON.parse(Cookies.get('vide_user') || "{}");
       const hospitalName = user?.hospital_name || 'default';
       try {
         const res = await axios.get(`/api/default-values?hospital_name=${encodeURIComponent(hospitalName)}&type=test_name`);

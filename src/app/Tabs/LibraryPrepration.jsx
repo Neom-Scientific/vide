@@ -40,7 +40,7 @@ const LibraryPrepration = () => {
   const [currentSelection, setCurrentSelection] = useState([]);
   // const [createdBatchIds, setCreatedBatchIds] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
-  const user = JSON.parse(Cookies.get('user') || '{}');
+  const user = JSON.parse(Cookies.get('vide_user') || '{}');
   const testNameRef = useRef(testName);
   const [manualPlateRows, setManualPlateRows] = useState(new Set());
   const [manualWellRows, setManualWellRows] = useState(new Set());

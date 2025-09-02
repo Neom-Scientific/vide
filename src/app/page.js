@@ -89,7 +89,7 @@ const Page = () => {
 
   // Fetch pool data
   useEffect(() => {
-    const cookieData = Cookies.get('user');
+    const cookieData = Cookies.get('vide_user');
     if (cookieData) {
       const fetchPoolData = async () => {
         try {
@@ -112,7 +112,7 @@ const Page = () => {
   useEffect(() => {
     const fetchMasterSheetData = async () => {
       try {
-        const cookieData = Cookies.get('user');
+        const cookieData = Cookies.get('vide_user');
         if (cookieData) {
           const parsedData = JSON.parse(cookieData);
           const response = await axios.get(`/api/store?role=${parsedData.role}&hospital_name=${parsedData.hospital_name}`);

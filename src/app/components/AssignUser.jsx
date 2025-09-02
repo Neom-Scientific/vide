@@ -11,7 +11,7 @@ const AssignUser = () => {
   const [admin, setAdmin] = useState(null);
 
   useEffect(() => {
-    const cookieUser = Cookies.get('user');
+    const cookieUser = Cookies.get('vide_user');
     const fetchData = async () => {
       if (cookieUser) {
 
