@@ -532,6 +532,29 @@ const LibraryPrepration = () => {
                 }
 
                 if (column.key === 'well' || column.key === 'plate_designation') {
+                  const storedData = JSON.parse(localStorage.getItem('libraryPreparationData')) || {};
+                  const allAssignedPlateWellPairs = Object.values(storedData)
+                    .flatMap(val => {
+                      if (Array.isArray(val)) return val;
+                      if (val && Array.isArray(val.rows)) return val.rows;
+                      return [];
+                    })
+                    .map(row => ({
+                      plate: row.plate_designation,
+                      well: row.well
+                    }))
+                    .filter(pair => pair.plate && pair.well);
+
+                  // Get the current row's plate
+                  const currentRow = tableRows[info.row.index];
+                  const currentPlate = currentRow?.plate_designation;
+
+                  // Only disable wells that are already assigned with the same plate
+                  const disabledWells = currentPlate
+                    ? allAssignedPlateWellPairs
+                      .filter(pair => pair.plate === currentPlate && pair.well !== currentRow?.well)
+                      .map(pair => pair.well)
+                    : [];
                   return (
                     <select
                       className="border-2 w-[100px] border-orange-300 rounded-lg p-2"
@@ -539,6 +562,13 @@ const LibraryPrepration = () => {
                       onChange={e => {
                         const newValue = e.target.value;
                         if (!newValue) return;
+                        if (
+                          column.key === 'well' &&
+                          disabledWells.includes(newValue)
+                        ) {
+                          toast.error("This well number is already assigned for this plate.");
+                          return;
+                        }
 
                         setTableRows(prevRows => {
                           if (info.row.index === 0) {
@@ -622,13 +652,19 @@ const LibraryPrepration = () => {
                     >
                       <option value="">Select {column.key === 'well' ? 'Well' : 'Plate Designation'}</option>
                       {(column.key === 'well' ? wellNumberOptions : plateOptions).map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
+                        <option
+                          key={opt}
+                          value={opt}
+                          disabled={column.key === 'well' && disabledWells.includes(opt)}
+                        >
+                          {opt}
+                        </option>
                       ))}
                     </select>
                   );
                 }
 
-                if (column.key === 'internal_id'){
+                if (column.key === 'internal_id') {
                   // if row has the base_internal_id not null than show the base_internal_id value else internal_id value
                   const base_internal_id = info.row.original.base_internal_id;
                   return <span>{base_internal_id ? base_internal_id : value}</span> || "";
@@ -782,15 +818,15 @@ const LibraryPrepration = () => {
               updatedRow.lib_vol_for_hyb = parseFloat(200 / qubit_lib_qc_ng_ul).toFixed(2)
             }
 
-            if (columnId === "size") {
-              updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
-            }
+            // if (columnId === "size") {
+            //   updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
+            // }
 
             if (qubit_dna || per_rxn_gdna) {
               updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.round((per_rxn_gdna / qubit_dna) * 3) : "";
             }
 
-            if (qubit_dna) {
+            if (testNameRef.current === "HLA" && qubit_dna) {
               updatedRow.dna_vol_for_dilution = qubit_dna > 0 ? (400 / qubit_dna).toFixed(2) : "";
               updatedRow.buffer_vol_to_be_added = (10 - updatedRow.dna_vol_for_dilution).toFixed(2);
             }
@@ -805,17 +841,17 @@ const LibraryPrepration = () => {
             }
 
             if (columnId === "qubit_lib_qc_ng_ul") {
-              updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
+              // updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
               updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
 
             }
 
-            if (columnId === "stock_ng_ul") {
-              const stock = parseFloat(value) || 0;
-              updatedRow.stock_ng_ul = stock;
-            }
+            // if (columnId === "stock_ng_ul") {
+            //   const stock = parseFloat(value) || 0;
+            //   updatedRow.stock_ng_ul = stock;
+            // }
 
-            if (columnId === "qubit_lib_qc_ng_ul") {
+            if (testNameRef.current === "SGS" && columnId === "qubit_lib_qc_ng_ul") {
               updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (100 / qubit_lib_qc_ng_ul).toFixed(2) : "";
             }
 
@@ -826,9 +862,9 @@ const LibraryPrepration = () => {
               updatedRow.nm_conc_for_2nm = parseFloat(updatedRow.nm_conc_for_2nm.toFixed(2));
             }
 
-            if (columnId === 'pool_conc' || columnId === 'size') {
-              updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
-            }
+            // if (columnId === 'pool_conc' || columnId === 'size') {
+            //   updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
+            // }
             return updatedRow;
 
           })
@@ -1003,6 +1039,10 @@ const LibraryPrepration = () => {
     }
     return { lib_vol_for_20nm, nfw_volu_for_20nm };
   }
+
+  useEffect(() => {
+    setRowSelection({})
+  }, [testName])
 
   const editableColumns = allColumns
     .map(col => col.key)
@@ -1336,7 +1376,7 @@ const LibraryPrepration = () => {
                 }
               }
 
-              if (qubit_dna) {
+              if (testName === "HLA" && qubit_dna) {
                 updatedRow.dna_vol_for_dilution = qubit_dna > 0 ? (400 / qubit_dna).toFixed(2) : "";
                 updatedRow.buffer_vol_to_be_added = (10 - updatedRow.dna_vol_for_dilution).toFixed(2);
               }
@@ -1373,9 +1413,9 @@ const LibraryPrepration = () => {
                 updatedRow.lib_vol_for_hyb = parseFloat(200 / qubit_lib_qc_ng_ul).toFixed(2)
               }
 
-              if (columnId === "size") {
-                updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
-              }
+              // if (columnId === "size") {
+              //   updatedRow.one_tenth_of_nm_conc = nm_conc > 0 ? (parseFloat((nm_conc / 10).toFixed(2))) : "";
+              // }
 
               if (qubit_dna || per_rxn_gdna) {
                 updatedRow.gdna_volume_3x = qubit_dna > 0 ? Math.round((per_rxn_gdna / qubit_dna) * 3) : "";
@@ -1387,21 +1427,21 @@ const LibraryPrepration = () => {
               }
 
               if (columnId === "qubit_lib_qc_ng_ul") {
-                updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
+                // updatedRow.stock_ng_ul = qubit_lib_qc_ng_ul > 0 ? qubit_lib_qc_ng_ul * 10 : "";
                 updatedRow.lib_vol_for_hyb = (200 / qubit_lib_qc_ng_ul).toFixed(2);
               }
-              if (columnId === "stock_ng_ul") {
-                const stock = parseFloat(rows[r][c]) || 0;
-                updatedRow.stock_ng_ul = stock;
+              // if (columnId === "stock_ng_ul") {
+              //   const stock = parseFloat(rows[r][c]) || 0;
+              //   updatedRow.stock_ng_ul = stock;
+              // }
+
+              if (testName === "SGS" && columnId === "qubit_lib_qc_ng_ul") {
+                updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (100 / qubit_lib_qc_ng_ul).toFixed(2) : "";
               }
 
-              if (columnId === "qubit_lib_qc_ng_ul") {
-                updatedRow.pooling_volume = qubit_lib_qc_ng_ul > 0 ? (200 / qubit_lib_qc_ng_ul).toFixed(2) : "";
-              }
-
-              if (columnId === 'pool_conc' || columnId === 'size') {
-                updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
-              }
+              // if (columnId === 'pool_conc' || columnId === 'size') {
+              //   updatedRow.one_tenth_of_nm_conc = updatedRow.nm_conc > 0 ? (parseFloat((updatedRow.nm_conc / 10).toFixed(2))) : "";
+              // }
 
               const { lib_vol_for_20nm, nfw_volu_for_20nm } = calculateLibVolFor2nm(updatedRow, testName);
               updatedRow.lib_vol_for_20nm = lib_vol_for_20nm;
@@ -2482,7 +2522,7 @@ const LibraryPrepration = () => {
                                                 : "";
 
                                               const nmConc = parseFloat(updated.nm_conc) || 0;
-                                              updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
+                                              // updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
 
                                               updated.lib_vol_for_20nm = (20 * totalVolFor2nm / nmConc).toFixed(2);
@@ -2686,7 +2726,7 @@ const LibraryPrepration = () => {
                                               : "";
 
                                             const nmConc = parseFloat(updated.nm_conc) || 0;
-                                            updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
+                                            // updated.one_tenth_of_nm_conc = (nmConc > 0) ? (nmConc / 10).toFixed(2) : "";
 
                                             if (cell.column.id === "lib_vol_for_20nm" || cell.column.id === "nm_conc" || cell.column.id === "one_tenth_of_nm_conc") {
                                               const nmConc = parseFloat(updated.nm_conc) || 0;
@@ -2701,7 +2741,7 @@ const LibraryPrepration = () => {
                                                 : "";
                                             }
 
-                                            if (qubit_dna) {
+                                            if (testName === "HLA" && qubit_dna) {
                                               updated.dna_vol_for_dilution = qubit_dna > 0 ? (400 / qubit_dna).toFixed(2) : "";
                                               updated.buffer_vol_to_be_added = (10 - updated.dna_vol_for_dilution).toFixed(2);
                                             }

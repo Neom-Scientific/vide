@@ -108,21 +108,21 @@ export async function POST(request) {
         }
 
 
-        const data = await pool.query('SELECT sample_id,test_name FROM master_sheet WHERE sample_id = $1', [sample_id])
-        if (data.rows.test_name === 'Myeloid' && data.rows.length >= 2) {
-            response.push({
-                message: 'Sample ID already exists for Myeloid test',
-                status: 400
-            })
-            return NextResponse.json(response)
-        }
-        else if (data.rows.length > 0 && data.rows.test_name !== 'Myeloid') {
-            response.push({
-                message: 'Sample ID already exists',
-                status: 400
-            })
-            return NextResponse.json(response)
-        }
+        // const data = await pool.query('SELECT sample_id,test_name FROM master_sheet WHERE sample_id = $1', [sample_id])
+        // if (data.rows.test_name === 'Myeloid' && data.rows.length >= 2) {
+        //     response.push({
+        //         message: 'Sample ID already exists for Myeloid test',
+        //         status: 400
+        //     })
+        //     return NextResponse.json(response)
+        // }
+        // else if (data.rows.length > 0 && data.rows.test_name !== 'Myeloid') {
+        //     response.push({
+        //         message: 'Sample ID already exists',
+        //         status: 400
+        //     })
+        //     return NextResponse.json(response)
+        // }
 
         if (testNames.length === 1) {
             let internal_id;

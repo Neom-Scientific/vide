@@ -326,7 +326,7 @@ const Processing = () => {
       accessorKey: "id",
       header: "S. No.",
       cell: ({ row }) => row.index + 1,
-      enableSorting: true,
+      // enableSorting: true,
       enableHiding: false,
     },
 
