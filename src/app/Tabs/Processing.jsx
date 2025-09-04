@@ -366,7 +366,7 @@ const Processing = () => {
           },
         };
       }
-      if (["hpo_id", "hpo_term", "clinical_indication", "remarks"].includes(col.key)) {
+      if (["hpo_id", "hpo_term", "clinical_history", "remarks"].includes(col.key)) {
         return {
           accessorKey: col.key,
           header: col.label,
