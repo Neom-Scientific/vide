@@ -72,7 +72,39 @@ export async function POST(request) {
             opd_notes_checkbox,
             consent_form_checkbox,
         } = fields;
+        let hpo_id_final = null;
+        let hpo_term_final = null;
+        if (clinical_history) {
+            try {
+                const resp = await fetch("https://hpoidextractor.onrender.com/extract", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ text: clinical_history }),
+                });
 
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (Array.isArray(data) && data.length > 0) {
+                        const hpoIds = data.map((d) => d["HPO ID"] || d.hpo_id).filter(Boolean);
+                        const hpoTerms = data.map((d) => d["Term"] || d.hpo_term).filter(Boolean);
+
+                        hpo_id_final = hpoIds.length > 0 ? hpoIds.join(", ") : "Not Found";
+                        hpo_term_final = hpoTerms.length > 0 ? hpoTerms.join(", ") : "Not Found";
+                    } else {
+                        hpo_id_final = "Not Found";
+                        hpo_term_final = "Not Found";
+                    }
+                } else {
+                    console.error("FastAPI error:", await resp.text());
+                    hpo_id_final = "Not Found";
+                    hpo_term_final = "Not Found";
+                }
+            } catch (err) {
+                console.error("Failed to call extractor:", err);
+                hpo_id_final = "Not Found";
+                hpo_term_final = "Not Found";
+            }
+        }
         const testNames = (selectedTestName || "").split(",").map(t => t.trim()).filter(Boolean);
 
         const today = new Date(registration_date || Date.now());
@@ -253,7 +285,9 @@ export async function POST(request) {
                     location,
                     trf_checkbox,
                     opd_notes_checkbox,
-                    consent_form_checkbox
+                    consent_form_checkbox,
+                    hpo_id,
+                    hpo_term
                 )
                 VALUES (
                     $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
@@ -262,7 +296,7 @@ export async function POST(request) {
                     $26, $27, $28, $29, $30,
                     $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                     $41, $42, $43, $44, $45, $46,$47, $48,
-                    $49, $50, $51, $52, $53, $54, $55, $56, $57,$58, $59,$60,$61
+                    $49, $50, $51, $52, $53, $54, $55, $56, $57,$58, $59,$60,$61,$62 ,$63
                 )
                 RETURNING *
             `;
@@ -327,7 +361,9 @@ export async function POST(request) {
                 "monitering",
                 trf_checkbox || 'No',
                 opd_notes_checkbox || 'No',
-                consent_form_checkbox || 'No'
+                consent_form_checkbox || 'No',
+                hpo_id_final,
+                hpo_term_final
             ];
             const result = await pool.query(query, values);
             const insertedData = result.rows[0];
@@ -452,7 +488,9 @@ export async function POST(request) {
                         trf_checkbox,
                         opd_notes_checkbox,
                         consent_form_checkbox,
-                        base_internal_id
+                        base_internal_id,
+                        hpo_id,
+                        hpo_term
                     )
                     VALUES (
                         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
@@ -462,7 +500,7 @@ export async function POST(request) {
                         $31, $32, $33, $34, $35, $36, $37, $38, $39, $40,
                         $41, $42, $43, $44, $45, $46,$47, $48,
                         $49, $50, $51, $52, $53, $54, $55, $56, $57, $58,
-                        $59, $60, $61, $62
+                        $59, $60, $61, $62, $63, $64
                     )
                     RETURNING *
                 `;
@@ -528,7 +566,9 @@ export async function POST(request) {
                     trf_checkbox || 'No',
                     opd_notes_checkbox || 'No',
                     consent_form_checkbox || 'No',
-                    base_internal_id
+                    base_internal_id,
+                    hpo_id_final,
+                    hpo_term_final
                 ];
                 const result = await pool.query(query, values);
                 const insertedData = result.rows[0];

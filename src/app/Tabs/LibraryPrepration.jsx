@@ -38,7 +38,6 @@ const LibraryPrepration = () => {
   const [processing, setProcessing] = useState(false);
   const [pooledRowData, setPooledRowData] = useState([]);
   const [currentSelection, setCurrentSelection] = useState([]);
-  // const [createdBatchIds, setCreatedBatchIds] = useState([]);
   const [DialogOpen, setDialogOpen] = useState(false);
   const user = JSON.parse(Cookies.get('vide_user') || '{}');
   const testNameRef = useRef(testName);

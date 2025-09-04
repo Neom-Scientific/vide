@@ -172,6 +172,8 @@ const Processing = () => {
     { key: 'buffer_vol_to_be_added', label: 'Buffer Vol (ul)' },
     { key: 'conc_of_amplicons', label: 'Conc of Amplicons (ng/ul)' },
     { key: 'vol_for_fragmentation', label: 'Volume for Fragmentation (ul)' },
+    { key: 'hpo_id', label: 'HPO ID' },
+    { key: 'hpo_term', label: 'HPO Term' },
   ];
 
   // const allTests = [
@@ -364,6 +366,25 @@ const Processing = () => {
           },
         };
       }
+      if (["hpo_id", "hpo_term", "clinical_indication", "remarks"].includes(col.key)) {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          size: 140, // Set your desired width in px
+          cell: (info) => (
+            <div style={{
+              maxWidth: 140,
+              minWidth: 140,
+              overflowX: "auto",
+              whiteSpace: "nowrap"
+            }}>
+              {info.getValue() || ""}
+            </div>
+          ),
+        };
+      }
+    
       if (col.key === 'sample_id') {
         return {
           accessorKey: col.key,
