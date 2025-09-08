@@ -35,47 +35,49 @@ const Processing = () => {
   const indicatorKeys = ["dna_isolation", "lib_prep", "under_seq", "seq_completed"];
 
   const allColumns = [
-    // { key: 'id', label: 'Serial No.' },
-    { key: 'hospital_name', label: 'Organization Name' },
-    { key: 'vial_received', label: 'Vial Received' },
-    { key: 'specimen_quality', label: 'Specimen Quality' },
-    { key: 'registration_date', label: 'Registration Date' },
-    { key: 'internal_id', label: 'Lab ID' },
-    { key: 'dept_name', label: 'Department Name' },
-    { key: 'run_id', label: 'Run ID' },
-    { key: 'sample_date', label: 'Sample Date' },
-    { key: 'sample_type', label: 'Sample Type' },
-    { key: 'trf', label: 'TRF' },
-    { key: 'collection_date_time', label: 'Collection Date Time' },
-    { key: 'storage_condition', label: 'Storage Condition' },
-    { key: 'prority', label: 'Prority' },
-    { key: 'hospital_id', label: 'Organization ID' },
-    { key: 'client_id', label: 'Client ID' },
-    { key: 'client_name', label: 'Client Name' },
+    // registration and identification columns
+    { key: 'registration_date', label: 'Registration Date' }, 
     { key: 'sample_id', label: 'Patient ID' },
+    { key: 'internal_id', label: 'Lab ID' }, 
+    { key: 'run_id', label: 'Run ID' },
+    { key: 'batch_id', label: 'Batch ID' },
+    { key: 'pool_no', label: 'Pool No' },
+    { key: 'lib_prep_date', label: 'Library Prep Date' },
+    { key: 'seq_run_date', label: 'Seq Run Date' },
     { key: 'patient_name', label: 'Patient Name' },
+    { key: 'test_name', label: 'Test Name' },
     { key: 'DOB', label: 'DOB' },
     { key: 'age', label: 'Age' },
     { key: 'gender', label: 'Gender' },
-    { key: 'ethnicity', label: 'Ethnicity' },
+    { key: 'collection_date_time', label: 'Collection Date Time' },
+    { key: 'sample_date', label: 'Sample Receiving Date and Time' },
+    { key: 'sample_type', label: 'Sample Type' },
+    { key: 'trf', label: 'TRF' }, 
+    { key: 'specimen_quality', label: 'Specimen Quality' },
+    { key: 'prority', label: 'Prority' },
+    { key: 'storage_condition', label: 'Storage Condition' },
+    { key: 'vial_received', label: 'Vial Received' },
+    { key: 'repeat_required', label: 'Repeat Required' },
+    { key: 'repeat_reason', label: 'Repeat Reason' },
+    { key: 'repeat_date', label: 'Repeat Date' },
     { key: 'father_mother_name', label: 'Father/Mother Name' },
-    // { key: 'spouse_name', label: 'Spouse Name' },
+    { key: 'patient_email', label: "Patient Email" },
+    { key: 'patient_mobile', label: "Patient's Mobile" },
+    { key: 'ethnicity', label: 'Ethnicity' },
     { key: 'address', label: 'Address' },
     { key: 'city', label: 'City' },
     { key: 'state', label: 'State' },
     { key: 'country', label: 'Country' },
-    { key: 'patient_mobile', label: "Patient's Mobile" },
-    { key: 'patient_email', label: "Patient Email" },
-    { key: 'docter_mobile', label: "Doctor's Mobile" },
-    { key: 'docter_name', label: 'Doctor Name' },
-    { key: 'email', label: 'Email' },
-    { key: 'test_name', label: 'Test Name' },
-    { key: 'remarks', label: 'Remarks' },
+    { key: 'client_id', label: 'Client ID' },
+    { key: 'client_name', label: 'Client Name' },
     { key: 'clinical_history', label: 'Clinical History' },
-    { key: 'repeat_required', label: 'Repeat Required' },
-    { key: 'repeat_reason', label: 'Repeat Reason' },
-    { key: 'repeat_date', label: 'Repeat Date' },
-    { key: 'selectedTestName', label: 'Selected Test Name' },
+    { key: 'hpo_id', label: 'HPO ID' },
+    { key: 'hpo_term', label: 'HPO Term' },
+    { key: 'docter_name', label: 'Doctor Name' },
+    { key: 'dept_name', label: 'Department Name' },
+    { key: 'docter_mobile', label: "Doctor's Mobile" },
+    { key: 'email', label: "Doctor's Email" },
+    { key: 'remarks', label: 'Remarks' },
     { key: 'systolic_bp', label: 'Systolic BP' },
     { key: 'diastolic_bp', label: 'Diastolic BP' },
     { key: 'total_cholesterol', label: 'Total Cholesterol' },
@@ -90,8 +92,75 @@ const Processing = () => {
     { key: 'lib_prep', label: 'Library Prep' },
     { key: 'under_seq', label: 'Under Sequencing' },
     { key: 'seq_completed', label: 'Sequencing Completed' },
-    { key: 'seq_run_date', label: 'Seq Run Date' },
-    { key: 'report_realising_date', label: 'Report Realising Date' },
+
+    //library preparation columns
+    { key: 'qubit_dna', label: 'Qubit DNA' },
+    { key: 'per_rxn_gdna', label: 'Per RXN GDNA' },
+    { key: 'volume', label: 'Volume' },
+    { key: 'gdna_volume_3x', label: 'GDNA Volume 3X' },
+    { key: 'nfw', label: 'NFW' },
+    { key: 'qubit_lib_qc_ng_ul', label: 'Qubit Lib QC NG/UL' },
+    { key: 'lib_vol_for_hyb', label: 'Lib Vol for HYB' },
+
+    { key: 'lib_qubit', label: 'Lib Qubit' },
+    { key: 'conc_rxn', label: 'Conc RXN' },
+    { key: 'nm_conc', label: 'NM Conc' },
+    { key: 'nfw_volu_for_20nm', label: 'NFW Volu for 2nm' },
+    { key: 'total_vol_for_20nm', label: 'Total Vol for 2nm' },
+    { key: 'lib_vol_for_20nm', label: 'Lib Vol for 2nm' },
+    { key: 'size', label: 'Size' },
+    { key: 'pool_conc', label: 'Pool Conc' },
+    { key: 'lib_qubit_for_2nm', label: 'Batch Qubit (ng/ul)' },
+    { key: 'size_for_2nm', label: 'Average Size' },
+    { key: 'nm_conc_for_2nm', label: 'nM Conc' },
+    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 2nM' },
+    { key: 'nfw_vol_for_2nm', label: 'NFW Volume For 2nM' },
+    { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
+    
+    { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
+    { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
+    { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool (Myeloid)' },
+    { key: 'tapestation_size', label: 'Average bp  Size (Myeloid)' },
+    
+    { key: 'pooling_volume', label: 'Pooling Volume (SGS)' },
+    { key: 'dna_vol_for_dilution', label: 'DNA Vol for Dilution (HLA)' },
+    { key: 'buffer_vol_to_be_added', label: 'Buffer Vol (HLA)' },
+    { key: 'conc_of_amplicons', label: 'Conc of Amplicons (HLA)' },
+    { key: 'vol_for_fragmentation', label: 'Volume for Fragmentation (HLA)' },
+
+    { key: 'plate_designation', label: 'Plate Designation' },
+    { key: 'well', label: 'Well' },
+    { key: 'i5_index_reverse', label: 'I5 Index Reverse' },
+    { key: 'i7_index', label: 'I7 Index' },
+    { key: 'i5_index_forward', label: 'I5 Index Forward' },
+    { key: 'data_required', label: 'Data Required' },
+
+    // run setup columns
+    { key: 'final_pool_vol_ul', label: 'Final Pool Vol (ul)' },
+    { key: 'total_required', label: 'Total Required (GB)' },
+    { key: 'total_gb_available', label: 'Total Available (GB)' },
+    { key: 'pool_conc_run_setup', label: 'Final Pool Concentration (Qubit)' },
+    { key: 'pool_size', label: 'Average Final Pool Size (Tapestation)' },
+    { key: 'nm_cal', label: 'Final Pool nM Concentration' },
+    { key: 'instument_type', label: 'Instrument Type' },
+    { key: 'total_volume_2nm_next_seq_550', label: 'Total Volume 2nm (Next Seq 550)' },
+    { key: 'final_pool_conc_vol_2nm_next_seq_550', label: 'Final Pool Conc Vol 2nm (Next Seq 550)' },
+    { key: 'nfw_vol_2nm_next_seq_550', label: 'NFW 2nm (Next Seq 550)' },
+    { key: 'dinatured_lib_next_seq_550', label: 'Stock Conc (Next Seq 550)' },
+    { key: 'total_volume_next_seq_550', label: 'Total Volume (Next Seq 550)' },
+    { key: 'loading_conc_550', label: 'Required Concentration (Next Seq 550)' },
+    { key: 'lib_required_next_seq_550', label: 'Volume from Stock (Next Seq 550)' },
+    { key: 'buffer_volume_next_seq_550', label: 'HT Buffer (Next Seq 550)' },
+    { key: 'total_volume_2nm_next_seq_1000_2000', label: 'Total Volume 2nm (Next Seq 1000-2000)' },
+    { key: 'final_pool_conc_vol_2nm_next_seq_1000_2000', label: 'Final Pool Conc Vol 2nm (Next Seq 1000-2000)' },
+    { key: 'rsbetween_vol_2nm_next_seq_1000_2000', label: 'RSB tween-20 2nm (Next Seq 1000-2000)' },
+    { key: 'loading_conc_1000_2000', label: 'Loading Concentration (Next Seq 1000-2000)' },
+    { key: 'total_volume_600pm_next_seq_1000_2000', label: 'Total Volume 600pm (Next Seq 1000-2000)' },
+    { key: 'vol_of_2nm_for_600pm_next_seq_1000_2000', label: 'Volume of 2nM conc 600pM (Next Seq 1000-2000)' },
+    { key: 'vol_of_rs_between_for_600pm_next_seq_1000_2000', label: 'Volume of RSB tween-20 for 600pm (Next Seq 1000-2000)' },
+    { key: 'run_remarks', label: 'Run Remarks' },
+
+    // reporting columns
     { key: 'q30', label: 'Q 30 >=' },
     { key: 'raw_data_gen', label: 'Raw Data Generated' },
     { key: 'duplication_rate', label: 'Duplication Rate' },
@@ -104,76 +173,6 @@ const Processing = () => {
     { key: 'mito_report_link', label: 'Mito Report Link' },
     { key: 'report_status', label: 'Report Status' },
     { key: 'report_releasing_date', label: 'Report Releasing Date' },
-    { key: 'conc_rxn', label: 'Conc RXN' },
-    { key: 'i5_index_reverse', label: 'I5 Index Reverse' },
-    { key: 'i7_index', label: 'I7 Index' },
-    { key: 'lib_qubit', label: 'Lib Qubit' },
-    { key: 'nm_conc', label: 'NM Conc' },
-    { key: 'nfw_volu_for_20nm', label: 'NFW Volu for 2nm' },
-    { key: 'total_vol_for_20nm', label: 'Total Vol for 2nm' },
-    { key: 'barcode', label: 'Barcode' },
-    { key: 'lib_vol_for_20nm', label: 'Lib Vol for 2nm' },
-    { key: 'qubit_dna', label: 'Qubit DNA' },
-    { key: 'per_rxn_gdna', label: 'Per RXN GDNA' },
-    { key: 'volume', label: 'Volume' },
-    { key: 'gdna_volume_3x', label: 'GDNA Volume 3X' },
-    { key: 'nfw', label: 'NFW' },
-    { key: 'plate_designation', label: 'Plate Designation' },
-    { key: 'well', label: 'Well' },
-    { key: 'qubit_lib_qc_ng_ul', label: 'Qubit Lib QC NG/UL' },
-    { key: 'stock_ng_ul', label: 'Stock NG/UL' },
-    { key: 'lib_vol_for_hyb', label: 'Lib Vol for HYB' },
-    { key: 'pool_no', label: 'Pool No' },
-    { key: 'size', label: 'Size' },
-    { key: 'i5_index_forward', label: 'I5 Index Forward' },
-    { key: 'sample_volume', label: 'Sample Volume' },
-    { key: 'pooling_volume', label: 'Pooling Volume' },
-    { key: 'pool_conc', label: 'Pool Conc' },
-    { key: 'one_tenth_of_nm_conc', label: 'One Tenth of NM Conc' },
-    { key: 'data_required', label: 'Data Required' },
-    { key: 'buffer_volume_next_seq_550', label: 'Buffer Volume Next Seq 550' },
-    { key: 'dinatured_lib_next_seq_550', label: 'Dinatured Lib Next Seq 550' },
-    { key: 'final_pool_conc_vol_2nm_next_seq_1000_2000', label: 'Final Pool Conc Vol 2nm Next Seq 1000-2000' },
-    { key: 'instument_type', label: 'Instrument Type' },
-    { key: 'lib_required_next_seq_550', label: 'Lib Required Next Seq 550' },
-    { key: 'loading_conc_550', label: 'Loading Conc 550' },
-    { key: 'loading_conc_1000_2000', label: 'Loading Conc 1000-2000' },
-    { key: 'nm_cal', label: 'NM Cal' },
-    { key: 'pool_conc_run_setup', label: 'Pool Conc Run Setup' },
-    { key: 'pool_size', label: 'Pool Size' },
-    { key: 'rsbetween_vol_2nm_next_seq_1000_2000', label: 'RS Between Vol 2nm Next Seq 1000-2000' },
-    { key: 'selected_application', label: 'Selected Application' },
-    { key: 'total_gb_available', label: 'Total GB Available' },
-    { key: 'total_required', label: 'Total Required' },
-    { key: 'total_volume_2nm_next_seq_1000_2000', label: 'Total Volume 2nm Next Seq 1000-2000' },
-    { key: 'total_volume_600pm_next_seq_1000_2000', label: 'Total Volume 600pm Next Seq 1000-2000' },
-    { key: 'total_volume_next_seq_550', label: 'Total Volume Next Seq 550' },
-    { key: 'vol_of_2nm_for_600pm_next_seq_1000_2000', label: 'Vol of 2nm for 600pm Next Seq 1000-2000' },
-    { key: 'vol_of_rs_between_for_600pm_next_seq_1000_2000', label: 'Vol of RS Between for 600pm Next Seq 1000-2000' },
-    { key: 'total_volume_2nm_next_seq_550', label: 'Total Volume 2nm Next Seq 550' },
-    { key: 'final_pool_conc_vol_2nm_next_seq_550', label: 'Final Pool Conc Vol 2nm Next Seq 550' },
-    { key: 'nfw_vol_2nm_next_seq_550', label: 'NFW Vol 2nm Next Seq 550' },
-    { key: 'final_pool_vol_ul', label: 'Final Pool Vol (ul)' },
-    { key: 'ht_buffer_next_seq_1000_2000', label: 'HT Buffer Next Seq 1000-2000' },
-    { key: 'lib_prep_date', label: 'Library Prep Date' },
-    { key: 'batch_id', label: 'Batch ID' },
-    { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
-    { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
-    { key: 'run_remarks', label: 'Run Remarks' },
-    { key: 'lib_qubit_for_2nm', label: 'Batch Qubit (ng/ul)' },
-    { key: 'size_for_2nm', label: 'Average Size' },
-    { key: 'nm_conc_for_2nm', label: 'nM Conc' },
-    { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 2nM' },
-    { key: 'nfw_vol_for_2nm', label: 'NFW Volume For 2nM' },
-    { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
-    { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool' },
-    { key: 'tapestation_size', label: 'Average bp  Size' },
-    { key: 'dna_vol_for_dilution', label: 'DNA Vol for Dilution (40ng/ul)' },
-    { key: 'buffer_vol_to_be_added', label: 'Buffer Vol (ul)' },
-    { key: 'conc_of_amplicons', label: 'Conc of Amplicons (ng/ul)' },
-    { key: 'vol_for_fragmentation', label: 'Volume for Fragmentation (ul)' },
-    { key: 'hpo_id', label: 'HPO ID' },
-    { key: 'hpo_term', label: 'HPO Term' },
   ];
 
   // const allTests = [
@@ -237,7 +236,7 @@ const Processing = () => {
 
   const handleEditRow = (rowData) => {
     // Save the row data to localStorage or Redux for use in the SampleRegistration tab
-    console.log('rowData:', rowData); // Debugging row data
+    // console.log('rowData:', rowData); // Debugging row data
     localStorage.setItem("editRowData", JSON.stringify(rowData));
 
     // Navigate to the SampleRegistration tab
@@ -346,6 +345,33 @@ const Processing = () => {
           },
         };
       }
+
+      if (col.key === "total_gb_available" || col.key === "total_required") {
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const value = info.getValue();
+            if (value === null || value === undefined || value === "") return "";
+            else return parseFloat(value).toFixed(2);
+          },
+        }
+      }
+
+      if (col.key === "nm_cal"){
+        return {
+          accessorKey: col.key,
+          header: col.label,
+          enableSorting: true,
+          cell: (info) => {
+            const value = info.getValue();
+            if (value === null || value === undefined || value === "") return "";
+            else return parseFloat(value).toFixed(2);
+          },
+        }
+      }
+
       if (col.key === "registration_date" || col.key === "sample_date" || col.key === "repeat_date" || col.key === "seq_run_date" || col.key === "report_releasing_date" || col.key === "lib_prep_date" || col.key === "collection_date_time") {
         return {
           accessorKey: col.key,
@@ -384,7 +410,7 @@ const Processing = () => {
           ),
         };
       }
-    
+
       if (col.key === 'sample_id') {
         return {
           accessorKey: col.key,
@@ -499,7 +525,7 @@ const Processing = () => {
           cell: (info) => {
             const value = info.getValue();
             if (!value) return "";
-            console.log('value:', value); // Debugging TRF value
+            // console.log('value:', value); // Debugging TRF value
             return (
               <a className="underline text-blue-500" href={`https://drive.google.com/file/d/${value}/view?usp=sharing`} target="_blank" rel="noopener noreferrer">
                 View TRF
@@ -707,7 +733,7 @@ const Processing = () => {
 
     try {
       const response = await axios.get(`/api/search`, { params: data });
-      console.log('response.data:', response.data[0].data); // Debugging response data
+      // console.log('response.data:', response.data[0].data); // Debugging response data
 
       if (response.data[0].status === 200) {
         // Map the data to ensure checkbox fields are "Yes"/"No"

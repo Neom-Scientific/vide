@@ -86,10 +86,6 @@ const MangementDashboard = () => {
     }
   });
 
-  const handleSubmit = (data) => {
-    console.log('Form Data:', data);
-  }
-
   const handleNewRowChange = (eOrObj) => {
     if (eOrObj.target) {
       setNewRow({ ...newRow, [eOrObj.target.name]: eOrObj.target.value });
@@ -330,7 +326,7 @@ const MangementDashboard = () => {
       // Always use the latest test_count from testOptions if available
       const opt = testOptions.find(opt => opt.value === row.testName);
       const testCount = opt ? Number(opt.test_count) : Number(row.testCount) || 0;
-      console.log('testCount:', testCount, 'for row:', row);
+      // console.log('testCount:', testCount, 'for row:', row);
       const gbSample = Number(row.gbSample) || 0;
       return sum + (testCount * gbSample);
     }, 0);

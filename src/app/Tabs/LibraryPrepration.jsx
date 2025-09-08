@@ -72,7 +72,6 @@ const LibraryPrepration = () => {
     // { key: 'qubit_dna', label: 'Qubit DNA (ng/ul)' },
     { key: 'qubit_dna', label: 'Input Quant (ng/ul)' },
     { key: 'conc_rxn', label: 'conc/rxn (ng/rxn)' },
-    { key: 'barcode', label: 'Barcode' },
     { key: 'per_rxn_gdna', label: 'Per Rxn gDNA (ng/rxn)' },
     { key: 'volume', label: 'Volume (ul)' },
     { key: 'gdna_volume_3x', label: 'gDNA Volume (ul) (3X)' },
@@ -89,12 +88,10 @@ const LibraryPrepration = () => {
     { key: 'lib_qubit', label: 'Lib Qubit ng/ml' },
     { key: 'qubit_lib_qc_ng_ul', label: 'Library Qubit (ng/ul)' },
     { key: 'lib_vol_for_hyb', label: 'Library Volume for Hyb (ul)' },
-    { key: 'sample_volume', label: 'Sample Volume (ul)' },
     { key: 'pooling_volume', label: 'Pooling Volume (ul)' },
     { key: 'pool_conc', label: 'Pooled Library Conc. (ng/ul)' },
     { key: 'size', label: 'Size (bp)' },
     { key: 'nm_conc', label: 'nM conc' },
-    { key: 'one_tenth_of_nm_conc', label: '1/10th of nM Conc' },
     { key: 'lib_vol_for_20nm', label: 'Volume from Stock library for 20nM' },
     { key: 'nfw_volu_for_20nm', label: 'NFW Volume For 20nM' },
     { key: 'total_vol_for_20nm', label: 'Total Volume For 20nM' },
@@ -131,7 +128,6 @@ const LibraryPrepration = () => {
     "pool_conc",
     "size",
     "nm_conc",
-    // "one_tenth_of_nm_conc",
     "lib_vol_for_20nm",
     "nfw_volu_for_20nm",
     "total_vol_for_20nm",
@@ -399,7 +395,7 @@ const LibraryPrepration = () => {
   });
 
   function handleCellKeyDown(e, { rowIndex, columnId, value, updateData, columns, tableRows, setSelectedCells, editableColumns }) {
-    console.log("KeyDown:", e.key, "rowIndex:", rowIndex, "columnId:", columnId);
+    // console.log("KeyDown:", e.key, "rowIndex:", rowIndex, "columnId:", columnId);
 
     const visibleColumns = columns.map(col => col.accessorKey);
     const visibleEditableColumns = visibleColumns.filter(col => editableColumns.includes(col));
@@ -1714,7 +1710,7 @@ const LibraryPrepration = () => {
         setProcessing(false);
       }
     } catch (error) {
-      console.log("Error updating values:", error);
+      // console.log("Error updating values:", error);
       setProcessing(false);
       toast.error("An error occurred while updating the values.");
     }

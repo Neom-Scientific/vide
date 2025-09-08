@@ -19,7 +19,7 @@ const AssignUser = () => {
           const parsedUser = JSON.parse(cookieUser);
           setAdmin(parsedUser);
           const data = await axios.get(`/api/request-insert?role=${parsedUser.role}&username=${parsedUser.username}`);
-          console.log('data', data);
+          // console.log('data', data);
           if (data.status === 200) {
             setUsers(data.data[0].data);
           } else {
@@ -37,7 +37,7 @@ const AssignUser = () => {
     try {
       const response = await axios.put('/api/request-insert', { username, status });
       if (response.data[0].status === 200) {
-        console.log('data', response.data[0]);
+        // console.log('data', response.data[0]);
         toast.success('User status changed successfully');
         setUsers((prevUsers) =>
           prevUsers.map((user) =>
@@ -56,11 +56,11 @@ const AssignUser = () => {
   }
 
   const handleRole = async (username, role) => {
-    console.log('username and role', username, role);
+    // console.log('username and role', username, role);
     try {
       const response = await axios.put('/api/request-insert', { username, role });
       if (response.data[0].status === 200) {
-        console.log('data', response.data[0]);
+        // console.log('data', response.data[0]);
         toast.success('User role changed successfully');
         setUsers((prevUsers) =>
           prevUsers.map((user) =>
@@ -74,6 +74,27 @@ const AssignUser = () => {
     } catch (error) {
       toast.error('Error changing user role');
       console.error('Error updating user role:', error);
+    }
+  }
+
+  const handleManagement = async (username, enable_management) => {
+    try {
+      const response = await axios.put('/api/request-insert', { username, enable_management });
+      if (response.data[0].status === 200) {
+        // console.log('data', response.data[0]);
+        toast.success('User management status changed successfully');
+        setUsers((prevUsers) =>
+          prevUsers.map((user) =>
+            user.username === username ? { ...user, enable_management: enable_management } : user
+          )
+        );
+      }
+      if (response.data[0].status === 400) {
+        toast.error(response.data[0].message);
+      }
+    }
+    catch (error) {
+      console.error('Error updating management status:', error);
     }
   }
 
@@ -96,6 +117,8 @@ const AssignUser = () => {
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Organization Name</TableHead>
 
+              <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Enable Management?</TableHead>
+
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"> Current Role</TableHead>
 
               <TableHead className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</TableHead>
@@ -110,7 +133,7 @@ const AssignUser = () => {
             {users && users.filter(user => user.role !== 'SuperAdmin').length > 0 ? (
               users
                 .filter(user => user.role !== 'SuperAdmin') // Exclude users with the role 'SuperAdmin'
-                .map((user,index) => (
+                .map((user, index) => (
                   <TableRow key={user.id} className="hover:bg-gray-100">
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -135,6 +158,17 @@ const AssignUser = () => {
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {user.hospital_name}
+                    </TableCell>
+
+                    <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <select
+                        className='bg-gray-50 border border-black text-gray-900 text-sm rounded-lg p-2'
+                        value={user.enable_management}
+                        onChange={e => handleManagement(user.username, e.target.value)}
+                      >
+                        <option value='Yes'>Yes</option>
+                        <option value='No'>No</option>
+                      </select>
                     </TableCell>
 
                     <TableCell className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

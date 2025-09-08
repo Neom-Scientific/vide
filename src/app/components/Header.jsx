@@ -47,11 +47,11 @@ const Header = ({ activeTab, setActiveTab }) => {
             try {
               const res = await axios.put('/api/request-insert', { username: parsedUser.username, status: 'disable' });
               if (res.data[0].status === 200) {
-                console.log('User status updated to disable');
+                // console.log('User status updated to disable');
                 router.push('/login');
               }
               else {
-                console.log(res.data[0].message)
+                // console.log(res.data[0].message)
               }
             }
             catch (error) {
@@ -165,6 +165,7 @@ const Header = ({ activeTab, setActiveTab }) => {
     }
   };
 
+  // console.log('user', user);
 
   return (
     <header className="max-w-full bg-white border-2 sticky top-0 z-50 dark:bg-gray-900 py-4 shadow-md transition-colors duration-300">
@@ -198,27 +199,33 @@ const Header = ({ activeTab, setActiveTab }) => {
         <nav className="hidden xl:flex">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="bg-white dark:bg-gray-900 flex items-center space-x-4 transition-colors duration-300">
-              <div className='relative'>
-                <DropdownMenu className='hover:none'>
-                  <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
-                    <Button
-                      style={{ backgroundColor: 'inherit' }}
-                      className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
-                    >
-                      Dashboard
-                      <ChevronDown className="ml-2 h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="flex flex-col min-w-[140px]">
-                    <TabsTrigger value="management" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
-                      Management
-                    </TabsTrigger>
-                    <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
-                      Lab
-                    </TabsTrigger>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
+              {user && user.enable_management === 'Yes' ?
+                <div className='relative'>
+                  <DropdownMenu className='hover:none'>
+                    <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
+                      <Button
+                        style={{ backgroundColor: 'inherit' }}
+                        className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
+                      >
+                        Dashboard
+                        <ChevronDown className="ml-2 h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="flex flex-col min-w-[140px]">
+                      <TabsTrigger value="management" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                        Management
+                      </TabsTrigger>
+                      <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                        Lab
+                      </TabsTrigger>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+                :
+                <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                  Dashboard
+                </TabsTrigger>
+              }
 
               <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory</TabsTrigger>
 
@@ -370,29 +377,37 @@ const Header = ({ activeTab, setActiveTab }) => {
                 setActiveTab(val);
                 setShowMobileMenu(false); // Close sidebar after tab change
               }}>
-              <TabsList className="flex flex-col w-full flex-1 space-y-2 bg-white dark:bg-gray-900">
-                <div className='relative'>
-                  <DropdownMenu className='hover:none'>
-                    <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
-                      <Button
-                        style={{ backgroundColor: 'inherit' }}
-                        className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
-                      >
-                        Dashboard
-                        <ChevronDown className="ml-2 h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent className="flex flex-col min-w-[140px]">
-                      <TabsTrigger value="management" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
-                        Management
-                      </TabsTrigger>
-                      <TabsTrigger value="lab" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
-                        Lab
-                      </TabsTrigger>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
 
-                </div>
+
+              <TabsList className="flex flex-col w-full flex-1 space-y-2 bg-white dark:bg-gray-900">
+                {user && user.enable_management === 'Yes' ?
+                  <div className='relative'>
+                    <DropdownMenu className='hover:none'>
+                      <DropdownMenuTrigger asChild className="bg-white dark:bg-gray-900 text-black dark:text-white shadow-none">
+                        <Button
+                          style={{ backgroundColor: 'inherit' }}
+                          className="w-full text-left flex items-center justify-between data-[state=active]:bg-orange-400 data-[state=active]:text-white px-2 py-2 rounded"
+                        >
+                          Dashboard
+                          <ChevronDown className="ml-2 h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="flex flex-col min-w-[140px]">
+                        <TabsTrigger value="management" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                          Management
+                        </TabsTrigger>
+                        <TabsTrigger value="lab" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                          Lab
+                        </TabsTrigger>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                  :
+                  <TabsTrigger value="lab" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                    Lab
+                  </TabsTrigger>
+                }
+
 
                 <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory Registration</TabsTrigger>
 

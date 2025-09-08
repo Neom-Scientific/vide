@@ -31,13 +31,13 @@ const Login = () => {
 
     const onSubmit = async (data) => {
         setProcessing(true);
-        console.log(data)
+        // console.log(data)
         data.application_name = 'vide'
         try {
             const response = await axios.post('/api/login-insert', data);
             if (response.data[0].status === 200) {
                 toast.success(response.data[0].message);
-                console.log(response.data[0].data);
+                // console.log(response.data[0].data);
                 Cookies.set('vide_user', JSON.stringify(response.data[0].data), { expires: 7 });
                 if (response.data[0].data.user_login === 0) {
                     router.push('/reset-password');

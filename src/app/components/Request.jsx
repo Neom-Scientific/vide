@@ -40,7 +40,7 @@ const Request = () => {
 
         const password = Math.random().toString(36).slice(-8); // Generate a random password
         data.password = password;
-        console.log('data', data);
+        // console.log('data', data);
         try {
             const response = await axios.post('/api/request-insert', {
                 data

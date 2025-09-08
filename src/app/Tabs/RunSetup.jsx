@@ -86,7 +86,6 @@ const RunSetup = () => {
       total_volume_2nm_next_seq_550: '', // Ensure numeric default value
       final_pool_conc_vol_2nm_next_seq_550: '', // Ensure numeric default value
       nfw_vol_2nm_next_seq_550: '', // Ensure numeric default value
-      ht_buffer_next_seq_1000_2000: '', // Ensure numeric default value
       table_data: [],
     },
   });
@@ -135,7 +134,7 @@ const RunSetup = () => {
           setAllTestNames(response.data[0].data); // Save full objects
         } else if (response.data[0].status === 404) {
           setTestNames([]);
-          console.log("No test names found for the provided Organization Name");
+          // console.log("No test names found for the provided Organization Name");
         }
       } catch (error) {
         console.error("Error fetching test names:", error);
@@ -149,13 +148,13 @@ const RunSetup = () => {
   const handleTestNameChange = async (selectedTestName) => {
     try {
       if (!user.hospital_name || !selectedTestName) {
-        console.log("Organization Name or test name is missing");
+        // console.log("Organization Name or test name is missing");
         return;
       }
 
       // Prevent duplicates in the selectedTestName list
       if (selectedTestNames.includes(selectedTestName)) {
-        console.log("Test name already selected");
+        // console.log("Test name already selected");
         return;
       }
 
@@ -209,7 +208,7 @@ const RunSetup = () => {
           return [...filtered, ...poolDataForTest];
         });
       } else if (response.data[0].status === 404) {
-        console.log("No pool data found for the provided Organization Name and test name");
+        // console.log("No pool data found for the provided Organization Name and test name");
       }
 
       // Reset the application field in the form
@@ -1167,11 +1166,6 @@ const RunSetup = () => {
                               placeholder="Enter HT Buffer"
                               className="mb-2 border-2 border-orange-300"
                             />
-                            {form.formState.errors.ht_buffer_next_seq_1000_2000 && (
-                              <p className="text-red-500 text-sm">
-                                {form.formState.errors.ht_buffer_next_seq_1000_2000.message}
-                              </p>
-                            )}
                           </FormItem>
                         )}
                       />

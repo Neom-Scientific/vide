@@ -175,7 +175,7 @@ export async function GET(request) {
 
 export async function PUT(request) {
     const body = await request.json();
-    const { username, status, role } = body; // Accept both status and role
+    const { username, status, role,enable_management } = body; // Accept both status and role
     try {
         let response = [];
 
@@ -233,6 +233,14 @@ export async function PUT(request) {
             response.push({
                 status: 200,
                 message: 'Role updated successfully',
+            });
+        }
+
+        if(enable_management){
+            await pool.query('UPDATE request_form SET enable_management = $1 WHERE username = $2', [enable_management, username]);
+            response.push({
+                status: 200,
+                message: 'Management status updated successfully',
             });
         }
 

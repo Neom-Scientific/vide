@@ -63,10 +63,11 @@ export async function POST(request) {
               nfw_vol_2nm_next_seq_550,
               count,
               table_data,
-              ht_buffer_next_seq_1000_2000
+              ht_buffer_next_seq_1000_2000,
+              final_pool_vol_ul
             ) VALUES (
               $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28
+              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28,$29
             )`,
             [
                 run_id,  //1
@@ -96,7 +97,8 @@ export async function POST(request) {
                 setup.nfw_vol_2nm_next_seq_550,//25
                 getUniqueSampleCount(setup.internal_ids),//26
                 JSON.stringify(setup.table_data),//27
-                setup.ht_buffer_next_seq_1000_2000//28
+                setup.ht_buffer_next_seq_1000_2000,//28
+                setup.final_pool_vol_ul //29
             ]
         );
 
@@ -133,7 +135,8 @@ export async function POST(request) {
                   count = $25,
                   table_data = $26,
                   ht_buffer_next_seq_1000_2000 = $27,
-                  run_id = $28
+                  run_id = $28,
+                    final_pool_vol_ul = $30
                   WHERE internal_id = $29`,
                     [
                         setup.selected_application,//1
@@ -165,6 +168,7 @@ export async function POST(request) {
                         setup.ht_buffer_next_seq_1000_2000,//27
                         run_id,//28
                         internalId,//29
+                        setup.final_pool_vol_ul //30
                     ]
                 );
 

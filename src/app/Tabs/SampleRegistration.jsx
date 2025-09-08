@@ -364,7 +364,7 @@ export const SampleRegistration = () => {
 
     // Get all form data
     const allData = form.getValues();
-    console.log('allData', allData);
+    // console.log('allData', allData);
 
     const trimmedData = Object.fromEntries(
       Object.entries(allData).map(([key, value]) => {
@@ -512,7 +512,7 @@ export const SampleRegistration = () => {
       changes
     };
 
-    console.log('changes', changes);
+    // console.log('changes', changes);
 
     try {
       const res = await axios.put('/api/store', {

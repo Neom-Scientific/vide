@@ -69,6 +69,7 @@ export async function POST(request) {
                     user_login: userData.rows[0].user_login,
                     name : userData.rows[0].name,
                     created_at: userData.rows[0].created_at,
+                    enable_management: userData.rows[0].enable_management
                 },
                 message: 'Login successful',
             });

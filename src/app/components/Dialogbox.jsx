@@ -44,7 +44,7 @@ const Dialogbox = ({
   })
 
   const handleSubmit = (data) => {
-    console.log("Form Data:", data);
+    // console.log("Form Data:", data);
     // Handle form submission logic here
     setOpen(false);
   }

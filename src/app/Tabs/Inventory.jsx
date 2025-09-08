@@ -91,7 +91,7 @@ const Inventory = () => {
 
   const handleEditSave = async (updatedItem) => {
     try {
-      console.log('updatedItem:', updatedItem);
+      // console.log('updatedItem:', updatedItem);
       const response = await axios.put('/api/inventory', updatedItem);
       if (response.data[0].status === 200) {
         toast.success('Item updated successfully!');
@@ -185,7 +185,7 @@ const Inventory = () => {
                         ? Number(item.purchase_price.toString().replace(/,/g, '')).toLocaleString('en-IN')
                         : ''}
                     </td>
-                    <td className="px-4 py-2"></td>
+                    <td className="px-4 py-2">{item.purchase_price/item.number_of_rxn}</td>
                   </tr>
                 ))}
               </tbody>

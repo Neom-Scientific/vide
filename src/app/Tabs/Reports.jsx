@@ -172,7 +172,7 @@ const Reports = () => {
   const handleChangeCheckbox = async (e, columnKey, InternalId) => {
     const isChecked = e.target.checked;
     try {
-      console.log('Updating:', InternalId, columnKey, isChecked);
+      // console.log('Updating:', InternalId, columnKey, isChecked);
 
       // Prepare the updates object
       const updates = {
@@ -185,7 +185,7 @@ const Reports = () => {
         updates, // Pass the updates object
       });
 
-      console.log('response:', response.data);
+      // console.log('response:', response.data);
       if (response.data[0].status === 200) {
         // toast.success(`Updated ${columnKey} successfully!`);
         // Update the tableRows state to reflect the change
@@ -223,7 +223,7 @@ const Reports = () => {
         },
       });
 
-      console.log('uploadResponse:', uploadResponse);
+      // console.log('uploadResponse:', uploadResponse);
       if (uploadResponse.status === 200) {
         const reportLink = uploadResponse.data[0].fileId; // Assuming the backend returns the file URL
         // href={`https://drive.google.com/file/d/${value}/view?usp=sharing`}

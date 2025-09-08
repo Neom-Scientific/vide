@@ -41,14 +41,14 @@ const page = () => {
             const fetchUser = async () => {
                 try {
                     if (!parsedData || !parsedData.role || !parsedData.username) {
-                        console.log('parsedData', parsedData);
+                        // console.log('parsedData', parsedData);
                         console.error("User role or username is undefined");
                         return;
                     }
                     try {
                         const response = await axios.get(`/api/request-insert?role=${parsedData.role}&username=${parsedData.username}`);
                         if (response.data[0]?.status === 200) {
-                            console.log("User data fetched successfully:", response.data[0].data);
+                            // console.log("User data fetched successfully:", response.data[0].data);
                             // if(response.data[0].data.user_login !== 0) {
                             //     router.push('/');
                             // }
@@ -84,7 +84,7 @@ const page = () => {
     });
 
     const handleSubmit = async(data) => {
-        console.log("Form submitted with data:", data);
+        // console.log("Form submitted with data:", data);
         try{
             const response = await axios.post('/api/reset-password', {
                 password: data.password,
@@ -94,11 +94,11 @@ const page = () => {
             if (response.data[0].status === 200) {
                 toast.success("Password reset successfully");
                 router.push('/')
-                console.log(response.data[0].message);
+                // console.log(response.data[0].message);
                 
             } else if (response.data[0]?.status === 401) {
                 toast.error(response.data[0].message);
-                console.log( response.data[0].message);
+                // console.log( response.data[0].message);
             } 
         }
         catch (error) {
