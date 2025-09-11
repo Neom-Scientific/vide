@@ -15,6 +15,7 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import RouteLoader from './components/RouteLoader';
+import { set } from 'lodash';
 
 Chart.register(...registerables);
 Chart.register(FunnelController, TrapezoidElement);
@@ -75,6 +76,8 @@ const Page = () => {
   const [selectedTatYear4, setSelectedTatYear4] = useState([currentYear.toString()]);
 
   const [tableData, setTableData] = useState([]);
+  const [masterSheetLoaded, setMasterSheetLoaded] = useState(false);
+  const [poolDataLoaded, setPoolDataLoaded] = useState(false);
 
   // Chart refs
   const chart1Ref = useRef(null);
@@ -105,6 +108,9 @@ const Page = () => {
           }
         } catch (error) {
           console.error('Error fetching pool data:', error);
+        } finally{
+          setPoolDataLoaded(true);
+          setProcessing(false);
         }
       };
       fetchPoolData();
@@ -127,6 +133,10 @@ const Page = () => {
         }
       } catch (error) {
         console.error('Error fetching master sheet data:', error);
+      }
+      finally{
+        setMasterSheetLoaded(true);
+        setProcessing(false);
       }
     }
     fetchMasterSheetData();
@@ -948,7 +958,7 @@ const Page = () => {
 
   return (
     <>
-      {(processing || !masterSheetData.length || !poolData.length) ?
+      {(!masterSheetLoaded || !poolDataLoaded) ?
         <div>
           {/* show the loading circle */}
           <div className="flex flex-col items-center justify-center min-h-[400px]">
