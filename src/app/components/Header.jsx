@@ -227,7 +227,7 @@ const Header = ({ activeTab, setActiveTab }) => {
                 </TabsTrigger>
               }
 
-              <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory</TabsTrigger>
+              {/* <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory</TabsTrigger> */}
 
               <TabsTrigger value="sample-register" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
 
@@ -238,6 +238,8 @@ const Header = ({ activeTab, setActiveTab }) => {
               <TabsTrigger value="run-setup" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
 
               <TabsTrigger value="reports" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
+
+              {/* <TabsTrigger value="help" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Help</TabsTrigger> */}
             </TabsList>
           </Tabs>
         </nav>
@@ -409,7 +411,7 @@ const Header = ({ activeTab, setActiveTab }) => {
                 }
 
 
-                <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory Registration</TabsTrigger>
+                {/* <TabsTrigger value="inventory" className="cursor-pointer data-[state=active]:bg-orange-400 data-[state=active]:text-white">Inventory Registration</TabsTrigger> */}
 
                 <TabsTrigger value="sample-register" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Sample Registration</TabsTrigger>
 
@@ -420,6 +422,8 @@ const Header = ({ activeTab, setActiveTab }) => {
                 <TabsTrigger value="run-setup" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Run Setup</TabsTrigger>
 
                 <TabsTrigger value="reports" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Reports</TabsTrigger>
+
+                {/* <TabsTrigger value="help" className="w-full text-left data-[state=active]:bg-orange-400 data-[state=active]:text-white">Help</TabsTrigger> */}
               </TabsList>
             </Tabs>
           </div>

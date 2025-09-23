@@ -14,8 +14,6 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import RouteLoader from './components/RouteLoader';
-import { set } from 'lodash';
 
 Chart.register(...registerables);
 Chart.register(FunnelController, TrapezoidElement);
@@ -54,11 +52,13 @@ const Page = () => {
   const [masterSheetData, setMasterSheetData] = useState([]);
   const [poolData, setPoolData] = useState([]);
   const [user, setUser] = useState(null);
+  const [selectedHospital, setSelectedHospital] = useState("");
+  const [hospitalOptions, setHospitalOptions] = useState([]);
 
   // Chart 1
   const [selectedTestName1, setSelectedTestName1] = useState([]);
   const [selectedMonth1, setSelectedMonth1] = useState("");
-  const [selectedYear1, setSelectedYear1] = useState([]);
+  const [selectedYear1, setSelectedYear1] = useState([currentYear.toString()]);
 
   // Chart 2
   const [selectedRunId2, setSelectedRunId2] = useState([]);
@@ -78,6 +78,9 @@ const Page = () => {
   const [tableData, setTableData] = useState([]);
   const [masterSheetLoaded, setMasterSheetLoaded] = useState(false);
   const [poolDataLoaded, setPoolDataLoaded] = useState(false);
+  const [auditLogsLoaded, setAuditLogsLoaded] = useState(false);
+  const [auditLog, setAuditLog] = useState([]);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Chart refs
   const chart1Ref = useRef(null);
@@ -90,6 +93,29 @@ const Page = () => {
   const chart2Instance = useRef(null);
   const chart3Instance = useRef(null);
   const chart4Instance = useRef(null);
+
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    }
+    const observer = new MutationObserver(() => {
+      setIsDarkMode(document.documentElement.classList.contains('dark'));
+    });
+    if (typeof document !== "undefined") {
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    }
+    return () => observer.disconnect();
+  }, []);
+
+  function getChartTextColor() {
+    if (typeof document !== "undefined") {
+      return document.documentElement.classList.contains('dark') ? '#fff' : '#374151';
+    }
+    return '#374151'; // fallback for SSR
+  }
+
+  const axisColor = getChartTextColor();
+
 
   // Fetch pool data
   useEffect(() => {
@@ -108,7 +134,7 @@ const Page = () => {
           }
         } catch (error) {
           console.error('Error fetching pool data:', error);
-        } finally{
+        } finally {
           setPoolDataLoaded(true);
           setProcessing(false);
         }
@@ -134,13 +160,40 @@ const Page = () => {
       } catch (error) {
         console.error('Error fetching master sheet data:', error);
       }
-      finally{
+      finally {
         setMasterSheetLoaded(true);
         setProcessing(false);
       }
     }
     fetchMasterSheetData();
   }, []);
+
+  useEffect(() => {
+    const fetchAuditLogs = async () => {
+      setProcessing(true);
+      try {
+        const cookieData = Cookies.get('vide_user');
+        if (cookieData) {
+          const parsedData = JSON.parse(cookieData);
+          const response = await axios.get(`/api/audit-logs/fetch-all?hospital_name=${parsedData?.hospital_name}`);
+          if (response.data[0]?.status === 200) {
+            setProcessing(false);
+            setAuditLog(response.data[0]?.logs || []);
+            setAuditLogsLoaded(true);
+          }
+        }
+      }
+      catch (error) {
+        console.log('error', error);
+        setProcessing(false);
+        setAuditLogsLoaded(true);
+      } finally {
+        setProcessing(false);
+        setAuditLogsLoaded(true);
+      }
+    }
+    fetchAuditLogs();
+  }, [])
 
   // Extract unique values
   // Extract unique runIds and sort by seq_run_date (ascending)
@@ -246,7 +299,7 @@ const Page = () => {
       anchor: 'center',
       align: 'center',
       font: { weight: 'bold', size: 14 },
-      color: '#22223b',
+      color: axisColor,
       formatter: v => v > 0 ? v : '',
     }
   }];
@@ -308,7 +361,7 @@ const Page = () => {
         anchor: 'center',
         align: 'center',
         font: { weight: 'bold', size: 14 },
-        color: '#22223b',
+        color: axisColor,
         formatter: v => v > 0 ? v : '',
       }
     }));
@@ -341,7 +394,7 @@ const Page = () => {
         anchor: 'center',
         align: 'center',
         font: { weight: 'bold', size: 14 },
-        color: '#22223b',
+        color: axisColor,
         formatter: v => v > 0 ? v : '',
       }
     }));
@@ -367,7 +420,11 @@ const Page = () => {
           )?.[0] || label;
 
           return label === shortName
-            ? filteredChartData.filter(item => (item.test_name || '').trim() === fullName).length
+            ? (
+              fullName === "Myeloid"
+                ? filteredChartData.filter(item => (item.test_name || '').trim() === fullName).length / 2
+                : filteredChartData.filter(item => (item.test_name || '').trim() === fullName).length
+            )
             : 0;
         }),
         backgroundColor: [
@@ -380,7 +437,7 @@ const Page = () => {
           anchor: 'center',
           align: 'center',
           font: { weight: 'bold', size: 14 },
-          color: '#22223b',
+          color: axisColor,
           formatter: v => v > 0 ? v : '',
         }
       };
@@ -458,6 +515,7 @@ const Page = () => {
   }
 
   // --- Chart 4: TAT Days by Month (multi-select, separate state) ---
+
   const filteredTatData4 = masterSheetData.filter(item =>
     (selectedTatTestName4.length === 0 || selectedTatTestName4.includes(item.test_name)) &&
     (selectedTatYear4.length === 0 || selectedTatYear4.includes(String((item.registration_date || item.created_at || '').slice(0, 4)))) &&
@@ -472,84 +530,133 @@ const Page = () => {
   let tatXAxisLabels4 = [];
   let tatDatasets4 = [];
 
-  if (selectedTatYear4.length > 0 && selectedTatMonth4) {
-    // Show dates in the selected month
-    const monthIdx = tatMonthNames.indexOf(selectedTatMonth4);
-    const year = selectedTatYear4.length === 1 ? Number(selectedTatYear4[0]) : new Date().getFullYear();
-    const daysInMonth = getDaysInMonth(monthIdx, year);
-    tatXAxisLabels4 = Array.from({ length: daysInMonth }, (_, i) => (i + 1).toString());
+  // Map funnel step keys to audit log descriptions
+  const funnelStepToAuditDesc = {
+    dna_isolation: [
+      "DNA Isolation status updated",
+      "Sample moved to DNA Isolation"
+    ],
+    lib_prep: [
+      "Library Preparation status updated",
+      "Sample moved to Library Preparation"
+    ],
+    under_seq: [
+      "Under Sequencing status updated",
+      "Sample moved to Under Sequencing"
+    ],
+    seq_completed: [
+      "Sequencing Completed status updated",
+      "Sample moved to Sequencing Completed"
+    ]
+  };
 
-    tatDatasets4 = (selectedTatTestName4.length > 0 ? selectedTatTestName4 : uniqueTestNames).map(testName => {
-      const data = tatXAxisLabels4.map(day => {
-        const arr = filteredTatData4.filter(item => {
-          const dateStr = item.registration_date || item.created_at;
-          if (!dateStr) return false;
-          const date = new Date(dateStr);
-          return (
-            item.test_name === testName &&
-            date.getMonth() === monthIdx &&
-            date.getFullYear() === year &&
-            date.getDate() === Number(day)
-          );
-        }).map(item => Number(item.tat_days));
-        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-      });
-      return { label: testName, data };
-    });
-  } else if (selectedTatTestName4.length > 0) {
-    tatXAxisLabels4 = selectedTatTestName4;
-    tatDatasets4 = (selectedTatYear4.length > 0 ? selectedTatYear4 : uniqueYears).map(year => {
-      const data = selectedTatTestName4.map(testName => {
-        const arr = filteredTatData4.filter(item => {
-          const dateStr = item.registration_date || item.created_at;
-          if (!dateStr) return false;
-          const date = new Date(dateStr);
-          return item.test_name === testName &&
-            String(date.getFullYear()) === String(year);
-        }).map(item => Number(item.tat_days));
-        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-      });
-      return { label: year, data };
-    });
-  } else {
-    tatXAxisLabels4 = tatMonthNames;
-    tatDatasets4 = [{
-      label: "TAT Days",
-      data: tatMonthNames.map((month, idx) => {
-        const arr = filteredTatData4.filter(item => {
-          const dateStr = item.registration_date || item.created_at;
-          if (!dateStr) return false;
-          const date = new Date(dateStr);
-          return date.getMonth() === idx;
-        }).map(item => Number(item.tat_days));
-        return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-      })
-    }];
+  // Helper to get audit log entry for a sample and step
+  function getAuditLogDateForStep(sample, stepKey) {
+    if (sample[stepKey] !== "Yes") return undefined;
+    const logsForSample = auditLog.filter(log =>
+      (log.sample_id === sample.sample_id || log.internal_id === sample.internal_id)
+    );
+    // Match any of the possible comments for this step
+    return logsForSample.find(log =>
+      funnelStepToAuditDesc[stepKey].includes(log.comments)
+    );
   }
 
-  // --- Funnel Chart ---
   const funnelSteps = [
     { key: "dna_isolation", label: "DNA Isolation" },
     { key: "lib_prep", label: "Library Prep" },
     { key: "under_seq", label: "Under Sequencing" },
     { key: "seq_completed", label: "Sequencing Completed" }
   ];
-  const funnelChartData = funnelSteps.map(step => ({
-    label: step.label,
-    value: masterSheetData.filter(item => item[step.key] === "Yes").length
-  }));
+
+  let funnelChartData;
+  let filteredFunnelData = masterSheetData;
+  if (selectedTatMonth4) {
+    filteredFunnelData = masterSheetData.filter(sample => {
+      const testNameMatch =
+        selectedTatTestName4.length === 0 ||
+        selectedTatTestName4.includes(sample.test_name);
+
+      const yearMatch =
+        selectedTatYear4.length === 0 ||
+        selectedTatYear4.includes(
+          String(
+            (sample.registration_date || sample.created_at || '').slice(0, 4)
+          )
+        );
+
+      return testNameMatch && yearMatch;
+    });
+
+    const selectedMonthIdx = selectedTatMonth4 ? tatMonthNames.indexOf(selectedTatMonth4) : null;
+    const selectedYearNum = Number(selectedTatYear4[0]); // assuming single year selected
+
+    // If test name(s) selected, build per-test funnel data
+    if (selectedTatTestName4.length > 0) {
+      funnelChartData = selectedTatTestName4.map(testName => ({
+        label: testName,
+        data: funnelSteps.map(step => {
+          return filteredFunnelData.filter(sample => {
+            if (sample.test_name !== testName) return false;
+            if (sample[step.key] !== "Yes") return false;
+            const logEntry = getAuditLogDateForStep(sample, step.key);
+            if (!logEntry || !logEntry.changed_at) return false;
+            const date = new Date(logEntry.changed_at);
+            const matchesYear = date.getFullYear() === selectedYearNum;
+            const matchesMonth = selectedMonthIdx === null || date.getMonth() === selectedMonthIdx;
+            return matchesYear && matchesMonth;
+          }).length;
+        })
+      }));
+    } else {
+      // Default: overall funnel
+      funnelChartData = funnelSteps.map(step => {
+        const stepItems = filteredFunnelData.filter(sample => {
+          if (sample[step.key] !== "Yes") return false;
+          const logEntry = getAuditLogDateForStep(sample, step.key);
+          if (!logEntry || !logEntry.changed_at) return false;
+          const date = new Date(logEntry.changed_at);
+          const matchesYear = date.getFullYear() === selectedYearNum;
+          const matchesMonth = selectedMonthIdx === null || date.getMonth() === selectedMonthIdx;
+          return matchesYear && matchesMonth;
+        });
+        return {
+          label: step.label,
+          value: stepItems.length,
+          details: stepItems.map(item => ({
+            test_name: item.test_name,
+            sample_id: item.sample_id,
+            internal_id: item.internal_id
+          }))
+        };
+      });
+    }
+  }
+
+  if (!funnelChartData) {
+    funnelChartData = funnelSteps.map(step => {
+      const stepItems = masterSheetData.filter(sample => sample[step.key] === "Yes");
+      return {
+        label: step.label,
+        value: stepItems.length,
+        details: stepItems.map(item => ({
+          test_name: item.test_name,
+          sample_id: item.sample_id,
+          internal_id: item.internal_id
+        }))
+      };
+    });
+  }
 
   // Chart rendering logic
   useEffect(() => {
     if (
-      processing ||
-      !masterSheetData.length ||
-      !poolData.length ||
       !chart1Ref.current ||
       !chart2Ref.current ||
       !chart3Ref.current ||
       !chart4Ref.current
     ) return;
+
     // Chart 2: Grouped Bar
     if (chart1Instance.current) chart1Instance.current.destroy();
     chart1Instance.current = new Chart(chart1Ref.current, {
@@ -568,7 +675,7 @@ const Page = () => {
             anchor: 'center',
             align: 'center',
             font: { weight: 'bold', size: 14 },
-            color: '#22223b',
+            color: axisColor,
             formatter: v => v > 0 ? v : '',
           }
         }))
@@ -577,7 +684,14 @@ const Page = () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: true, position: 'right' },
+          legend: {
+            display: true,
+            position: 'right',
+            labels: {
+              font: { weight: 'bold' },
+              color: axisColor,
+            }
+          },
           tooltip: {
             enabled: true,
             mode: 'nearest',
@@ -603,7 +717,7 @@ const Page = () => {
               }
               const runId = tooltipModel.dataPoints?.[0]?.label;
               const testMap = runIdTestNameMap[runId] || {};
-              let table = '<table style="min-width:120px">';
+              let table = `<table style="min-width:120px;color:inherit">`;
               table += '<thead><tr><th style="text-align:left;padding-right:8px">Test Name</th><th style="text-align:right">Count</th></tr></thead><tbody>';
               Object.entries(testMap).forEach(([testName, count]) => {
                 table += `<tr><td style="text-align:left;padding-right:8px">${testName}</td><td style="text-align:right">${count}</td></tr>`;
@@ -617,8 +731,12 @@ const Page = () => {
               tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
               tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY + 30 + 'px';
               tooltipEl.style.pointerEvents = 'none';
-              tooltipEl.style.background = 'white';
-              tooltipEl.style.border = '1px solid #ddd';
+              // tooltipEl.style.background = 'white';
+              // tooltipEl.style.border = '1px solid #ddd';
+              const isDark = document.documentElement.classList.contains('dark');
+              tooltipEl.style.background = isDark ? '#22223b' : 'white';
+              tooltipEl.style.color = isDark ? '#fff' : '#22223b'; // <-- add this line
+              tooltipEl.style.border = isDark ? '1px solid #444' : '1px solid #ddd';
               tooltipEl.style.borderRadius = '8px';
               tooltipEl.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
               tooltipEl.style.padding = '8px';
@@ -633,7 +751,7 @@ const Page = () => {
             stacked: false,
             ticks: {
               font: { size: 12, weight: 'bold' },
-              color: '#374151',
+              color: axisColor,
               maxRotation: 0,
               minRotation: 0,
             },
@@ -641,8 +759,8 @@ const Page = () => {
           },
           y: {
             beginAtZero: true,
-            title: { display: true, text: "Sample Count" },
-            ticks: { font: { size: 14, weight: 'bold' }, color: '#374151' },
+            title: { display: true, text: "Sample Count", color: axisColor },
+            ticks: { font: { size: 14, weight: 'bold' }, color: axisColor },
             grid: {
               color: '#e5e7eb',
               borderDash: [4, 4],
@@ -692,7 +810,7 @@ const Page = () => {
             },
             labels: {
               font: { weight: 'bold' },
-              color: '#22223b',
+              color: axisColor,
               generateLabels: function (chart) {
                 const datasets = chart.data.datasets;
                 // Add "Show All" at the top
@@ -701,13 +819,15 @@ const Page = () => {
                   fillStyle: 'transparent',
                   hidden: false,
                   datasetIndex: null,
-                  showAll: true // Custom flag
+                  showAll: true, // Custom flag
+                  fontColor: axisColor
                 };
                 const datasetItems = datasets.map((ds, i) => ({
                   text: ds.label,
                   fillStyle: ds.backgroundColor,
                   hidden: !chart.isDatasetVisible(i),
-                  datasetIndex: i
+                  datasetIndex: i,
+                  fontColor: axisColor
                 }));
                 return [showAllItem, ...datasetItems];
               }
@@ -723,7 +843,7 @@ const Page = () => {
             ticks: {
               autoSkip: false,
               font: { size: 12, weight: 'bold' },
-              color: '#374151',
+              color: axisColor,
               maxRotation: 0,
               minRotation: 0,
             },
@@ -731,8 +851,8 @@ const Page = () => {
           },
           y: {
             beginAtZero: true,
-            title: { display: true, text: "Sample Count" },
-            ticks: { font: { size: 14, weight: 'bold' }, color: '#374151' },
+            title: { display: true, text: "Sample Count", color: axisColor },
+            ticks: { font: { size: 14, weight: 'bold' }, color: axisColor },
             grid: {
               color: '#e5e7eb',
               borderDash: [4, 4],
@@ -772,7 +892,7 @@ const Page = () => {
             anchor: 'center',
             align: 'center',
             font: { weight: 'bold', size: 14 },
-            color: '#22223b',
+            color: axisColor,
             formatter: v => v > 0 ? v.toFixed(1) : '',
           }
         }))
@@ -781,20 +901,26 @@ const Page = () => {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
-          legend: { display: true, position: 'right' },
+          legend: {
+            display: true,
+            position: 'right', labels: {
+              color: axisColor, // <-- this is required for legend text color
+              font: { weight: 'bold' }
+            }
+          },
           tooltip: { enabled: true },
           datalabels: { display: true }
         },
         scales: {
           x: {
             title: { display: true, text: "" },
-            ticks: { font: { size: 12, weight: 'bold' }, color: '#374151' },
+            ticks: { font: { size: 12, weight: 'bold' }, color: axisColor },
             grid: { display: false }
           },
           y: {
             beginAtZero: true,
-            title: { display: true, text: "TAT Days" },
-            ticks: { font: { size: 14, weight: 'bold' }, color: '#374151' },
+            title: { display: true, text: "TAT Days", color: axisColor },
+            ticks: { font: { size: 14, weight: 'bold' }, color: axisColor },
             grid: {
               color: '#e5e7eb',
               borderDash: [4, 4],
@@ -808,61 +934,154 @@ const Page = () => {
     });
 
     // Chart 4: Bar (Sample Funnel)
+
+    const testColorPalette = [
+      '#6366f1', // indigo
+      '#f87171', // red
+      '#34d399', // green
+      '#fbbf24', // yellow
+      '#818cf8', // blue
+      '#f472b6', // pink
+      '#a5b4fc', // light indigo
+      '#c7d2fe', // lighter indigo
+    ];
+
+    const funnelTestNames = selectedTatTestName4.length > 0 ? selectedTatTestName4 : uniqueTestNames;
+
+    const selectedMonthIdx = selectedTatMonth4 ? tatMonthNames.indexOf(selectedTatMonth4) : null;
+    const selectedYearNum = Number(selectedTatYear4[0]);
+
+    const funnelChartDatasets = funnelTestNames.map((testName, idx) => {
+      const data = funnelSteps.map(step => {
+        return filteredFunnelData.filter(item => {
+          if (item.test_name !== testName) return false;
+          if (item[step.key] !== "Yes") return false;
+          const logEntry = getAuditLogDateForStep(item, step.key);
+          if (!logEntry || !logEntry.changed_at) return false;
+          const date = new Date(logEntry.changed_at);
+          const matchesYear = date.getFullYear() === selectedYearNum;
+          const matchesMonth = selectedMonthIdx === null || date.getMonth() === selectedMonthIdx;
+          return matchesYear && matchesMonth;
+        }).length;
+      });
+      return {
+        label: testName,
+        data,
+        backgroundColor: testColorPalette[idx % testColorPalette.length],
+        borderRadius: 8,
+        barPercentage: 0.7,
+        categoryPercentage: 0.6,
+        datalabels: {
+          anchor: 'center',
+          align: 'center',
+          font: { weight: 'bold', size: 16 },
+          color: axisColor,
+          formatter: v => v > 0 ? v : '',
+        }
+      };
+    }).filter(ds => ds.data.some(v => v > 0));
+
     if (chart4Instance.current) chart4Instance.current.destroy();
-    chart4Instance.current = new Chart(chart4Ref.current, {
-      type: 'bar',
-      data: {
-        labels: funnelChartData.map(item => item.label),
-        datasets: [{
-          label: "Sample Funnel",
-          data: funnelChartData.map(item => item.value),
-          backgroundColor: [
-            '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'
-          ],
-          borderRadius: 8,
-          barPercentage: 0.7,
-          categoryPercentage: 0.6,
-          datalabels: {
-            anchor: 'center',
-            align: 'center',
-            font: { weight: 'bold', size: 16 },
-            color: '#22223b',
-            formatter: v => v > 0 ? v : '',
-          }
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: true },
-          datalabels: { display: true }
+
+    if (!selectedTatTestName4 || selectedTatTestName4.length === 0) {
+      // Default: single bar, one color per step
+      chart4Instance.current = new Chart(chart4Ref.current, {
+        type: 'bar',
+        data: {
+          labels: funnelChartData && funnelChartData.map(item => item.label),
+          datasets: [{
+            label: "Sample",
+            data: funnelChartData && funnelChartData.map(item => item.value),
+            backgroundColor: [
+              '#6366f1', '#818cf8', '#a5b4fc', '#c7d2fe'
+            ],
+            borderRadius: 8,
+            barPercentage: 0.7,
+            categoryPercentage: 0.6,
+            datalabels: {
+              anchor: 'center',
+              align: 'center',
+              font: { weight: 'bold', size: 16 },
+              color: axisColor,
+              formatter: v => v > 0 ? v : '',
+            }
+          }]
         },
-        scales: {
-          x: {
-            title: { display: true, text: "" },
-            ticks: {
-              font: { size: 14, weight: 'bold' },
-              color: '#374151',
-            },
-            grid: { display: false }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { enabled: true },
+            datalabels: { display: true }
           },
-          y: {
-            beginAtZero: true,
-            title: { display: true, text: "Sample Count" },
-            ticks: { font: { size: 14, weight: 'bold' }, color: '#374151' },
-            grid: {
-              color: '#e5e7eb',
-              borderDash: [4, 4],
-              drawTicks: false,
-              drawBorder: false,
+          scales: {
+            x: {
+              title: { display: true, text: "" },
+              ticks: {
+                font: { size: 14, weight: 'bold' },
+                color: axisColor,
+              },
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              title: { display: true, text: "Sample Count", color: axisColor },
+              ticks: { font: { size: 14, weight: 'bold' }, color: axisColor },
+              grid: {
+                color: '#e5e7eb',
+                borderDash: [4, 4],
+                drawTicks: false,
+                drawBorder: false,
+              }
             }
           }
-        }
-      },
-      plugins: [ChartDataLabels]
-    });
+        },
+        plugins: [ChartDataLabels]
+      });
+    } else {
+      // When test(s) selected: stacked bar, each test a color
+      chart4Instance.current = new Chart(chart4Ref.current, {
+        type: 'bar',
+        data: {
+          labels: funnelSteps.map(item => item.label),
+          datasets: funnelChartDatasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true, position: 'right' },
+            tooltip: { enabled: true },
+            datalabels: { display: true }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              title: { display: true, text: "" },
+              ticks: {
+                font: { size: 14, weight: 'bold' },
+                color: axisColor,
+              },
+              grid: { display: false }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              title: { display: true, text: "Sample Count" },
+              ticks: { font: { size: 14, weight: 'bold' }, color: axisColor },
+              grid: {
+                color: '#e5e7eb',
+                borderDash: [4, 4],
+                drawTicks: false,
+                drawBorder: false,
+              }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
 
     const canvas = chart1Ref.current;
     const hideTooltip = () => {
@@ -896,7 +1115,8 @@ const Page = () => {
     selectedTestName1, selectedYear1, selectedMonth1,
     selectedRunId2, selectedYear2, selectedMonth2,
     selectedTatTestName3, selectedTatYear3, selectedTatMonth3,
-    selectedTatTestName4, selectedTatYear4, selectedTatMonth4
+    selectedTatTestName4, selectedTatYear4, selectedTatMonth4,
+    isDarkMode
   ]);
 
   // Dropdown rendering helper
@@ -956,9 +1176,10 @@ const Page = () => {
     );
   }
 
+
   return (
     <>
-      {(!masterSheetLoaded || !poolDataLoaded) ?
+      {(!masterSheetLoaded || !poolDataLoaded || !auditLogsLoaded) ?
         <div>
           {/* show the loading circle */}
           <div className="flex flex-col items-center justify-center min-h-[400px]">

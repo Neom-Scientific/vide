@@ -13,10 +13,11 @@ import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import RunSetup from "./Tabs/RunSetup";
 import Inventory from "./Tabs/Inventory";
 import MangementDashboard from "./components/MangementDashboard";
+import Help from "./Tabs/Help";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
-  const showSidebar = pathname !== "/login" && pathname !== "/reset-password";
+  const showSidebar = pathname !== "/login" && pathname !== "/reset-password" && pathname !== "/format";
 
   return (
     <div className="bg-white text-black dark:bg-gray-900 dark:text-white transition-colors duration-300">
@@ -64,6 +65,9 @@ function ReduxWrapper({ children, showSidebar, pathname }) {
       case "run-setup":
         title = "VIDE";
         break;
+      case "help":
+        title = "VIDE";
+        break;
       default:
         title = "VIDE";
     }
@@ -81,7 +85,7 @@ function ReduxWrapper({ children, showSidebar, pathname }) {
       )}
       <div className="p-1">
         {/* Render login page if on /login */}
-        {pathname === "/login" || pathname === "/reset-password" ? (
+        {pathname === "/login" || pathname === "/reset-password" || pathname === "/format" ? (
           children
         ) : (
           <ReduxContent activeTab={activeTab} children={children} />
@@ -109,6 +113,8 @@ function ReduxContent({ children, activeTab }) {
       return <LibraryPrepration />;
     case "run-setup":
       return <RunSetup />;
+    case "help":
+      return <Help />;
     default:
       return <>{children}</>;
   }

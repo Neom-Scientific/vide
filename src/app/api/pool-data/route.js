@@ -90,14 +90,14 @@ export async function GET(request) {
 
 export async function PUT(request) {
     const body = await request.json();
-    const { sample_id, sample_indicator, indicator_status, changed_by, internal_id } = body.data;
+    const { sample_id, sample_indicator, indicator_status, changed_by, internal_id,hospital_name } = body.data;
     // console.log('body', body);
     try {
         const response = [];
 
         if (sample_indicator === 'dna_isolation') {
             await pool.query(`UPDATE master_sheet SET dna_isolation = $2 WHERE internal_id = $1`, [internal_id, indicator_status]);
-            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'DNA Isolation status updated', changed_by, new Date()]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, $4, $5)`, [sample_id, 'DNA Isolation status updated', changed_by, new Date(), hospital_name]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 indicator_status: indicator_status,
@@ -106,7 +106,7 @@ export async function PUT(request) {
         }
         else if (sample_indicator === 'lib_prep') {
             await pool.query(`UPDATE master_sheet SET lib_prep = $2 WHERE internal_id = $1`, [internal_id, indicator_status]);
-            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'Library Preparation status updated', changed_by, new Date()]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, $4, $5)`, [sample_id, 'Library Preparation status updated', changed_by, new Date(), hospital_name]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 indicator_status: indicator_status,
@@ -115,7 +115,7 @@ export async function PUT(request) {
         }
         else if (sample_indicator === 'under_seq') {
             await pool.query(`UPDATE master_sheet SET under_seq = $2 WHERE internal_id = $1`, [internal_id, indicator_status]);
-            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'Under Sequencing status updated', changed_by, new Date()]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, $4, $5)`, [sample_id, 'Under Sequencing status updated', changed_by, new Date(), hospital_name]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 status: 200
@@ -123,7 +123,7 @@ export async function PUT(request) {
         }
         else if (sample_indicator === 'seq_completed') {
             await pool.query(`UPDATE master_sheet SET seq_completed = $2,location = $3 WHERE internal_id = $1`, [internal_id, indicator_status, 'seq_completed']);
-            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`, [sample_id, 'Sequencing Completed status updated', changed_by, new Date()]);
+            await pool.query(`INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, $4, $5)`, [sample_id, 'Sequencing Completed status updated', changed_by, new Date(), hospital_name]);
             response.push({
                 message: 'Sample indicator updated successfully',
                 status: 200

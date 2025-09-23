@@ -74,37 +74,37 @@ export async function POST(request) {
         } = fields;
         let hpo_id_final = null;
         let hpo_term_final = null;
-        if (clinical_history) {
-            try {
-                const resp = await fetch("https://hpoidextractor.onrender.com/extract", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ text: clinical_history }),
-                });
+        // if (clinical_history) {
+        //     try {
+        //         const resp = await fetch("https://hpoidextractor.onrender.com/extract", {
+        //             method: "POST",
+        //             headers: { "Content-Type": "application/json" },
+        //             body: JSON.stringify({ text: clinical_history }),
+        //         });
 
-                if (resp.ok) {
-                    const data = await resp.json();
-                    if (Array.isArray(data) && data.length > 0) {
-                        const hpoIds = data.map((d) => d["HPO ID"] || d.hpo_id).filter(Boolean);
-                        const hpoTerms = data.map((d) => d["Term"] || d.hpo_term).filter(Boolean);
+        //         if (resp.ok) {
+        //             const data = await resp.json();
+        //             if (Array.isArray(data) && data.length > 0) {
+        //                 const hpoIds = data.map((d) => d["HPO ID"] || d.hpo_id).filter(Boolean);
+        //                 const hpoTerms = data.map((d) => d["Term"] || d.hpo_term).filter(Boolean);
 
-                        hpo_id_final = hpoIds.length > 0 ? hpoIds.join(", ") : "Not Found";
-                        hpo_term_final = hpoTerms.length > 0 ? hpoTerms.join(", ") : "Not Found";
-                    } else {
-                        hpo_id_final = "Not Found";
-                        hpo_term_final = "Not Found";
-                    }
-                } else {
-                    console.error("FastAPI error:", await resp.text());
-                    hpo_id_final = "Not Found";
-                    hpo_term_final = "Not Found";
-                }
-            } catch (err) {
-                console.error("Failed to call extractor:", err);
-                hpo_id_final = "Not Found";
-                hpo_term_final = "Not Found";
-            }
-        }
+        //                 hpo_id_final = hpoIds.length > 0 ? hpoIds.join(", ") : "Not Found";
+        //                 hpo_term_final = hpoTerms.length > 0 ? hpoTerms.join(", ") : "Not Found";
+        //             } else {
+        //                 hpo_id_final = "Not Found";
+        //                 hpo_term_final = "Not Found";
+        //             }
+        //         } else {
+        //             console.error("FastAPI error:", await resp.text());
+        //             hpo_id_final = "Not Found";
+        //             hpo_term_final = "Not Found";
+        //         }
+        //     } catch (err) {
+        //         console.error("Failed to call extractor:", err);
+        //         hpo_id_final = "Not Found";
+        //         hpo_term_final = "Not Found";
+        //     }
+        // }
         const testNames = (selectedTestName || "").split(",").map(t => t.trim()).filter(Boolean);
 
         const today = new Date(registration_date || Date.now());
@@ -139,64 +139,85 @@ export async function POST(request) {
             project_id = `PI${String(nextSeq).padStart(4, "0")}`;
         }
 
-
-        // const data = await pool.query('SELECT sample_id,test_name FROM master_sheet WHERE sample_id = $1', [sample_id])
-        // if (data.rows.test_name === 'Myeloid' && data.rows.length >= 2) {
-        //     response.push({
-        //         message: 'Sample ID already exists for Myeloid test',
-        //         status: 400
-        //     })
-        //     return NextResponse.json(response)
-        // }
-        // else if (data.rows.length > 0 && data.rows.test_name !== 'Myeloid') {
-        //     response.push({
-        //         message: 'Sample ID already exists',
-        //         status: 400
-        //     })
-        //     return NextResponse.json(response)
-        // }
-
         if (testNames.length === 1) {
+            const formatRes = await pool.query(
+                `SELECT * FROM id_format WHERE hospital_name = $1`,
+                [hospital_name]
+            );
+            const format = formatRes.rows[0];
+
+            const now = new Date();
+            const currentYear = String(now.getFullYear());
+            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+
             let internal_id;
-            const date = new Date(registration_date || Date.now());
-            const year = date.getFullYear();
-
-            if (selectedTestName === "Myeloid") {
-                // Check if this sample_id already exists for Myeloid
-                const existing = await pool.query(
-                    `SELECT internal_id FROM master_sheet WHERE sample_id = $1 AND test_name = $2`,
-                    [sample_id, "Myeloid"]
-                );
-
-                if (existing.rows.length > 0) {
-                    // Use the same numeric part, but change the suffix to the new sample_type
-                    const existingInternalId = existing.rows[0].internal_id;
-                    const numericPart = existingInternalId.split('-')[0];
-                    internal_id = `${numericPart}-${sample_type}`;
-                } else {
-                    // Find the max numeric part for this year from the whole table
-                    const maxInternalIdQuery = `
-                        SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
-                        FROM master_sheet
-                        WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
-                    `;
-                    const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
-                    const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
-                    const nextSeq = maxSeq + 1;
-                    const numericPart = `${year}${String(nextSeq).padStart(5, '0')}`;
-                    internal_id = `${numericPart}-${sample_type}`;
+            if (format.internal_id_pad_length && format.internal_id_prefix === '' && format.internal_id_separator === '') {
+                let nextSeq = format.internal_id_last_seq + 1;
+                if (format.internal_id_last_year !== currentYear || format.internal_id_last_month !== currentMonth) {
+                    nextSeq = 1;
                 }
+                internal_id = `${currentYear}${currentMonth}${String(nextSeq).padStart(format.internal_id_pad_length, '0')}`;
+                await pool.query(
+                    `UPDATE id_format SET internal_id_last_seq = $1, internal_id_last_year = $2, internal_id_last_month = $3 WHERE hospital_name = $4`,
+                    [nextSeq, currentYear, currentMonth, hospital_name]
+                );
             } else {
-                // Default logic for other test_names
-                const maxInternalIdQuery = `
-                    SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
-                    FROM master_sheet
-                    WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+                const idFormatQuery = `
+                    SELECT internal_id_prefix, internal_id_separator, internal_id_pad_length, internal_id_last_seq
+                    FROM id_format
+                    WHERE hospital_name = $1
+                    LIMIT 1
                 `;
-                const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
-                const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
-                const nextSeq = maxSeq + 1;
-                internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
+                const idFormatResult = await pool.query(idFormatQuery, [hospital_name]);
+                if (idFormatResult.rows.length === 0) {
+                    throw new Error("ID format not found for hospital");
+                }
+                const {
+                    internal_id_prefix,
+                    internal_id_separator,
+                    internal_id_pad_length,
+                    internal_id_last_seq
+                } = idFormatResult.rows[0];
+
+                if (selectedTestName === "Myeloid") {
+                    const existing = await pool.query(
+                        `SELECT internal_id FROM master_sheet WHERE sample_id = $1 AND test_name = $2 AND hospital_name = $3`,
+                        [sample_id, "Myeloid", hospital_name]
+                    );
+
+                    if (existing.rows.length > 0) {
+                        const existingInternalId = existing.rows[0].internal_id;
+                        const lastSepIndex = Math.max(
+                            existingInternalId.lastIndexOf('-'),
+                            existingInternalId.lastIndexOf('_')
+                        );
+                        const numericPart = lastSepIndex !== -1
+                            ? existingInternalId.substring(0, lastSepIndex)
+                            : existingInternalId;
+                        internal_id = `${numericPart}-${sample_type}`;
+                    } else {
+                        const nextSeq = Number(internal_id_last_seq) + 1;
+                        const updateSeqQuery = `
+                            UPDATE id_format
+                            SET internal_id_last_seq = $1
+                            WHERE hospital_name = $2
+                        `;
+                        await pool.query(updateSeqQuery, [nextSeq, hospital_name]);
+                        const paddedSeq = String(nextSeq).padStart(Number(internal_id_pad_length), "0");
+                        const numericPart = `${internal_id_prefix}${internal_id_separator || ""}${paddedSeq}`;
+                        internal_id = `${numericPart}-${sample_type}`;
+                    }
+                } else {
+                    const nextSeq = Number(internal_id_last_seq) + 1;
+                    const updateSeqQuery = `
+                        UPDATE id_format
+                        SET internal_id_last_seq = $1
+                        WHERE hospital_name = $2
+                    `;
+                    await pool.query(updateSeqQuery, [nextSeq, hospital_name]);
+                    const paddedSeq = String(nextSeq).padStart(Number(internal_id_pad_length), "0");
+                    internal_id = `${internal_id_prefix}${internal_id_separator || ""}${paddedSeq}`;
+                }
             }
 
             let trf_file_id = null;
@@ -377,20 +398,53 @@ export async function POST(request) {
             });
         }
         else if (testNames.length > 1) {
-            // Generate base_internal_id ONCE
-            const date = new Date(registration_date || Date.now());
-            const year = date.getFullYear();
+            // // Generate base_internal_id ONCE
+            // const date = new Date(registration_date || Date.now());
+            // const year = date.getFullYear();
 
-            // Find the max numeric part for this year from the whole table
-            const maxInternalIdQuery = `
-                SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
-                FROM master_sheet
-                WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
-            `;
-            const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
-            const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
-            const nextSeq = maxSeq + 1;
-            const base_internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
+            // // Find the max numeric part for this year from the whole table
+            // const maxInternalIdQuery = `
+            //     SELECT MAX(CAST(SUBSTRING(CAST(internal_id AS TEXT), 5, 5) AS INTEGER)) AS max_seq
+            //     FROM master_sheet
+            //     WHERE LEFT(CAST(internal_id AS TEXT), 4) = $1
+            // `;
+            // const maxInternalIdResult = await pool.query(maxInternalIdQuery, [String(year)]);
+            // const maxSeq = maxInternalIdResult.rows[0]?.max_seq || 0;
+            // const nextSeq = maxSeq + 1;
+            // const base_internal_id = `${year}${String(nextSeq).padStart(5, '0')}`;
+
+            const formatRes = await pool.query(
+                `SELECT * FROM id_format WHERE hospital_name = $1`,
+                [hospital_name]
+            );
+            const format = formatRes.rows[0];
+
+            const now = new Date(registration_date || Date.now());
+            const currentYear = String(now.getFullYear());
+            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+
+            let base_internal_id;
+            let nextSeq = format.internal_id_last_seq + 1;
+
+            // If year/month format (no prefix/separator)
+            if (format.internal_id_pad_length && format.internal_id_prefix === '' && format.internal_id_separator === '') {
+                // Reset sequence if year/month changed
+                if (format.internal_id_last_year !== currentYear || format.internal_id_last_month !== currentMonth) {
+                    nextSeq = 1;
+                }
+                base_internal_id = `${currentYear}${currentMonth}${String(nextSeq).padStart(format.internal_id_pad_length, '0')}`;
+                await pool.query(
+                    `UPDATE id_format SET internal_id_last_seq = $1, internal_id_last_year = $2, internal_id_last_month = $3 WHERE hospital_name = $4`,
+                    [nextSeq, currentYear, currentMonth, hospital_name]
+                );
+            } else {
+                // Generic format: prefix + separator + padded sequence
+                base_internal_id = `${format.internal_id_prefix}${format.internal_id_separator || ""}${String(nextSeq).padStart(Number(format.internal_id_pad_length), "0")}`;
+                await pool.query(
+                    `UPDATE id_format SET internal_id_last_seq = $1 WHERE hospital_name = $2`,
+                    [nextSeq, hospital_name]
+                );
+            }
 
             let trf_file_id = null;
             if (file && typeof file.arrayBuffer === "function") {
@@ -712,8 +766,8 @@ export async function PUT(request) {
                     : [];
 
                 const auditQuery = `
-                     INSERT INTO audit_logs (sample_id, changed_by, changes, changed_at, comments)
-                     VALUES ($1, $2, $3::jsonb, $4, $5)
+                     INSERT INTO audit_logs (sample_id, changed_by, changes, changed_at, comments, hospital_name)
+                     VALUES ($1, $2, $3::jsonb, $4, $5, $6)
                     `;
 
                 const auditValues = [
@@ -721,7 +775,9 @@ export async function PUT(request) {
                     auditLog.changed_by,
                     JSON.stringify(safeChanges) || null,
                     auditLog.changed_at,
-                    auditLog.comments || null
+                    auditLog.comments || null,
+                    auditLog.hospital_name || null
+
                 ];
                 await pool.query(auditQuery, auditValues);
             }

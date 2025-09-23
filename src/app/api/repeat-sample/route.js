@@ -349,12 +349,13 @@ export async function POST(request) {
 
         // Optionally, add audit log
         await pool.query(
-            `INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at) VALUES ($1, $2, $3, $4)`,
+            `INSERT INTO audit_logs (sample_id, comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, $4, $5)`,
             [
                 newSample.sample_id,
                 `Repeat sample created because of ${comments}`,
                 user_email,
                 new Date(),
+                newSample.hospital_name
             ]
         );
 

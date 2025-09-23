@@ -509,7 +509,8 @@ export const SampleRegistration = () => {
       sample_id: sampleId,
       changed_by: user?.email || '',
       changed_at: new Date().toISOString(),
-      changes
+      changes,
+      hospital_name: user?.hospital_name || ''
     };
 
     // console.log('changes', changes);

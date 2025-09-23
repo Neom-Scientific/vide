@@ -23,10 +23,12 @@ import { useDispatch } from "react-redux";
 import { setActiveTab } from "@/lib/redux/slices/tabslice";
 import Cookies from "js-cookie";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { set } from "lodash";
 
 const Processing = () => {
   const user = JSON.parse(Cookies.get('vide_user') || "{}");
   const [processing, setProcessing] = useState(false);
+  const [sendSamplesProcessing, setSendSamplesProcessing] = useState(false);
   const [showAuditSidebar, setShowAuditSidebar] = useState(false);
   const [auditSampleId, setAuditSampleId] = useState("");
   const [auditData, setAuditData] = useState([]);
@@ -36,9 +38,9 @@ const Processing = () => {
 
   const allColumns = [
     // registration and identification columns
-    { key: 'registration_date', label: 'Registration Date' }, 
+    { key: 'registration_date', label: 'Registration Date' },
     { key: 'sample_id', label: 'Patient ID' },
-    { key: 'internal_id', label: 'Lab ID' }, 
+    { key: 'internal_id', label: 'Lab ID' },
     { key: 'run_id', label: 'Run ID' },
     { key: 'batch_id', label: 'Batch ID' },
     { key: 'pool_no', label: 'Pool No' },
@@ -52,7 +54,7 @@ const Processing = () => {
     { key: 'collection_date_time', label: 'Collection Date Time' },
     { key: 'sample_date', label: 'Sample Receiving Date and Time' },
     { key: 'sample_type', label: 'Sample Type' },
-    { key: 'trf', label: 'TRF' }, 
+    { key: 'trf', label: 'TRF' },
     { key: 'specimen_quality', label: 'Specimen Quality' },
     { key: 'prority', label: 'Prority' },
     { key: 'storage_condition', label: 'Storage Condition' },
@@ -116,12 +118,12 @@ const Processing = () => {
     { key: 'lib_vol_for_2nm', label: 'Volume from Stock library for 2nM' },
     { key: 'nfw_vol_for_2nm', label: 'NFW Volume For 2nM' },
     { key: 'total_vol_for_2nm', label: 'Total Volume For 2nM' },
-    
+
     { key: 'vol_for_40nm_percent_pooling', label: '20nM vol. % pooling' },
     { key: 'volume_from_40nm_for_total_25ul_pool', label: 'Volume from 20nM for Total 25ul Pool' },
     { key: 'tapestation_conc', label: 'TapeStation/Qubit QC ng/ul RNA/DNA Pool (Myeloid)' },
     { key: 'tapestation_size', label: 'Average bp  Size (Myeloid)' },
-    
+
     { key: 'pooling_volume', label: 'Pooling Volume (SGS)' },
     { key: 'dna_vol_for_dilution', label: 'DNA Vol for Dilution (HLA)' },
     { key: 'buffer_vol_to_be_added', label: 'Buffer Vol (HLA)' },
@@ -359,7 +361,7 @@ const Processing = () => {
         }
       }
 
-      if (col.key === "nm_cal"){
+      if (col.key === "nm_cal") {
         return {
           accessorKey: col.key,
           header: col.label,
@@ -494,7 +496,8 @@ const Processing = () => {
                     internal_id: updatedRow.internal_id,
                     sample_indicator: col.key,
                     indicator_status: checked ? "Yes" : "No",
-                    changed_by: user.email
+                    changed_by: user.email,
+                    hospital_name: user.hospital_name
                   };
                   try {
                     const response = await axios.put("/api/pool-data", { data: payload });
@@ -797,11 +800,11 @@ const Processing = () => {
   ];
 
   const handleSendForLibraryPreparation = async () => {
-    setProcessing(true);
+    setSendSamplesProcessing(true);
     const validRows = selectedRows.filter(row => row.specimen_quality !== 'Not Accepted');
     if (validRows.length === 0) {
       toast.warning("No rows selected for Library Preparation.");
-      setProcessing(false);
+      setSendSamplesProcessing(false);
       return;
     }
 
@@ -819,7 +822,7 @@ const Processing = () => {
           auditLog
         });
       } catch (err) {
-        // toast.error(`Failed to update location for sample ${row.sample_id}`);
+        setSendSamplesProcessing(false);
       }
     }
 
@@ -1042,7 +1045,7 @@ const Processing = () => {
     setAuditSampleId(sampleId);
     setShowAuditSidebar(true);
     try {
-      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}&internal_id=${internalId}`);
+      const res = await axios.get(`/api/audit-logs?sample_id=${sampleId}&internal_id=${internalId}&hospital_name=${encodeURIComponent(user.hospital_name)}`);
       console.log('res.data:', res.data); // Debugging audit data
       setAuditData(res.data[0]?.logs || []);
     } catch (e) {
@@ -1460,11 +1463,11 @@ const Processing = () => {
 
             {selectedRows && (
               <Button
-                disabled={processing}
+                disabled={sendSamplesProcessing}
                 className={"mt-5 text-white cursor-pointer min-w-[200px] h-12 bg-gray-700 hover:bg-gray-800 " + (selectedRows ? "" : "opacity-50")}
                 onClick={handleSendForLibraryPreparation}
               >
-                {processing ? 'Sending...' : 'Send for Library Preparation'}
+                {sendSamplesProcessing ? 'Sending...' : 'Send for Library Preparation'}
               </Button>
             )}
 
@@ -1479,6 +1482,7 @@ const Processing = () => {
         audits={auditData}
         changed_by={user.email}
         setAuditData={setAuditData}
+        hospitalName={user.hospital_name}
       />
 
       <DialogBox
@@ -1496,7 +1500,7 @@ const Processing = () => {
 
 export default Processing;
 
-const AuditSidebar = ({ open, onClose, sampleId, audits, changed_by, setAuditData }) => {
+const AuditSidebar = ({ open, onClose, sampleId, audits, changed_by, setAuditData, hospitalName }) => {
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -1513,10 +1517,11 @@ const AuditSidebar = ({ open, onClose, sampleId, audits, changed_by, setAuditDat
         comments: value,
         changed_by: changed_by,
         changed_at: new Date().toISOString(),
+        hospital_name: hospitalName
       }
       const res = await axios.post('/api/audit-logs', data)
       if (res.data[0].status === 201) {
-        const data = await axios.get(`/api/audit-logs?sample_id=${sampleId}`);
+        const data = await axios.get(`/api/audit-logs?sample_id=${sampleId}&hospital_name=${encodeURIComponent(hospitalName)}`);
         if (data.data[0].status === 200) {
           // toast.success("Comment added successfully.");
           setAuditData(data.data[0].logs || []);

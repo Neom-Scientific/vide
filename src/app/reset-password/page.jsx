@@ -93,7 +93,19 @@ const page = () => {
             });
             if (response.data[0].status === 200) {
                 toast.success("Password reset successfully");
-                router.push('/')
+                try{
+                    const res = await axios.get(`/api/format-save?hospital_name=${user?.hospital_name}`);
+                    if(res.data[0].status === 200){
+                        router.push('/format')
+                    }
+                    else{
+                        router.push('/')
+                    }
+                }
+                catch(error){
+                    console.log('error in try',error);
+                }
+                // router.push('/')
                 // console.log(response.data[0].message);
                 
             } else if (response.data[0]?.status === 401) {
@@ -109,11 +121,11 @@ const page = () => {
     return (
         <div className="grid h-screen grid-cols-1 md:grid-cols-12">
             {/* Left Section (Hidden on Mobile) */}
-            <div className="hidden md:block md:col-span-8">
+            <div className="hidden md:block md:col-span-8 mt-[100px]">
                 <Image
                     src={SideImage}
-                    className="w-full h-full"
-                    alt="side image"
+                    // className=""
+                    alt="Neom Scientific"
                 />
             </div>
 
@@ -122,7 +134,7 @@ const page = () => {
                 <div className="absolute top-2 left-2 md:hidden">
                     <Image
                         src={SideImage}
-                        alt="side image"
+                        alt="Neom Scientific"
                         width={100} // Adjust size for mobile
                         height={100}
                         className="object-contain"

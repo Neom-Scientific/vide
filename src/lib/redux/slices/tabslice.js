@@ -4,17 +4,18 @@ const { createSlice } = require("@reduxjs/toolkit");
 const initialState = {
     activeTab: "dashboard", // Default active tab
     taskId: null,
-    tab:[
+    tab: [
         { value: "dashboard", name: "Home" },
         { value: "sample-register", name: "New Project" },
         { value: "processing", name: "Project Analysis" },
         { value: "library-prepration", name: "Library Prepration" },
         { value: "run-setup", name: "Run Setup" },
-        { value: "reports", name: "Reports" }
+        { value: "reports", name: "Reports" },
+        { value: "help", name: "Help" }
     ]
 };
 
-const tabSlice=createSlice({
+const tabSlice = createSlice({
     name: "tab",
     initialState,
     reducers: {
@@ -26,5 +27,5 @@ const tabSlice=createSlice({
         },
     },
 })
-export const { setActiveTab , setTaskId } = tabSlice.actions;
+export const { setActiveTab, setTaskId } = tabSlice.actions;
 export default tabSlice.reducer;

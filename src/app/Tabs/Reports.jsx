@@ -263,6 +263,7 @@ const Reports = () => {
             comments: `Report ${isMito ? 'Mito' : 'Main'} uploaded`,
             changed_by: user.email,
             changed_at: new Date().toISOString(),
+            hospital_name:user.hospital_name
           }
           const res = await axios.post('/api/audit-logs', data);
           setTableRows((prevRows) =>

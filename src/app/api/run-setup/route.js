@@ -10,7 +10,7 @@ export async function POST(request) {
     const body = await request.json();
     const { setup } = body;
     try {
-        let run_id;
+        // let run_id;
         const response = [];
         if (!setup) {
             response.push({
@@ -19,21 +19,38 @@ export async function POST(request) {
             });
         }
         // console.log('table_data', setup.table_data);
-        const { rows } = await pool.query(
-            `SELECT run_id FROM run_setup WHERE hospital_name = $1 ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER) DESC LIMIT 1;`,
+        // const { rows } = await pool.query(
+        //     `SELECT run_id FROM run_setup WHERE hospital_name = $1 ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER) DESC LIMIT 1;`,
+        //     [setup.hospital_name]
+        // );
+
+        const idFormatRes = await pool.query(
+            `SELECT run_id_prefix, internal_id_separator, run_id_pad_length, run_id_last_seq FROM id_format WHERE hospital_name = $1`,
             [setup.hospital_name]
         );
 
-        let nextRunNumber = 1;
-        if (rows.length > 0 && rows[0].run_id) {
-            // Extract the number from run_id, e.g., "run_5" => 5
-            const match = rows[0].run_id.match(/^run_(\d+)$/);
-            if (match) {
-                nextRunNumber = parseInt(match[1], 10) + 1;
-            }
+        if (idFormatRes.rows.length === 0) {
+            return NextResponse.json([{ message: "No id_format found for hospital", status: 404 }]);
         }
-        console.log('setup.table_data', setup.table_data);
-        run_id = `run_${nextRunNumber}`;
+
+        const { run_id_prefix, internal_id_separator, run_id_pad_length, run_id_last_seq } = idFormatRes.rows[0];
+
+        // Increment sequence
+        const nextRunSeq = Number(run_id_last_seq) + 1;
+
+        // Update run_id_last_seq in id_format table
+        await pool.query(
+            `UPDATE id_format SET run_id_last_seq = $1 WHERE hospital_name = $2`,
+            [nextRunSeq, setup.hospital_name]
+        );
+
+        // Build padded sequence
+        const paddedSeq = String(nextRunSeq).padStart(Number(run_id_pad_length), "0");
+
+        // Build run_id using internal_id_separator
+        // const run_id = `${run_id_prefix}${internal_id_separator || ""}${paddedSeq}`;
+        const run_id = setup.run_id
+
         await pool.query(
             `INSERT INTO run_setup (
               run_id,
@@ -64,10 +81,12 @@ export async function POST(request) {
               count,
               table_data,
               ht_buffer_next_seq_1000_2000,
-              final_pool_vol_ul
+              final_pool_vol_ul,
+              flowcell
             ) VALUES (
               $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22,$23,$24, $25, $26,$27,$28,$29
+              $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 
+              $21, $22,$23,$24, $25, $26,$27,$28,$29,$30
             )`,
             [
                 run_id,  //1
@@ -98,7 +117,8 @@ export async function POST(request) {
                 getUniqueSampleCount(setup.internal_ids),//26
                 JSON.stringify(setup.table_data),//27
                 setup.ht_buffer_next_seq_1000_2000,//28
-                setup.final_pool_vol_ul //29
+                setup.final_pool_vol_ul, //29
+                setup.flowcell //30
             ]
         );
 
@@ -136,7 +156,8 @@ export async function POST(request) {
                   table_data = $26,
                   ht_buffer_next_seq_1000_2000 = $27,
                   run_id = $28,
-                    final_pool_vol_ul = $30
+                    final_pool_vol_ul = $30,
+                    flowcell = $31
                   WHERE internal_id = $29`,
                     [
                         setup.selected_application,//1
@@ -168,7 +189,8 @@ export async function POST(request) {
                         setup.ht_buffer_next_seq_1000_2000,//27
                         run_id,//28
                         internalId,//29
-                        setup.final_pool_vol_ul //30
+                        setup.final_pool_vol_ul,//30
+                        setup.flowcell //31
                     ]
                 );
 
@@ -176,8 +198,9 @@ export async function POST(request) {
                     `UPDATE pool_info SET run_id = $1 WHERE internal_id = $2`,
                     [run_id, internalId]
                 );
+                await pool.query(`INSERT INTO audit_logs (internal_id , comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, NOW(), $4)`, [internalId, `Sample moved to Under Sequencing`, setup.change_by, setup.hospital_name]);
 
-                await pool.query(`INSERT INTO audit_logs (internal_id , comments, changed_by, changed_at) VALUES ($1, $2, $3, NOW())`, [internalId, `Run setup created with run_id: ${run_id}`, setup.change_by]);
+                await pool.query(`INSERT INTO audit_logs (internal_id , comments, changed_by, changed_at, hospital_name) VALUES ($1, $2, $3, NOW())`, [internalId, `Run setup created with run_id: ${run_id}`, setup.change_by, setup.hospital_name]);
             }
         }
 
@@ -230,7 +253,7 @@ export async function GET(request) {
             });
         }
         if (role === 'SuperAdmin') {
-            const { rows } = await pool.query(`SELECT run_id ,seq_run_date, instument_type ,total_required, total_gb_available, selected_application, run_remarks,table_data, count FROM run_setup ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER);`);
+            const { rows } = await pool.query(`SELECT run_id ,seq_run_date, instument_type,flowcell ,total_required, total_gb_available, selected_application, run_remarks,table_data, count FROM run_setup ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER);`);
             if (rows.length === 0) {
                 response.push({
                     status: 404,
@@ -245,7 +268,7 @@ export async function GET(request) {
         }
         else {
             const { rows } = await pool.query(
-                `SELECT run_id, total_required, total_gb_available, selected_application,instument_type, table_data, seq_run_date,count,run_remarks FROM run_setup WHERE hospital_name = $1 ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER);`,
+                `SELECT run_id, total_required, total_gb_available, selected_application,instument_type, flowcell,table_data, seq_run_date,count,run_remarks FROM run_setup WHERE hospital_name = $1 ORDER BY CAST(SUBSTRING(run_id FROM '[0-9]+$') AS INTEGER);`,
                 [hospital_name]
             );
             if (rows.length === 0) {

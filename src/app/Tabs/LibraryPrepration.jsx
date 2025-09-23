@@ -3304,6 +3304,7 @@ const DialogBox = ({ isOpen, onClose, user_email, onRemove, rowInfo, user_hospit
           changed_by: user_email,
           comments: comments,
           changed_at: new Date().toISOString(),
+          hospital_name: user_hospital_name,
         }
       });
 

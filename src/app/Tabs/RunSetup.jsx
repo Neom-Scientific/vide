@@ -1,6 +1,8 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { Form, FormField, FormItem, FormLabel } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
@@ -13,31 +15,33 @@ import { toast, ToastContainer } from 'react-toastify'
 import { z } from 'zod'
 
 const getRunSetupSchema = (instrumentType) => z.object({
+  run_id: z.string().min(1, 'Run ID is required'),
   seq_run_date: z.string().min(1, 'Sequence run date is required'),
-  total_gb_available: z.string().min(1, 'Total GB available is required'),
-  instument_type: z.string().min(1, 'Instrument type is required'),
-  pool_size: z.number().min(1, 'Pool size is required'),
-  pool_conc_run_setup: z.string().min(1, 'Pool concentration is required'),
-  nm_cal: z.number().min(1, 'nM calibration is required'),
-  total_required: z.number().min(1, 'Total required is required'),
-  final_pool_vol_ul: z.number().min(1, 'Final pool volume (ul) is required'),
+  total_gb_available: z.string().min(0.00001, 'Total GB available is required'),
+  instument_type: z.string().min(0.00001, 'Instrument type is required'),
+  pool_size: z.number().min(0.00001, 'Pool size is required'),
+  pool_conc_run_setup: z.string().min(0.00001, 'Pool concentration is required'),
+  nm_cal: z.number().min(0.00001, 'nM calibration is required'),
+  total_required: z.number().min(0.00001, 'Total required is required'),
+  final_pool_vol_ul: z.number().min(0.00001, 'Final pool volume (ul) is required'),
+  flowcell: z.string().min(0.00001, 'Flowcell is required'),
   ...(instrumentType === 'NextSeq_550' && {
-    dinatured_lib_next_seq_550: z.number().min(1, 'Stock Conc(pM) is required'),
-    total_volume_next_seq_550: z.number().min(1, 'Total Volume is required'),
-    loading_conc_550: z.number().min(1, 'Required Concentration(pM) is required'),
-    lib_required_next_seq_550: z.number().min(1, 'Volume from Stock is required'),
-    buffer_volume_next_seq_550: z.number().min(1, 'HT Buffer is required'),
-    final_pool_conc_vol_2nm_next_seq_550: z.number().min(1, 'Volume for Final Pool conc 2nM is required'),
+    dinatured_lib_next_seq_550: z.number().min(0.00001, 'Stock Conc(pM) is required'),
+    total_volume_next_seq_550: z.number().min(0.00001, 'Total Volume is required'),
+    loading_conc_550: z.number().min(0.00001, 'Required Concentration(pM) is required'),
+    lib_required_next_seq_550: z.number().min(0.00001, 'Volume from Stock is required'),
+    buffer_volume_next_seq_550: z.number().min(0.00001, 'HT Buffer is required'),
+    final_pool_conc_vol_2nm_next_seq_550: z.number().min(0.00001, 'Volume for Final Pool conc 2nM is required'),
     // nfw_vol_2nm_next_seq_550: z.number().min(1, 'NFW (2nM) is required'),
   }),
   ...(instrumentType === 'NextSeq_1000_2000' && {
-    final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().min(1, 'Volulme for Final Pool conc 2nM is required'),
-    rsbetween_vol_2nm_next_seq_1000_2000: z.number().min(1, 'RSB tween-20 (2nM) is required'),
-    total_volume_2nm_next_seq_1000_2000: z.number().min(1, 'Total Volume (2nM) is required'),
-    vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of 2nM conc(600pM) is required'),
-    vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().min(1, 'Volume of RSB tween-20 (600pM) is required'),
-    total_volume_600pm_next_seq_1000_2000: z.number().min(1, 'Total Volume(600pM) is required'),
-    loading_conc_1000_2000: z.number().min(1, 'Loading Concentration(pM) is required'),
+    final_pool_conc_vol_2nm_next_seq_1000_2000: z.number().min(0.00001, 'Volulme for Final Pool conc 2nM is required'),
+    rsbetween_vol_2nm_next_seq_1000_2000: z.number().min(0.00001, 'RSB tween-20 (2nM) is required'),
+    total_volume_2nm_next_seq_1000_2000: z.number().min(0.00001, 'Total Volume (2nM) is required'),
+    vol_of_2nm_for_600pm_next_seq_1000_2000: z.number().min(0.00001, 'Volume of 2nM conc(600pM) is required'),
+    vol_of_rs_between_for_600pm_next_seq_1000_2000: z.number().min(0.00001, 'Volume of RSB tween-20 (600pM) is required'),
+    total_volume_600pm_next_seq_1000_2000: z.number().min(0.00001, 'Total Volume(600pM) is required'),
+    loading_conc_1000_2000: z.number().min(0.00001, 'Loading Concentration(pM) is required'),
   }),
   // Add other fields as needed
 });
@@ -57,14 +61,74 @@ const RunSetup = () => {
   const [runDetailsWithSampleIds, setRunDetailsWithSampleIds] = useState([]);
   const [selectedPoolNos, setSelectedPoolNos] = useState([]);
   const [processing, setProcessing] = useState(false);
+  const [showAddInstrumentDialog, setShowAddInstrumentDialog] = useState(false);
+  const [fetchFlowcells, setFetchFlowcells] = useState({}); // { name:{amount:'', gb:''}, ... }
+
+  // dialog box
+  const [instrumentName, setInstrumentName] = useState('');
+  const [submittingInstument, setSubmittingInstument] = useState(false);
+  const [showFlowcellForm, setShowFlowcellForm] = useState(false);
+  const [flowcellName, setFlowcellName] = useState('');
+  const [flowcellAmount, setFlowcellAmount] = useState('');
+  const [flowcells, setFlowcells] = useState({}); // { name: { amount, gb }, ... }
+  const [flowcellGB, setFlowcellGB] = useState('');
+
+
+  const handleAddFlowcell = () => {
+    if (flowcellName.trim() && flowcellAmount && flowcellGB) {
+      setFlowcells(prev => ({
+        ...prev,
+        [flowcellName.trim()]: { amount: flowcellAmount, gb: flowcellGB }
+      }));
+      setFlowcellName('');
+      setFlowcellAmount('');
+      setFlowcellGB('');
+      setShowFlowcellForm(false);
+    }
+  };
+
+  const handleRemoveFlowcell = (name) => {
+    setFlowcells(prev => {
+      const updated = { ...prev };
+      delete updated[name];
+      return updated;
+    });
+  };
+
+  const handleAddInstrument = async (e) => {
+    e.preventDefault();
+    setSubmittingInstument(true);
+    try {
+      const response = await axios.post('/api/instruments', { instrument_name: instrumentName, flowcell: flowcells });
+      if (response.data.status === 200) {
+        toast.success('Instrument added successfully');
+        setInstrumentName('');
+        setFlowcells({});
+        setShowAddInstrumentDialog(false);
+        toast.success('Instrument added successfully');
+      } else {
+        toast.error(response.data.message);
+      }
+    }
+    catch (err) {
+      console.error('Error adding instrument:', err);
+      toast.error('Failed to add instrument. Please try again.');
+    }
+    finally {
+      setSubmittingInstument(false);
+    }
+  }
+  // dialog box ends
 
   const form = useForm({
     resolver: zodResolver(getRunSetupSchema(InstrumentType)),
     defaultValues: {
       // application: '',
+      run_id: '',
       seq_run_date: '',
       total_gb_available: '',
       instument_type: '',
+      flowcell: '',
       pool_size: '', // Ensure numeric default value
       pool_conc_run_setup: '',
       nm_cal: '',
@@ -363,7 +427,7 @@ const RunSetup = () => {
     form.setValue("final_pool_conc_vol_2nm_next_seq_550", volumeForFinalPoolConc2nM);
     const rnfwVol2nM = parseFloat((totalVolume2nMNextSeq550 - volumeForFinalPoolConc2nM).toFixed(2));
     form.setValue("nfw_vol_2nm_next_seq_550", rnfwVol2nM);
-  })
+  }, [totalVolume2nMNextSeq550, nMCal]);
 
   const handleCheckboxChange = (testName, isChecked) => {
     let updatedCheckboxes;
@@ -645,6 +709,29 @@ const RunSetup = () => {
     }
   }
 
+
+  const fetchFlowcellsForInstrument = async (instrumentType) => {
+    try {
+      const response = await axios.get(`/api/instruments?instument_type=${instrumentType}`);
+      if (
+        response.data &&
+        response.data.response &&
+        response.data.response[0].status === 200
+      ) {
+        // Assuming only one instrument per type, or use response.data.response[0].data[0]
+        const instrument = response.data.response[0].data[0];
+        if (instrument && instrument.flowcell) {
+          setFetchFlowcells(instrument.flowcell); // This will be your { name: { amount, gb }, ... }
+        }
+      } else {
+        setFetchFlowcells({});
+      }
+    } catch (error) {
+      setFetchFlowcells({});
+      console.error("Failed to fetch flowcells:", error);
+    }
+  };
+
   const groupedByTest = runDetailsWithSampleIds.reduce((acc, item) => {
     if (!acc[item.test_name]) acc[item.test_name] = [];
     acc[item.test_name].push(item.sample_id);
@@ -668,6 +755,30 @@ const RunSetup = () => {
             >
               <div className="mt-4">
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+                  {/* run_id */}
+                  <FormField
+                    control={form.control}
+                    name="run_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="mb-2">Run ID</FormLabel>
+                        <Input
+                          {...field}
+                          type="text"
+                          placeholder="Enter Run ID"
+                          className="mb-2 border-2 w-full border-orange-300"
+                          required
+                        />
+                        {form.formState.errors.run_id && (
+                          <p className="text-red-500 text-sm">
+                            {form.formState.errors.run_id.message}
+                          </p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+
+                  <div></div>
 
                   {/* Application Dropdown */}
                   <FormField
@@ -956,7 +1067,7 @@ const RunSetup = () => {
                   />
 
                   {/* Instrument Type */}
-                  <FormField
+                  {/* <FormField
                     control={form.control}
                     name="instument_type"
                     render={({ field }) => (
@@ -996,6 +1107,103 @@ const RunSetup = () => {
                           <option value="">Select instrument type</option>
                           <option value="NextSeq_550">NextSeq 550</option>
                           <option value="NextSeq_1000_2000">NextSeq 1000/2000</option>
+                        </select>
+                      </FormItem>
+                    )}
+                  /> */}
+
+                  <FormField
+                    control={form.control}
+                    name="instument_type"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="mb-2">Instrument Type</FormLabel>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              type="button"
+                              className="w-full bg-white dark:bg-gray-900 border-2 border-orange-300 text-black dark:text-white text-left hover:bg-white justify-start"
+                            >
+                              {field.value === "NextSeq_550"
+                                ? "NextSeq 550"
+                                : field.value === "NextSeq_1000_2000"
+                                  ? "NextSeq 1000/2000"
+                                  : "Select instrument type"}
+                              <span className="ml-2">&#9662;</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent className="min-w-[250px] mx-10">
+                            <DropdownMenuItem
+                              onClick={() => {
+                                field.onChange("NextSeq_550");
+                                setInstrumentType("NextSeq_550");
+                                fetchFlowcellsForInstrument("NextSeq_550");
+                                // Reset fields for NextSeq_550
+                                form.setValue("total_volume_2nm_next_seq_1000_2000", '');
+                                form.setValue("final_pool_conc_vol_2nm_next_seq_1000_2000", '');
+                                form.setValue("rsbetween_vol_2nm_next_seq_1000_2000", '');
+                                form.setValue("loading_conc_1000_2000", 600);
+                                form.setValue("total_volume_600pm_next_seq_1000_2000", '');
+                                form.setValue("vol_of_2nm_for_600pm_next_seq_1000_2000", '');
+                                form.setValue("vol_of_rs_between_for_600pm_next_seq_1000_2000", '');
+                              }}
+                            >
+                              NextSeq 550
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                field.onChange("NextSeq_1000_2000");
+                                setInstrumentType("NextSeq_1000_2000");
+                                fetchFlowcellsForInstrument("NextSeq_1000_2000");
+                                // Reset fields for NextSeq_1000_2000
+                                form.setValue("total_volume_2nm_next_seq_550", '');
+                                form.setValue("final_pool_conc_vol_2nm_next_seq_550", '');
+                                form.setValue("nfw_vol_2nm_next_seq_550", '');
+                                form.setValue("dinatured_lib_next_seq_550", 20);
+                                form.setValue("total_volume_next_seq_550", 1500);
+                                form.setValue("loading_conc_550", '');
+                                form.setValue("lib_required_next_seq_550", '');
+                                form.setValue("buffer_volume_next_seq_550", '');
+                              }}
+                            >
+                              NextSeq 1000/2000
+                            </DropdownMenuItem>
+                            {user.role === 'SuperAdmin' && (
+                              <>
+                                <div className="border-b border-gray-200 my-1" />
+                                <DropdownMenuItem
+                                  onClick={() => setShowAddInstrumentDialog(true)}
+                                  className="text-blue-600 font-semibold"
+                                >
+                                  + Add Instrument
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="flowcell"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="mb-2">Flowcell</FormLabel>
+                        <select
+                          {...field}
+                          value={field.value || ""}
+                          onChange={(e) => field.onChange(e)} // Update form state
+                          className="mb-2 w-full p-2 border-2 border-orange-300 rounded"
+                          required
+                        >
+                          <option value="">Select Flowcell</option>
+                          {fetchFlowcells && Object.entries(fetchFlowcells).map(([name, { amount, gb }]) => (
+                            <option key={name} value={name}>
+                              {name}
+                            </option>
+                          ))}
                         </select>
                       </FormItem>
                     )}
@@ -1327,7 +1535,7 @@ const RunSetup = () => {
                 <div className='flex flex-row gap-4'>
                   <Button
                     type='reset'
-                    className="w-1/2 mt-7 bg-gray-500 cursor-pointer text-white py-2 rounded hover:bg-gray-600 transition-colors"
+                    className="w-1/2 mt-7 bg-gray-700 cursor-pointer text-white py-2 rounded hover:bg-gray-800 transition-colors"
                     onClick={() => {
                       form.reset();
                       setPoolData([]);
@@ -1451,6 +1659,157 @@ const RunSetup = () => {
           </div>
         )}
       </div>
+      {/* Add Instrument Dialog */}
+      {/* <AddInstrument
+        open={showAddInstrumentDialog}
+        onOpenChange={setShowAddInstrumentDialog}
+      /> */}
+      {/* <AddInstrument
+        open={showAddInstrumentDialog}
+        onClose={() => setShowAddInstrumentDialog(false)}
+      /> */}
+      {/* {showAddInstrumentDialog && (
+        <AddInstrument
+          open={showAddInstrumentDialog}
+          onClose={() => setShowAddInstrumentDialog(false)}
+        />
+      )} */}
+      {/* {showAddInstrumentDialog && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white p-6 rounded shadow">
+            <h2 className="text-lg font-bold">Dialog here</h2>
+            <button
+              onClick={() => setShowAddInstrumentDialog(false)}
+              className="mt-4 px-4 py-2 bg-gray-700 text-white rounded"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )} */}
+
+      {showAddInstrumentDialog && (
+        <div
+          className="fixed inset-0 flex items-center justify-center z-50"
+          style={{
+            background: 'rgba(255,255,255,0.6)', // semi-transparent white
+            // WebkitBackdropFilter: 'blur(4px)',   // Safari support
+          }}
+        >
+          <div className="bg-white dark:bg-gray-800 p-6 rounded shadow w-11/12 md:w-1/2 lg:w-1/3">
+            <h2 className="text-lg font-bold mb-4 text-black dark:text-white">Add New Instrument</h2>
+            <form onSubmit={handleAddInstrument}>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <label htmlFor="instrumentName">Instrument Name</label>
+                  <Input
+                    id="instrumentName"
+                    value={instrumentName}
+                    onChange={(e) => setInstrumentName(e.target.value)}
+                    className="w-full border-2 border-orange-300"
+                  />
+                </div>
+                <div className="mb-4">
+                  <Button
+                    type="button"
+                    className="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 cursor-pointer transition-colors"
+                    onClick={() => setShowFlowcellForm(true)}
+                  >
+                    + Add Flowcell
+                  </Button>
+
+                  {showFlowcellForm && (
+                    <div className="mt-2 flex gap-2 items-center">
+                      <Input
+                        placeholder="Flowcell Name"
+                        value={flowcellName}
+                        onChange={e => setFlowcellName(e.target.value)}
+                        className="border-2 border-orange-300"
+                      />
+                      <Input
+                        placeholder="GB"
+                        type="number"
+                        value={flowcellGB}
+                        onChange={e => setFlowcellGB(e.target.value)}
+                        className="border-2 border-orange-300"
+                      />
+                      <Input
+                        placeholder="Amount"
+                        type="number"
+                        value={flowcellAmount}
+                        onChange={e => setFlowcellAmount(e.target.value)}
+                        className="border-2 border-orange-300"
+                      />
+                      <Button
+                        type="button"
+                        className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 cursor-pointer"
+                        onClick={handleAddFlowcell}
+                        disabled={!flowcellName.trim() || !flowcellAmount || !flowcellGB}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        type="button"
+                        className="bg-gray-300 text-black px-3 py-1 rounded hover:bg-gray-400 cursor-pointer"
+                        onClick={() => setShowFlowcellForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                  {/* List of added flowcells */}
+                  {Object.keys(flowcells).length > 0 && (
+                    <div className="mt-2">
+                      {Object.entries(flowcells).map(([name, { amount, gb }]) => (
+                        <div key={name} className="flex items-center gap-2 mb-1">
+                          <span className="px-2 py-1 bg-orange-100 dark:text-black border border-orange-300 rounded text-xs">
+                            {name} (GB: {gb}) - ₹{amount}
+                          </span>
+                          <button
+                            type="button"
+                            className="text-red-500 hover:text-red-700"
+                            onClick={() => handleRemoveFlowcell(name)}
+                            aria-label="Remove"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-row gap-4 mt-4">
+                <Button
+                  type="reset"
+                  variant="outline"
+                  className="flex-1 bg-white text-gray-700 border dark:text-white cursor-pointer border-gray-300 hover:bg-gray-100 hover:text-black transition-colors"
+                  onClick={() => {
+                    setShowAddInstrumentDialog(false);
+                    setInstrumentName('');
+                    setFlowcells([]);
+                    setFlowcellAmount('');
+                    setFlowcellGB('');
+                    setFlowcellName('');
+                    setShowFlowcellForm(false);
+                    setSubmittingInstument(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 bg-orange-500 text-white cursor-pointer hover:bg-orange-600 transition-colors"
+                  disabled={submittingInstument}
+                >
+                  {submittingInstument ? 'Submitting...' : 'Submit'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <ToastContainer />
 
     </div>
@@ -1458,3 +1817,5 @@ const RunSetup = () => {
 };
 
 export default RunSetup;
+
+
