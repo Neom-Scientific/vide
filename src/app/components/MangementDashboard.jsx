@@ -30,7 +30,7 @@ function getShortTestName(name) {
   const map = {
     'Cardio Metabolic Syndrome (Screening)': 'CMS',
     'WES + Mito': 'WES + Mito',
-    'Myeloid': 'MYE',
+    'Myeloid': 'Myeloid',
     'Cardio Comprehensive Myopathy': 'CMP',
     'HLA': 'HLA',
     'SGS': 'SGS',
@@ -50,7 +50,7 @@ const MangementDashboard = () => {
   //   const allRows = JSON.parse(localStorage.getItem('trf_dashboard_rows') || '{}');
   //   return allRows['current'] || [];
   // });
-  const [rows,setRows] = useState([]);
+  const [rows, setRows] = useState([]);
   const [newRow, setNewRow] = useState({
     testCode: '',
     testName: '',
@@ -88,6 +88,9 @@ const MangementDashboard = () => {
   const [isDarkMode, setIsDarkMode] = useState(document.documentElement.classList.contains('dark'));
   const [hoveredRun, setHoveredRun] = useState(null);
   const [flowcellInfoMap, setFlowcellInfoMap] = useState({}); // { "NextSeq_550|Mid Output": { gb, amount } }
+  const [hideDropdownValue, setHideDropdownValue] = useState('');
+  const [unhideDropdownValue, setUnhideDropdownValue] = useState('');
+  const [hiddenTests, setHiddenTests] = useState([]);
   const cptChartRef = useRef(null);
   const cptChartInstance = useRef(null);
   const profitLossChartRef = useRef(null);
@@ -100,10 +103,65 @@ const MangementDashboard = () => {
   let previousYear = currentYear - 1;
 
 
-  const colors = ['#6366f1', '#f87171', '#34d399', '#fbbf24', '#818cf8', '#f472b6', '#a5b4fc', '#c7d2fe'];
+
+  const testColorPalette = [
+    '#6366f1', // blue
+    '#f87171', // red
+    '#34d399', // green
+    '#fbbf24', // yellow
+    '#f472b6', // pink
+    '#22c55e', // emerald
+    '#f59e42', // orange
+    '#a78bfa', // purple
+    '#10b981', // teal
+    '#eab308', // gold
+    '#3b82f6', // sky blue
+    '#ef4444', // dark red
+    '#8b5cf6', // violet
+    '#14b8a6', // cyan
+    '#e11d48', // rose
+    '#facc15', // amber
+    '#0ea5e9', // light blue
+    '#7c3aed', // deep purple
+    '#f97316', // deep orange
+    '#84cc16', // lime
+  ];
+
+  const visibleRows = useMemo(() => {
+    const visibleTestNames = new Set(
+      filteredRunData.flatMap(run =>
+        (run.table_data || []).map(test =>
+          (testOptions.find(opt => opt.label === test.test_name)?.value || test.test_name)
+        )
+      )
+    );
+    return rows.filter(
+      row =>
+        visibleTestNames.has(row.testName) &&
+        !hiddenTests.includes(row.testName)
+    );
+  }, [rows, filteredRunData, testOptions, hiddenTests]);
+
+  const testCountByName = useMemo(() => {
+    const map = {};
+    filteredRunData.forEach(run => {
+      (run.table_data || []).forEach(test => {
+        const name = testOptions.find(opt => opt.label === test.test_name)?.value || test.test_name;
+        map[name] = (map[name] || 0) + (Number(test.sample_count) || 0);
+      });
+    });
+    return map;
+  }, [filteredRunData, testOptions]);
+
+  const visibleRowsWithMonthCounts = useMemo(() => {
+    return visibleRows.map(row => ({
+      ...row,
+      testCount: testCountByName[row.testName] || 0
+    }));
+  }, [visibleRows, testCountByName]);
 
   // Prepare labels (test names)
-  const cptLabels = rows.map(row => {
+  const cptLabels = visibleRowsWithMonthCounts.map(row => {
     const opt = testOptions.find(opt => opt.value === row.testName);
     const fullName = opt ? opt.label : row.testName;
     return getShortTestName(fullName);
@@ -121,6 +179,23 @@ const MangementDashboard = () => {
     }
     return null;
   }
+
+  const uniqueTestNames = useMemo(() => {
+    return [
+      ...new Set(
+        visibleRowsWithMonthCounts.map(row => row.testName)
+      )
+    ];
+  }, [visibleRowsWithMonthCounts]);
+
+
+  const testColorMap = useMemo(() => {
+    const map = {};
+    uniqueTestNames.forEach((name, idx) => {
+      map[name] = testColorPalette[idx % testColorPalette.length];
+    });
+    return map;
+  }, [uniqueTestNames]);
 
   useEffect(() => {
     async function fetchAllFlowcellInfo() {
@@ -140,23 +215,23 @@ const MangementDashboard = () => {
     if (filteredRunData.length > 0) fetchAllFlowcellInfo();
   }, [filteredRunData]);
 
-  const testLabels = useMemo(() => {
-    return rows.map(row => {
-      const opt = testOptions.find(opt => opt.value === row.testName);
-      const fullName = opt ? opt.label : row.testName;
-      return getShortTestName(fullName);
-    });
-  }, [rows, testOptions]);
-  const testValues = useMemo(() => rows.map(row => Number(row.testCount) || 0), [rows]);
+  const testLabels = useMemo(() => visibleRowsWithMonthCounts.map(row => {
+    const opt = testOptions.find(opt => opt.value === row.testName);
+    const fullName = opt ? opt.label : row.testName;
+    return getShortTestName(fullName);
+  }), [visibleRowsWithMonthCounts, testOptions]);
+
+  const testValues = useMemo(() => visibleRowsWithMonthCounts.map(row => Number(row.testCount) || 0), [visibleRowsWithMonthCounts]);
 
 
-  const cptValues = rows.map(row => Number(row.cpt) || 0);
-  const cprtValues = rows.map(row => Number(row.cprt) || 0);
+  const cptValues = visibleRowsWithMonthCounts.map(row => Number(row.cpt) || 0);
+  const cprtValues = visibleRowsWithMonthCounts.map(row => Number(row.cprt) || 0);
 
   const perRunCprtlabel = useMemo(
     () => perRunCprt && Object.keys(perRunCprt).length > 0 ? Object.keys(perRunCprt) : ['No Data'],
     [perRunCprt]
   );
+
   const perRunCprtValues = useMemo(
     () => perRunCprt && Object.keys(perRunCprt).length > 0 ? Object.values(perRunCprt).map(val => Number(val) || 0) : [0],
     [perRunCprt]
@@ -227,16 +302,17 @@ const MangementDashboard = () => {
   });
 
   const profitLossLabels = filteredRunData.map(run => run.run_id);
+
   const profitLossValues = filteredRunData.map(run => {
     // Calculate profit for each run
     let totalExpPerRun = 0;
     let totalMoneyIn = 0;
     const allCustomExpenseNames = Array.from(
-      new Set(rows.flatMap(r => (r.customExpenses || []).map(exp => exp.name)))
+      new Set(visibleRowsWithMonthCounts.flatMap(r => (r.customExpenses || []).map(exp => exp.name)))
     );
     (run.table_data || []).forEach(test => {
       const normalizedTestName = (test.test_name || '').toLowerCase().replace(/[\s_]+/g, '_').replace(/_+/g, '_').trim();
-      const row = rows.find(r => (r.testName || '').toLowerCase().replace(/[\s_]+/g, '_').replace(/_+/g, '_').trim() === normalizedTestName);
+      const row = visibleRowsWithMonthCounts.find(r => (r.testName || '').toLowerCase().replace(/[\s_]+/g, '_').replace(/_+/g, '_').trim() === normalizedTestName);
       if (!row) return;
       const testCount = Number(test.sample_count) || 0;
       const perSampleGb = Number(row.gbSample) || 0;
@@ -533,101 +609,6 @@ const MangementDashboard = () => {
     setTotalNoRun(filtered.length);
   }, [runData, yearSelection, monthSelection]);
 
-  // useEffect(() => {
-  //   // Parse numbers safely
-  //   // const perRunSeqNum = parseFloat(perRunSeq) || 0;
-  //   const perRunSeqNum = 6050;
-  //   // const perFlowcellGbNum = parseFloat(perFlowcellGb) || 0;
-  //   const perFlowcellGbNum = 40;
-  //   const totalNoRunNum = parseFloat(totalNoRun) || 0;
-
-  //   // total_seq_exp = total_no_run * per_run_seq
-  //   const totalSeqExpCalc = totalNoRunNum * perRunSeqNum;
-  //   console.log('perRunSeq (raw):', perRunSeq);
-  //   console.log('perRunSeq', parseFloat(perRunSeq));
-  //   console.log('totlalnoRunNum', totalNoRunNum);
-  //   console.log('perRunSeqNum', perRunSeqNum);
-  //   console.log('totalSeqExpCalc', totalSeqExpCalc);
-
-  //   // total_lab_expense = sum(wet lab expense) + total_seq_exp
-  //   const wetLabExpenseSum = rows.reduce((sum, row) => sum + Number(row.wetLabExpense || 0), 0);
-  //   const totalLabExpenseCalc = wetLabExpenseSum + totalSeqExpCalc;
-
-  //   // total_p_and_l = sum(patient billing) - total_lab_expense
-  //   const patientBillingSum = rows.reduce((sum, row) => sum + Number(row.patientBilling || 0), 0);
-  //   const totalPandLCalc = patientBillingSum - totalLabExpenseCalc;
-
-  //   // total_test_count
-  //   const totalTestCount = rows.reduce((sum, row) => sum + Number(row.testCount || 0), 0);
-  //   const perGbCostCalc = perFlowcellGbNum ? perRunSeqNum / perFlowcellGbNum : 0;
-  //   setPerGbCost(perGbCostCalc ? perGbCostCalc.toFixed(2) : '');
-
-  //   // Recalculate cpt and cprt for all rows
-  //   const updatedRows = rows.map(row => {
-  //     const gbSample = Number(row.gbSample) || 0;
-  //     const libraryQC = Number(row.libraryQC) || 0;
-  //     const library = Number(row.library) || 0;
-  //     const extraction = Number(row.extraction) || 0;
-  //     const customExpenses = row.customExpenses || [];
-  //     const perSampleExpense = library + libraryQC + extraction + customExpenses.reduce((sum, exp) => sum + Number(exp.value || 0), 0);
-  //     const cpt = libraryQC + (perGbCostCalc * gbSample);
-  //     console.log('cpt:', cpt);
-  //     console.log('gbSample:', gbSample);
-  //     console.log('perGbCostCalc:', perGbCostCalc);
-  //     // console.log('libraryQC:', libraryQC);
-  //     console.log('perSampleExpense:', perSampleExpense);
-  //     // Find the correct test count for this row (from testOptions or row)
-  //     const opt = testOptions.find(opt => opt.value === row.testName);
-  //     const testCount = opt ? Number(opt.test_count) : Number(row.testCount) || 0;
-
-  //     // CPRT = libraryQC + (total_seq_exp / test_count_for_this_row)
-  //     // const cprt = testCount ? libraryQC + (totalSeqExpCalc / testCount) : libraryQC;
-  //     const cprt = totalTestCount ? perSampleExpense + (totalSeqExpCalc / totalTestCount) : perSampleExpense;
-  //     console.log('cprt:', cprt);
-  //     console.log('testCount:', totalTestCount);
-  //     console.log('totalSeqExpCalc:', totalSeqExpCalc);
-  //     console.log('---');
-  //     return {
-  //       ...row,
-  //       cpt: cpt.toFixed(2),
-  //       cprt: cprt.toFixed(2),
-  //     };
-  //   });
-
-  //   setRows(updatedRows);
-
-  //   // // total_test_count
-  //   // const totalTestCount = rows.reduce((sum, row) => sum + Number(row.testCount || 0), 0);
-
-  //   // per_gb_cost = per_run_seq / per_flowcell_gb
-
-
-  //   // total_gb_consumption = per_flowcell_gb * total_no_run
-  //   const totalGbConsumptionCalc = rows.reduce((sum, row) => {
-  //     // Always use the latest test_count from testOptions if available
-  //     const opt = testOptions.find(opt => opt.value === row.testName);
-  //     const testCount = opt ? Number(opt.test_count) : Number(row.testCount) || 0;
-  //     const gbSample = Number(row.gbSample) || 0;
-  //     return sum + (testCount * gbSample);
-  //   }, 0);
-
-  //   setTotalGbConsumption(totalGbConsumptionCalc ? totalGbConsumptionCalc.toFixed(2) : '');
-
-  //   // total_seq_exp = total_no_run * per_run_seq
-  //   setTotalSeqExp(totalSeqExpCalc ? totalSeqExpCalc.toFixed(2) : '');
-
-  //   // total_lab_expense = sum(wet lab expense) + total_seq_exp
-  //   setTotalLabExpense(totalLabExpenseCalc ? totalLabExpenseCalc.toFixed(2) : '');
-
-  //   // total_p_and_l = sum(patient billing) - total_lab_expense
-  //   setTotalPandL(totalPandLCalc ? totalPandLCalc.toFixed(2) : '');
-
-  //   // per_run_profit = total_p_and_l / total_no_run
-  //   const perRunProfitCalc = totalNoRunNum ? totalPandLCalc / totalNoRunNum : 0;
-  //   setPerRunProfit(perRunProfitCalc ? perRunProfitCalc.toFixed(2) : '');
-
-  // }, [perRunSeq, perFlowcellGb, totalNoRun, rows.length]);
-
   useEffect(() => {
     // const perRunSeqCost = 242000;//for nextseq 550 Mid Output
     // const perFlowcellGbNum = 40;//for nextseq 550 Mid Output
@@ -738,7 +719,6 @@ const MangementDashboard = () => {
 
   }, [filteredRunData, rows]);
 
-
   useEffect(() => {
     const formInputs = {
       perRunSeq,
@@ -805,7 +785,15 @@ const MangementDashboard = () => {
             position: 'right',
             labels: { color: axisColor }
           },
-          tooltip: { enabled: hasData },
+          tooltip: {
+            enabled: hasData,
+            usePointStyle: true,
+            callbacks: {
+              labelPointStyle: () => ({
+                pointStyle: 'circle'
+              })
+            }
+          },
           datalabels: {
             display: hasData,
             color: axisColor,
@@ -878,7 +866,15 @@ const MangementDashboard = () => {
         maintainAspectRatio: false,
         plugins: {
           legend: { display: !hasData ? true : false },
-          tooltip: { enabled: hasData },
+          tooltip: {
+            enabled: hasData,
+            usePointStyle: true,
+            callbacks: {
+              labelPointStyle: () => ({
+                pointStyle: 'circle'
+              })
+            }
+          },
           datalabels: {
             display: hasData,
             color: axisColor,
@@ -944,7 +940,7 @@ const MangementDashboard = () => {
           datasets: [{
             label: 'Total Tests',
             data: [...testValues],
-            backgroundColor: colors,
+            backgroundColor: visibleRowsWithMonthCounts.map(row => testColorMap[row.testName] || '#6366f1'),
             borderRadius: 8,
           }]
         }
@@ -968,6 +964,7 @@ const MangementDashboard = () => {
           },
           tooltip: {
             enabled: hasData,
+            usePointStyle: true,
             callbacks: {
               label: function (context) {
                 // context.dataIndex gives the bar index
@@ -978,7 +975,10 @@ const MangementDashboard = () => {
                 return testCode
                   ? `Test Code: ${testCode} | Value: ${value.toLocaleString()}`
                   : `Value: ${value.toLocaleString()}`;
-              }
+              },
+              labelPointStyle: () => ({
+                pointStyle: 'circle'
+              })
             }
           },
           datalabels: {
@@ -1021,89 +1021,17 @@ const MangementDashboard = () => {
     };
   }, [testLabels, testValues, axisColor, isDarkMode]);
 
-  // useEffect(() => {
-  //   if (perRunCprtChartInstance.current) {
-  //     perRunCprtChartInstance.current.destroy();
-  //   }
-  //   const hasData = Object.keys(perRunCprt).length > 0;
-  //   const labels = hasData ? filteredRunData.map(run => run.run_id) : ['No Data'];
-  //   const dataValues = hasData ? filteredRunData.map(run => perRunCprt[run.run_id] || 0) : [0];
-  //   const barColors = hasData ? dataValues.map(v => v >= 0 ? '#22c55e' : '#ef4444') : [axisColor];
-  //   perRunCprtChartInstance.current = new Chart(perRunCprtChartRef.current, {
-  //     type: 'bar',
-  //     data: hasData ?
-  //       {
-  //         labels,
-  //         datasets: [{
-  //           label: 'Per Run CPRT',
-  //           data: dataValues,
-  //           backgroundColor: barColors,
-  //           borderRadius: 8,
-  //         }]
-  //       } :
-  //       {
-  //         labels: ['No Data'],
-  //         datasets: [{
-  //           label: 'No Data',
-  //           data: [0],
-  //           backgroundColor: axisColor,
-  //           borderRadius: 8,
-  //         }]
-  //       },
-  //     options: {
-  //       responsive: true,
-  //       maintainAspectRatio: false,
-  //       plugins: {
-  //         legend: { display: !hasData ? true : false },
-  //         tooltip: { enabled: hasData },
-  //         datalabels: {
-  //           display: hasData,
-  //           color: axisColor,
-  //           font: { weight: 'bold', size: 12 },
-  //           formatter: value => hasData ? `₹${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}` : '',
-  //         }
-  //       },
-  //       scales: {
-  //         x: {
-  //           title: { display: true, text: 'Runs', color: axisColor },
-  //           ticks: {
-  //             font: { size: 14, weight: 'bold' },
-  //             color: axisColor,
-  //             maxRotation: 0,
-  //             minRotation: 0,
-  //             autoSkip: false
-  //           },
-  //           grid: { display: false },
-  //         },
-  //         y: {
-  //           beginAtZero: true,
-  //           title: { display: true, text: 'Per Run CPRT', color: axisColor },
-  //           ticks: { font: { size: 14, weight: 'bold' }, color: axisColor },
-  //           grid: {
-  //             color: axisColor === '#fff' ? '#444' : '#e5e7eb',
-  //             borderDash: [4, 4],
-  //             drawTicks: false,
-  //             drawBorder: false,
-  //           },
-  //         },
-  //       },
-  //     }
-  //   });
-  //   return () => {
-  //     if (perRunCprtChartInstance.current) perRunCprtChartInstance.current.destroy();
-  //   };
-  // }, [perRunCprt, perRunCprtlabel, perRunCprtValues, isDarkMode]);
 
   const profitRuns = filteredRunData.map(run => {
     // ...calculate profit for this run (same as before)...
     let totalExpPerRun = 0;
     let totalMoneyIn = 0;
     const allCustomExpenseNames = Array.from(
-      new Set(rows.flatMap(r => (r.customExpenses || []).map(exp => exp.name)))
+      new Set(visibleRowsWithMonthCounts.flatMap(r => (r.customExpenses || []).map(exp => exp.name)))
     );
     (run.table_data || []).forEach(test => {
       const normalizedTestName = normalizeName(test.test_name);
-      const row = rows.find(r => normalizeName(r.testName) === normalizedTestName);
+      const row = visibleRowsWithMonthCounts.find(r => normalizeName(r.testName) === normalizedTestName);
       if (!row) return;
       const testCount = Number(test.sample_count) || 0;
       const perSampleGb = Number(row.gbSample) || 0;
@@ -1225,98 +1153,18 @@ const MangementDashboard = () => {
         )}
       </div>
 
-      {/* <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center mb-6"
-      >
-        <canvas ref={perRunCprtChartRef} height={CARD_HEIGHT - 40} />
-      </div> */}
-
-      {/* <div className="py-4">
-        <div className="grid grid-cols-2 gap-6">
-          Left Column
-          <div className="flex flex-col gap-6">
-            <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex flex-col items-center justify-center"
-              style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}>
-              Button OUTSIDE the scrollable area
-              <div className="w-full flex justify-end mt-2 mb-2 pr-4">
-                <button
-                  className="bg-orange-500 text-white px-4 py-2 rounded"
-                  onClick={() => {
-                    setNewRow({
-                      testCode: '',
-                      testName: '',
-                      testCount: '',
-                      extraction: '',
-                      library: '',
-                      libraryQC: '',
-                      wetLabExpense: '',
-                      patientCost: '',
-                      patientBilling: '',
-                      gbSample: '',
-                      totalGb: '',
-                      cpt: '',
-                      cprt: '',
-                      perruncprt: ''
-                    });
-                    setAddDialogOpen(true);
-                  }}
-                >
-                  Add Test
-                </button>
-              </div>
-              <div className="w-full overflow-x-auto">
-                <div style={{ minWidth: Math.max(900, testLabels.length * 60) }}>
-                  <canvas ref={testChartRef} width={Math.max(900, testLabels.length * 60)} height={CARD_HEIGHT - 40} />
-                </div>
-              </div>
-            </div>
-            Profit/Loss Bar Chart
-            <div
-              className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
-              style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}
-            >
-              <div className="w-full overflow-x-auto">
-                <div style={{ minWidth: Math.max(900, profitLossLabels.length * 60) }}>
-                  <canvas ref={profitLossChartRef} width={Math.max(900, profitLossLabels.length * 60)} height={CARD_HEIGHT - 40} />
-                </div>
-              </div>
-            </div>
-            Best Run Breakdown
-            <div
-              className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
-              style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}
-            >
-              <BestRunBreakdown run={bestRun?.run} rows={rows} chartSize={CHART_SIZE} />
-            </div>
-          </div>
-          Right Column
-          <div className="flex flex-col gap-6">
-            All Runs Expense Pie Chart
-            <div
-              className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
-              style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}
-            >
-              <AllRunsExpensePieChart runs={filteredRunData} rows={rows} chartSize={CHART_SIZE} />
-            </div>
-            CPT/CPRT Bar Chart
-            <div
-              className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
-              style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}
-            >
-              <canvas ref={cptChartRef} height={CARD_HEIGHT - 40} />
-            </div>
-          </div>
-        </div>
-      </div> */}
 
       <div className="py-4">
         {/* Top row: 3 charts */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           {/* Test Count Bar Chart */}
-          <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex flex-col items-center justify-center"
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg flex flex-col items-center justify-center p-4 relative"
           >
-            <div className="w-full flex justify-end mt-2 mb-2 pr-4">
+            {/* Chart Title and Add Button */}
+            <div className="w-full flex justify-between items-center mb-2">
+              <div className="text-lg font-bold text-gray-800 dark:text-white">Test Count Overview</div>
               <button
-                className="bg-orange-500 text-white px-4 py-2 rounded"
+                className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-1 rounded-lg flex items-center gap-1 text-sm shadow"
                 onClick={() => {
                   setNewRow({
                     testCode: '',
@@ -1336,15 +1184,77 @@ const MangementDashboard = () => {
                   });
                   setAddDialogOpen(true);
                 }}
+                title="Add Test"
               >
                 Add Test
               </button>
             </div>
+            {/* Test Chips */}
+            <div className="w-full flex flex-wrap gap-2 mb-2">
+              {visibleRows.length > 0 && (
+                <div className="w-full flex items-center gap-2 mb-2">
+                  <span className="font-semibold text-gray-700">Visible:</span>
+                  <select
+                    className="border rounded px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 dark:text-white"
+                    value={hideDropdownValue}
+                    onChange={e => {
+                      const testToHide = e.target.value;
+                      if (testToHide) {
+                        setHiddenTests([...hiddenTests, testToHide]);
+                        setHideDropdownValue(''); // reset dropdown
+                      }
+                    }}
+                  >
+                    <option value="" disabled>
+                      Hide test...
+                    </option>
+                    {visibleRows.map(row => {
+                      const label = testOptions.find(opt => opt.value === row.testName)?.label || row.testName;
+                      return (
+                        <option key={row.testName} value={row.testName}>
+                          {getShortTestName(label)}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              )}
+            </div>
+            {/* Hidden Chips */}
+            {hiddenTests.length > 0 && (
+              <div className="w-full flex items-center gap-2 mb-2">
+                <span className="font-semibold text-gray-500">Hidden:</span>
+                <select
+                  className="border rounded px-2 py-1 text-xs bg-gray-100 dark:bg-gray-800 dark:text-white"
+                  value={unhideDropdownValue}
+                  onChange={e => {
+                    const testToUnhide = e.target.value;
+                    if (testToUnhide) {
+                      setHiddenTests(hiddenTests.filter(t => t !== testToUnhide));
+                      setUnhideDropdownValue(''); // reset dropdown
+                    }
+                  }}
+                >
+                  <option value="" disabled>
+                    Unhide test...
+                  </option>
+                  {hiddenTests.map(test => {
+                    const label = testOptions.find(opt => opt.value === test)?.label || test;
+                    return (
+                      <option key={test} value={test}>
+                        {getShortTestName(label)}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            )}
+            {/* Chart */}
             <div className="w-full overflow-x-auto">
               <div className="w-full flex-1 flex items-center justify-center">
                 <canvas
                   ref={testChartRef}
-                  style={{ width: '100%', height: CARD_HEIGHT - 40 }}
+                  style={{ width: '100%', height: CARD_HEIGHT - 40, maxHeight: 340 }}
                   width={undefined}
                   height={CARD_HEIGHT - 40}
                 />
@@ -1371,7 +1281,12 @@ const MangementDashboard = () => {
           {/* Best Run Analysis */}
           <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
             style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}>
-            <BestRunBreakdown run={bestRun?.run} rows={rows} chartSize={CHART_SIZE} />
+            <BestRunBreakdown
+              run={bestRun?.run}
+              rows={rows}
+              chartSize={CHART_SIZE}
+              testColorMap={testColorMap}
+            />
           </div>
           {/* Revenue Analysis by Test Category (CPT/CPRT Bar Chart) */}
           <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
@@ -1381,263 +1296,6 @@ const MangementDashboard = () => {
         </div>
       </div>
 
-      {/* <div>
-        <AllRunsExpensePieChart runs={filteredRunData} rows={rows} />
-      </div> */}
-
-      {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full overflow-x-hidden">
-        {filteredRunData.map((run, idx) => (
-          <PerRunExpenseLine
-            key={idx}
-            run={run}
-            rows={rows}
-            setHoveredRun={setHoveredRun}
-          />
-        ))}
-      </div> */}
-
-
-
-      <div className='mt-6 w-full overflow-x-auto'>
-        {/* <div className="w-full overflow-x-auto">
-          <table className="min-w-full border border-black">
-            <thead>
-              <tr>
-                <th className='px-4 py-2 border border-black bg-gray-100 dark:text-black'>Test Code</th>
-                <th className='px-4 py-2 border border-black bg-gray-100 dark:text-black'>Test Name & Description</th>
-                <th className='px-4 py-2 border border-black bg-yellow-100 dark:text-black'>Test Count</th>
-                <th className='px-4 py-2 border border-black bg-orange-100 dark:text-black'>Extraction</th>
-                <th className='px-4 py-2 border border-black bg-orange-100 dark:text-black'>Library</th>
-                <th className='px-4 py-2 border border-black bg-orange-100 dark:text-black'>Library QC</th>
-                <th className='px-4 py-2 border border-black bg-orange-100 dark:text-black'>Wet Lab Expense</th>
-                <th className='px-4 py-2 border border-black bg-green-100 dark:text-black'>Patient Cost</th>
-                <th className='px-4 py-2 border border-black bg-green-100 dark:text-black'>Patient Billing</th>
-                <th className='px-4 py-2 border border-black bg-blue-100 dark:text-black'>GB/Sample</th>
-                <th className='px-4 py-2 border border-black bg-blue-100 dark:text-black'>Total GB</th>
-                <th className='px-4 py-2 border border-black bg-blue-100 dark:text-black'>CPT</th>
-                <th className='px-4 py-2 border border-black bg-blue-100 dark:text-black'>CPRT</th>
-                <th className='px-4 py-2 border border-black bg-gray-100 dark:text-black'>per run cprt</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, idx) => (
-                <tr key={idx}>
-                  <td className='px-4 py-2 border border-black bg-gray-50 dark:text-black'>{row.testCode}</td>
-                  <td className='px-4 py-2 border border-black bg-gray-50 dark:text-black'>{testOptions.find(opt => opt.value === row.testName)?.label || row.testName}</td>
-                  <td className='px-4 py-2 border border-black text-right bg-yellow-50 dark:text-black'>
-                    {row.testCount && !isNaN(Number(row.testCount)) ? Number(row.testCount).toLocaleString() : row.testCount}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-yellow-50 dark:text-black'>
-                    {
-                      (() => {
-                        const opt = testOptions.find(opt => opt.value === row.testName);
-                        return opt && !isNaN(Number(opt.test_count))
-                          ? Number(opt.test_count).toLocaleString()
-                          : row.testCount;
-                      })()
-                    }
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-orange-50 dark:text-black'>
-                    {row.extraction && !isNaN(Number(row.extraction)) ? Number(row.extraction).toLocaleString() : row.extraction}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-orange-50 dark:text-black'>
-                    {row.library && !isNaN(Number(row.library)) ? Number(row.library).toLocaleString() : row.library}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-orange-50 dark:text-black'>
-                    {row.libraryQC && !isNaN(Number(row.libraryQC)) ? Number(row.libraryQC).toLocaleString() : row.libraryQC}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-orange-50 dark:text-black'>
-                    {((
-                      (Number(row.extraction) || 0) +
-                      (Number(row.library) || 0) +
-                      (Number(row.libraryQC) || 0)
-                    ) * (Number(row.testCount) || 0)
-                    ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-green-50 dark:text-black'>
-                    {row.patientCost && !isNaN(Number(row.patientCost)) ? Number(row.patientCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : row.patientCost}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-green-50 dark:text-black'>
-                    {row.patientBilling && !isNaN(Number(row.patientBilling)) ? Number(row.patientBilling).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : row.patientBilling}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-blue-50 dark:text-black'>
-                    {row.gbSample && !isNaN(Number(row.gbSample)) ? Number(row.gbSample).toLocaleString() : row.gbSample}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-blue-50 dark:text-black'>
-                    {row.totalGb && !isNaN(Number(row.totalGb)) ? Number(row.totalGb).toLocaleString() : row.totalGb}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-purple-50 dark:text-black'>
-                    {row.cpt && !isNaN(Number(row.cpt)) ? Number(row.cpt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : row.cpt}
-                  </td>
-                  <td className='px-4 py-2 border border-black text-right bg-purple-50 dark:text-black'>
-                    {row.cprt && !isNaN(Number(row.cprt)) ? Number(row.cprt).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : row.cprt}
-                  </td>
-                  <td className='px-4 py-2 border border-black bg-gray-50'>
-                    <button
-                      className="bg-red-500 text-white px-2 py-1 rounded ml-2"
-                      onClick={() => handleDeleteRow(idx)}
-                    >Delete</button>
-                  </td>
-                </tr>
-              ))}
-              <tr className="font-bold">
-                <td className='px-4 py-2 border border-black bg-red-600 text-white text-right' colSpan={2}>Total-Test Count</td>
-                <td className='px-4 py-2 border border-black bg-yellow-400 text-black text-right'>
-                  {rows.reduce((sum, row) => sum + Number(row.testCount || 0), 0).toLocaleString()}
-                </td>
-                <td className='px-4 py-2 border border-black bg-red-600 text-white text-right' colSpan={3}>Total Wet Lab Expense</td>
-                <td className='px-4 py-2 border border-black bg-orange-600 text-white text-right'>
-                  {
-                    rows.reduce(
-                      (sum, row) =>
-                        sum +
-                        (
-                          (Number(row.extraction) || 0) +
-                          (Number(row.library) || 0) +
-                          (Number(row.libraryQC) || 0)
-                        ) * (Number(row.testCount) || 0),
-                      0
-                    ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                  }
-                </td>
-                <td className='px-4 py-2 border border-black bg-green-200 text-right'></td>
-                <td className='px-4 py-2 border border-black bg-green-600 text-white text-right'>
-                  {rows.reduce((sum, row) => sum + Number(row.patientBilling || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className='px-4 py-2 border border-black bg-blue-200 text-right'></td>
-                <td className='px-4 py-2 border border-black bg-blue-600 text-white text-right'>
-                  {rows.reduce((sum, row) => sum + Number(row.totalGb || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </td>
-                <td className='px-4 py-2 border border-black bg-purple-200 text-right'></td>
-                <td className='px-4 py-2 border border-black bg-purple-200 text-right'></td>
-              </tr>
-            </tbody>
-          </table>
-        </div> */}
-        {/* Add Row Button at the bottom */}
-        {/* <div className="flex justify-end mt-4">
-          <button
-            className="bg-orange-500 text-white px-4 py-2 mb-4 rounded"
-            onClick={() => {
-              setNewRow({
-                testCode: '',
-                testName: '',
-                testCount: '',
-                extraction: '',
-                library: '',
-                libraryQC: '',
-                wetLabExpense: '',
-                patientCost: '',
-                patientBilling: '',
-                gbSample: '',
-                totalGb: '',
-                cpt: '',
-                cprt: '',
-                perruncprt: ''
-              }); // <-- clear form
-              setAddDialogOpen(true);
-            }}
-          >
-            Add Test
-          </button>
-        </div> */}
-      </div>
-
-      {/* <div className="w-full overflow-x-auto">
-        <div className="max-h-[329px] overflow-y-auto">
-          <table className="w-full border border-black dark:border-white">
-            <thead>
-              <tr>
-                <th className='sticky top-0 z-10 bg-gray-50 px-4 py-2 border border-black dark:text-white dark:bg-[#22223b] dark:border-white'>Run Name</th>
-                <th className='sticky top-0 z-10 bg-gray-50 px-4 py-2 border border-black dark:text-white dark:bg-[#22223b] dark:border-white'>Run Date</th>
-                <th className='sticky top-0 z-10 bg-gray-50 px-4 py-2 border border-black dark:text-white dark:bg-[#22223b] dark:border-white'>Expense</th>
-                <th className='sticky top-0 z-10 bg-gray-50 px-4 py-2 border border-black dark:text-white dark:bg-[#22223b] dark:border-white'>Billing</th>
-                <th className='sticky top-0 z-10 bg-gray-50 px-4 py-2 border border-black dark:text-white dark:bg-[#22223b] dark:border-white'>GB Consumption</th>
-                <th className='sticky top-0 z-10 bg-gray-50 px-4 py-2 border border-black dark:text-white dark:bg-[#22223b] dark:border-white'>Per Run Profitability</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRunData.map((run, idx) => {
-                // Get summary table rows for this run
-                const summaryRows = (() => {
-                  const { instument_type, flowcell } = run;
-                  let flowcellAmount = 0, gb = 0, perGb = 0;
-                  if (instument_type === 'NextSeq_550' && flowcell === 'Mid Output') {
-                    flowcellAmount = 242000;
-                    gb = 40;
-                    perGb = 6050;
-                  }
-                  else if (instument_type === 'NextSeq_1000_2000' && flowcell === 'Mid Output') {
-                    flowcellAmount = 968000;
-                    gb = 240;
-                    perGb = 4033;
-                  }
-                  // Collect all unique custom expense names from all rows
-                  const allCustomExpenseNames = Array.from(
-                    new Set(
-                      rows.flatMap(r => (r.customExpenses || []).map(exp => exp.name))
-                    )
-                  );
-                  // Use normalized testName for matching
-                  return (run.table_data || []).map(test => {
-                    const normalizedTestName = normalizeName(test.test_name);
-                    const row = rows.find(r => normalizeName(r.testName) === normalizedTestName);
-                    if (!row) return null;
-                    const testCount = Number(test.sample_count) || 0;
-                    const perSampleGb = Number(row.gbSample) || 0;
-                    const lib = Number(row.library) || 0;
-                    const libQC = Number(row.libraryQC) || 0;
-                    const extr = Number(row.extraction) || 0;
-                    const customExpenses = row.customExpenses || [];
-                    let customExpenseSum = 0;
-                    allCustomExpenseNames.forEach(name => {
-                      const found = customExpenses.find(exp => exp.name === name);
-                      customExpenseSum += found ? Number(found.value) : 0;
-                    });
-                    const flowcellConsumption = testCount * perSampleGb * perGb;
-                    const wetLabExpense = (lib + libQC + extr + customExpenseSum) * testCount;
-                    const totalExpPerRun = flowcellConsumption + wetLabExpense;
-                    const patientCost = Number(row.patientCost) || 0;
-                    const moneyIn = patientCost * testCount;
-                    return {
-                      totalExpPerRun,
-                      moneyIn,
-                      gbConsumption: testCount * perSampleGb
-                    };
-                  }).filter(Boolean);
-                })();
-
-                // Sum up the totals for this run
-                const runExpense = summaryRows.reduce((sum, r) => sum + r.totalExpPerRun, 0);
-                const runBilling = summaryRows.reduce((sum, r) => sum + r.moneyIn, 0);
-                const runGb = summaryRows.reduce((sum, r) => sum + r.gbConsumption, 0);
-                const runProfit = runBilling - runExpense;
-
-                return (
-                  <tr key={idx}>
-                    <td className='px-4 py-2 border border-black bg-gray-50 dark:text-white dark:bg-[#22223b] dark:border-white'>{run.run_id}</td>
-                    <td className='px-4 py-2 border border-black bg-gray-50 dark:text-white dark:bg-[#22223b] dark:border-white'>
-                      {new Date(run.seq_run_date).toLocaleDateString('en-GB')}
-                    </td>
-                    <td className='px-4 py-2 border border-black bg-gray-50 dark:text-white dark:bg-[#22223b] dark:border-white'>
-                      {runExpense.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className='px-4 py-2 border border-black bg-gray-50 dark:text-white dark:bg-[#22223b] dark:border-white'>
-                      {runBilling.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className='px-4 py-2 border border-black bg-gray-50 dark:text-white dark:bg-[#22223b] dark:border-white'>
-                      {runGb.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                    <td className='px-4 py-2 border border-black bg-gray-50 dark:text-white dark:bg-[#22223b] dark:border-white'>
-                      {runProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div> */}
       {/* Pass new props to AddRowDialog: */}
       <AddRowDialog
         open={addDialogOpen}
@@ -1662,8 +1320,13 @@ const MangementDashboard = () => {
         setCustomExpenses={setCustomExpenses}
       />
       {hoveredRun && (
-        <FloatingPieChart run={hoveredRun.run} rows={rows} position={hoveredRun.position} floating />
-      )}
+        <FloatingPieChart
+          run={hoveredRun.run}
+          rows={rows}
+          position={hoveredRun.position}
+          floating
+          testColorMap={testColorMap}
+        />)}
     </div>
   )
 }
@@ -2040,12 +1703,13 @@ function PerRunExpenseLine({ run, rows, setHoveredRun }) {
   );
 }
 
-function FloatingPieChart({ run, rows, position, title, floating = false }) {
+function FloatingPieChart({ run, rows, position, title, testColorMap, floating = false }) {
   const chartRef = useRef(null);
   useEffect(() => {
     if (!run) return;
     const testCounts = (run.table_data || []).map(test => ({
       label: getShortTestName(test.test_name),
+      rawName: test.test_name,
       value: Number(test.sample_count) || 0,
     }));
 
@@ -2057,31 +1721,27 @@ function FloatingPieChart({ run, rows, position, title, floating = false }) {
           labels: testCounts.map(t => t.label),
           datasets: [{
             data: testCounts.map(t => t.value),
-            backgroundColor: [
-              '#6366f1', '#f87171', '#34d399', '#fbbf24', '#818cf8', '#f472b6', '#a5b4fc', '#c7d2fe'
-            ]
+            backgroundColor: testCounts.map(t =>
+              testColorMap && testColorMap[normalizeName(t.rawName)]
+                ? testColorMap[normalizeName(t.rawName)]
+                : '#6366f1'
+            ),
+            borderWidth: 0,
           }]
         },
         options: {
           plugins: {
             legend: {
               display: true,
-              // position: floating ? 'bottom' : 'right',
               position: 'bottom',
               labels: {
-                font: {
-                  size: 12,
-                  weight: floating ? 'normal' : 'bold'
-                },
+                font: { size: 12, weight: floating ? 'normal' : 'bold' },
                 color: floating ? 'black' : 'white'
               }
             },
             datalabels: {
-              color: floating ? 'black' : 'white', // <--- Set your desired color here
-              font: {
-                weight: floating ? 'normal' : 'bold',
-                size: floating ? 10 : 14
-              }
+              color: floating ? 'black' : 'white',
+              font: { weight: floating ? 'normal' : 'bold', size: floating ? 10 : 14 }
             }
           }
         }
@@ -2090,7 +1750,7 @@ function FloatingPieChart({ run, rows, position, title, floating = false }) {
     return () => {
       if (chartRef.current && chartRef.current.chart) chartRef.current.chart.destroy();
     };
-  }, [run]);
+  }, [run, testColorMap]);
 
   if (!run) return null;
   return (
@@ -2129,10 +1789,141 @@ function FloatingPieChart({ run, rows, position, title, floating = false }) {
   );
 }
 
-function BestRunBreakdown({ run, rows, chartSize = 340 }) {
+// function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
+//   const chartRef = useRef(null);
+//   const isDarkMode = document.documentElement.classList.contains('dark');
+//   useEffect(() => {
+//     if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
+
+//     let testCounts = [];
+//     if (run) {
+//       const testMap = {};
+//       (run.table_data || []).forEach(test => {
+//         const label = test.test_name?.trim();
+//         const value = Number(test.sample_count) || 0;
+//         if (label in testMap) {
+//           testMap[label] += value;
+//         } else {
+//           testMap[label] = value;
+//         }
+//       });
+//       testCounts = Object.entries(testMap).map(([label, value]) => ({
+//         label: getShortTestName(label),
+//         rawName: label,
+//         value
+//       }));
+//     }
+
+//     const data = testCounts.map(t => t.value);
+//     const labels = testCounts.map(t => t.label);
+//     const colors = testCounts.map(t =>
+//       testColorMap && testColorMap[t.rawName]
+//         ? testColorMap[t.rawName]
+//         : '#6366f1'
+//     );
+//     const hasData = data.length > 0 && data.some(v => v !== 0);
+
+//     // Center text plugin
+//     const centerTextPlugin = {
+//       id: 'centerText',
+//       afterDraw: chart => {
+//         const { ctx, chartArea } = chart;
+//         ctx.save();
+//         ctx.font = 'bold 2.2rem sans-serif';
+//         ctx.textAlign = 'center';
+//         ctx.textBaseline = 'middle';
+//         ctx.fillStyle = isDarkMode ? '#fff' : '#22223b';
+//         if (hasData && run) {
+//           ctx.fillText('Best Run', chartArea.left + chartArea.width / 2, chartArea.top + chartArea.height / 2 - 16);
+//           ctx.font = 'bold 2rem sans-serif';
+//           ctx.fillText(run.run_id, chartArea.left + chartArea.width / 2, chartArea.top + chartArea.height / 2 + 16);
+//         } else {
+//           ctx.fillText('No Data', chartArea.left + chartArea.width / 2, chartArea.top + chartArea.height / 2);
+//         }
+//         ctx.restore();
+//       }
+//     };
+
+//     chartRef.current._chart = new Chart(chartRef.current, {
+//       type: 'doughnut',
+//       data: hasData
+//         ? {
+//           labels,
+//           datasets: [{
+//             data,
+//             backgroundColor: colors,
+//             borderWidth: 0,
+//           }]
+//         }
+//         : {
+//           labels: ['No Data'],
+//           datasets: [{
+//             data: [1],
+//             backgroundColor: [isDarkMode ? '#444' : '#e5e7eb'],
+//             borderWidth: 0,
+//           }]
+//         },
+//       options: {
+//         cutout: '70%',
+//         plugins: {
+//           legend: { display: false, labels: { color: isDarkMode ? '#fff' : '#22223b' } },
+//           tooltip: { enabled: hasData },
+//           datalabels: { display: false }
+//         }
+//       },
+//       plugins: [centerTextPlugin]
+//     });
+
+//     return () => {
+//       if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
+//     };
+//   }, [run, rows, isDarkMode, testColorMap]);
+
+//   // Only show legend if there is data
+//   let testCounts = [];
+//   if (run) {
+//     const testMap = {};
+//     (run.table_data || []).forEach(test => {
+//       const label = test.test_name?.trim();
+//       const value = Number(test.sample_count) || 0;
+//       if (label in testMap) {
+//         testMap[label] += value;
+//       } else {
+//         testMap[label] = value;
+//       }
+//     });
+//     testCounts = Object.entries(testMap).map(([label, value]) => ({ label, value }));
+//   }
+//   const total = testCounts.reduce((sum, t) => sum + t.value, 0);
+
+//   return (
+//     <div className="flex items-center" style={{ maxWidth: 800 }}>
+//       <div className="flex-shrink-0">
+//         <canvas ref={chartRef} width={chartSize} height={chartSize} />
+//       </div>
+//       {testCounts.length > 0 && total > 0 && (
+//         <div className="ml-8">
+//           <div className={`text-lg font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+//             Run Breakdown
+//           </div>
+//           <ul>
+//             {testCounts.map((t, i) => (
+//               <li key={t.label} className="flex items-center mb-1">
+//                 <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ background: colors[i % colors.length] }} />
+//                 <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{t.label}</span>
+//                 <span className={`ml-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>({((t.value / total) * 100).toFixed(1)}%)</span>
+//               </li>
+//             ))}
+//           </ul>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
   const chartRef = useRef(null);
   const isDarkMode = document.documentElement.classList.contains('dark');
-  const colors = ['#22c55e', '#f59e42', '#6366f1', '#ef4444', '#fbbf24', '#818cf8', '#f472b6', '#a5b4fc', '#c7d2fe'];
   useEffect(() => {
     if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
 
@@ -2150,13 +1941,18 @@ function BestRunBreakdown({ run, rows, chartSize = 340 }) {
       });
       testCounts = Object.entries(testMap).map(([label, value]) => ({
         label: getShortTestName(label),
+        rawName: label,
         value
       }));
     }
 
     const data = testCounts.map(t => t.value);
     const labels = testCounts.map(t => t.label);
-    const colors = ['#22c55e', '#f59e42', '#6366f1', '#ef4444', '#fbbf24', '#818cf8', '#f472b6', '#a5b4fc', '#c7d2fe'];
+    const colors = testCounts.map(t =>
+      testColorMap && testColorMap[normalizeName(t.rawName)]
+        ? testColorMap[normalizeName(t.rawName)]
+        : '#6366f1'
+    );
     const hasData = data.length > 0 && data.some(v => v !== 0);
 
     // Center text plugin
@@ -2203,7 +1999,15 @@ function BestRunBreakdown({ run, rows, chartSize = 340 }) {
         cutout: '70%',
         plugins: {
           legend: { display: false, labels: { color: isDarkMode ? '#fff' : '#22223b' } },
-          tooltip: { enabled: hasData },
+          tooltip: {
+            enabled: hasData,
+            usePointStyle: true,
+            callbacks: {
+              labelPointStyle: () => ({
+                pointStyle: 'circle'
+              }),
+            }
+          },
           datalabels: { display: false }
         }
       },
@@ -2213,7 +2017,7 @@ function BestRunBreakdown({ run, rows, chartSize = 340 }) {
     return () => {
       if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
     };
-  }, [run, rows, isDarkMode]);
+  }, [run, rows, isDarkMode, testColorMap]);
 
   // Only show legend if there is data
   let testCounts = [];
@@ -2228,9 +2032,20 @@ function BestRunBreakdown({ run, rows, chartSize = 340 }) {
         testMap[label] = value;
       }
     });
-    testCounts = Object.entries(testMap).map(([label, value]) => ({ label, value }));
+    testCounts = Object.entries(testMap).map(([label, value]) => ({
+      label: getShortTestName(label),
+      rawName: label,
+      value
+    }));
   }
   const total = testCounts.reduce((sum, t) => sum + t.value, 0);
+
+  // FIX: Define colors here for use in JSX
+  const colors = testCounts.map(t =>
+    testColorMap && testColorMap[normalizeName(t.rawName)]
+      ? testColorMap[normalizeName(t.rawName)]
+      : '#6366f1'
+  );
 
   return (
     <div className="flex items-center" style={{ maxWidth: 800 }}>
@@ -2343,13 +2158,18 @@ function AllRunsExpensePieChart({ runs, rows, flowcellInfoMap }) {
         plugins: {
           legend: { display: false },
           tooltip: {
+            usePointStyle: true,
             callbacks: {
               label: ctx => {
                 const val = ctx.parsed;
                 const percent = total ? (val / total) * 100 : 0;
                 return `${ctx.label}: ₹${val.toLocaleString()} (${percent.toFixed(1)}%)`;
-              }
+              },
+              labelPointStyle: () => ({
+                pointStyle: 'circle'
+              }),
             },
+
             bodyColor: isDarkMode ? '#fff' : '#22223b',
             titleColor: isDarkMode ? '#fff' : '#22223b',
             backgroundColor: isDarkMode ? '#22223b' : '#fff',
