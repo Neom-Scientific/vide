@@ -46,10 +46,11 @@ function getShortTestName(name) {
 const MangementDashboard = () => {
   const [user, setUser] = useState({});
   const [yearSelection, setYearSelection] = useState('current');
-  const [rows, setRows] = useState(() => {
-    const allRows = JSON.parse(localStorage.getItem('trf_dashboard_rows') || '{}');
-    return allRows['current'] || [];
-  });
+  // const [rows, setRows] = useState(() => {
+  //   const allRows = JSON.parse(localStorage.getItem('trf_dashboard_rows') || '{}');
+  //   return allRows['current'] || [];
+  // });
+  const [rows,setRows] = useState([]);
   const [newRow, setNewRow] = useState({
     testCode: '',
     testName: '',
@@ -205,9 +206,9 @@ const MangementDashboard = () => {
   });
 
   // Save rows to localStorage whenever rows change
-  useEffect(() => {
-    localStorage.setItem('trf_dashboard_rows', JSON.stringify(rows));
-  }, [rows]);
+  // useEffect(() => {
+  //   localStorage.setItem('trf_dashboard_rows', JSON.stringify(rows));
+  // }, [rows]);
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -424,9 +425,7 @@ const MangementDashboard = () => {
             const cpt = libraryQC + (perGbCostCalc * gbSample);
             // console.log('cpt from fetch:', cpt);
             // CPRT = libraryQC + (total_seq_exp / test_count_for_this_row)
-            const cprt = testCountForRow
-              ? libraryQC + (totalSeqExpCalc / testCountForRow)
-              : libraryQC;
+            const cprt = totalTestCount ? libraryQC + (totalSeqExpCalc / totalTestCount) : libraryQC;
             // console.log('cprt from fetch:', cprt);
             return {
               ...row,
