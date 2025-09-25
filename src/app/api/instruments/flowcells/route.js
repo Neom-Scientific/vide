@@ -14,7 +14,6 @@ export async function GET(request) {
             })
             return NextResponse.json({ response });
         }
-        console.log('flowcell', flowcell, 'instument_type', instument_type);
         const result = await pool.query('SELECT * FROM instruments where instrument_type = $1', [instument_type]);
         if (result.rowCount === 0) {
             response.push({
@@ -34,7 +33,6 @@ export async function GET(request) {
             });
             return NextResponse.json({ response });
         }
-        console.log('flowcellData', flowcellData);
         response.push({
             message: 'Flowcell fetched successfully',
             status: 200, data: flowcellData

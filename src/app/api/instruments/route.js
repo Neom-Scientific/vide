@@ -12,7 +12,6 @@ export async function POST(request) {
             })
             return NextResponse.json({ response });
         }
-        console.log('flowcells', flowcell);
         const result = await pool.query(`INSERT INTO instruments (
         instrument_type, flowcell
       ) VALUES (

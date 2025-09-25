@@ -12,7 +12,6 @@ export async function POST(request) {
             })
             return NextResponse.json({ response });
         }
-        console.log('rows', rows);
         const result = await pool.query(`INSERT INTO management_rows (
         year, test_code, test_name, test_count, extraction, library, library_qc,
         wet_lab_expense, patient_cost, patient_billing, gb_sample, total_gb,

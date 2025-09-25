@@ -215,6 +215,9 @@ const Header = ({ activeTab, setActiveTab }) => {
                       <TabsTrigger value="management" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
                         Management
                       </TabsTrigger>
+                      <TabsTrigger value="cost_calculator" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                        Cost Calculator
+                      </TabsTrigger>
                       <TabsTrigger value="lab" className="w-full text-left px-4 py-2 data-[state=active]:bg-orange-400 data-[state=active]:text-white">
                         Lab
                       </TabsTrigger>
@@ -397,6 +400,9 @@ const Header = ({ activeTab, setActiveTab }) => {
                       <DropdownMenuContent className="flex flex-col min-w-[140px]">
                         <TabsTrigger value="management" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
                           Management
+                        </TabsTrigger>
+                        <TabsTrigger value="cost_calculator" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
+                          Cost Calculator
                         </TabsTrigger>
                         <TabsTrigger value="lab" className="w-full text-left px-4 py-2  data-[state=active]:bg-orange-400 data-[state=active]:text-white">
                           Lab

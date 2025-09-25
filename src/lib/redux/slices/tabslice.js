@@ -11,7 +11,8 @@ const initialState = {
         { value: "library-prepration", name: "Library Prepration" },
         { value: "run-setup", name: "Run Setup" },
         { value: "reports", name: "Reports" },
-        { value: "help", name: "Help" }
+        { value: "help", name: "Help" },
+        { value: "cost_calculator", name: "Cost Calculator" }
     ]
 };
 

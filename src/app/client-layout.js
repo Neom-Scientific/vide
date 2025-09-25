@@ -14,6 +14,7 @@ import RunSetup from "./Tabs/RunSetup";
 import Inventory from "./Tabs/Inventory";
 import MangementDashboard from "./components/MangementDashboard";
 import Help from "./Tabs/Help";
+import CostCalculator from "./Tabs/CostCalculator";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
@@ -101,6 +102,8 @@ function ReduxContent({ children, activeTab }) {
       return <>{children}</>;
     case "management":
       return <MangementDashboard />;
+    case "cost_calculator":
+      return <CostCalculator />;
     case "inventory":
       return <Inventory />;
     case "sample-register":
