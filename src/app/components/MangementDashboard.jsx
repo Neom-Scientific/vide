@@ -1113,7 +1113,7 @@ const MangementDashboard = () => {
         </select>
       </div>
 
-      <div className="flex w-full gap-6 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8 w-full">
         <div className={`flex-1 rounded-2xl px-8 py-6 shadow-sm border ${avgProfit < 0 ? 'border-red-200 bg-red-50' : 'border-green-100 bg-green-50'}`}>
           <div className={`text-base font-semibold ${avgProfit < 0 ? 'text-red-800' : 'text-green-800'} mb-1`}>
             {avgProfit < 0 ? 'Average Run Loss' : 'Average Run Profit'}
@@ -1156,7 +1156,9 @@ const MangementDashboard = () => {
 
       <div className="py-4">
         {/* Top row: 3 charts */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6"> */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6 w-full">
+
           {/* Test Count Bar Chart */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg flex flex-col items-center justify-center p-4 relative"
           >
@@ -1271,22 +1273,30 @@ const MangementDashboard = () => {
             </div>
           </div>
           {/* Expense Pie Chart */}
-          <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
-          >
-            <AllRunsExpensePieChart runs={filteredRunData} rows={rows} chartSize={CHART_SIZE} flowcellInfoMap={flowcellInfoMap} />
+          <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md w-full overflow-x-auto flex items-center justify-start">
+            <div style={{ width: 700, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+              <AllRunsExpensePieChart
+                runs={filteredRunData}
+                rows={rows}
+                chartSize={CHART_SIZE}
+                flowcellInfoMap={flowcellInfoMap}
+              />
+            </div>
           </div>
         </div>
         {/* Bottom row: 2 charts */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Best Run Analysis */}
-          <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
+          <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md w-full overflow-x-auto flex items-center justify-start"
             style={{ height: CARD_HEIGHT, minHeight: CARD_HEIGHT }}>
-            <BestRunBreakdown
-              run={bestRun?.run}
-              rows={rows}
-              chartSize={CHART_SIZE}
-              testColorMap={testColorMap}
-            />
+            <div style={{ width: 700, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+              <BestRunBreakdown
+                run={bestRun?.run}
+                rows={rows}
+                chartSize={CHART_SIZE}
+                testColorMap={testColorMap}
+              />
+            </div>
           </div>
           {/* Revenue Analysis by Test Category (CPT/CPRT Bar Chart) */}
           <div className="bg-white dark:bg-gray-900 border-2 border-black dark:border-white rounded-2xl shadow-md flex items-center justify-center"
@@ -1921,39 +1931,193 @@ function FloatingPieChart({ run, rows, position, title, testColorMap, floating =
 //   );
 // }
 
-function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
+// function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
+//   const chartRef = useRef(null);
+//   const isDarkMode = document.documentElement.classList.contains('dark');
+//   useEffect(() => {
+//     if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
+
+//     let testCounts = [];
+//     if (run) {
+//       const testMap = {};
+//       (run.table_data || []).forEach(test => {
+//         const label = test.test_name?.trim();
+//         const value = Number(test.sample_count) || 0;
+//         if (label in testMap) {
+//           testMap[label] += value;
+//         } else {
+//           testMap[label] = value;
+//         }
+//       });
+//       testCounts = Object.entries(testMap).map(([label, value]) => ({
+//         label: getShortTestName(label),
+//         rawName: label,
+//         value
+//       }));
+//     }
+
+//     const data = testCounts.map(t => t.value);
+//     const labels = testCounts.map(t => t.label);
+//     const colors = testCounts.map(t =>
+//       testColorMap && testColorMap[normalizeName(t.rawName)]
+//         ? testColorMap[normalizeName(t.rawName)]
+//         : '#6366f1'
+//     );
+//     const hasData = data.length > 0 && data.some(v => v !== 0);
+
+//     // Center text plugin
+//     const centerTextPlugin = {
+//       id: 'centerText',
+//       afterDraw: chart => {
+//         const { ctx, chartArea } = chart;
+//         ctx.save();
+//         ctx.font = 'bold 2.2rem sans-serif';
+//         ctx.textAlign = 'center';
+//         ctx.textBaseline = 'middle';
+//         ctx.fillStyle = isDarkMode ? '#fff' : '#22223b';
+//         if (hasData && run) {
+//           ctx.fillText('Best Run', chartArea.left + chartArea.width / 2, chartArea.top + chartArea.height / 2 - 16);
+//           ctx.font = 'bold 2rem sans-serif';
+//           ctx.fillText(run.run_id, chartArea.left + chartArea.width / 2, chartArea.top + chartArea.height / 2 + 16);
+//         } else {
+//           ctx.fillText('No Data', chartArea.left + chartArea.width / 2, chartArea.top + chartArea.height / 2);
+//         }
+//         ctx.restore();
+//       }
+//     };
+
+//     chartRef.current._chart = new Chart(chartRef.current, {
+//       type: 'doughnut',
+//       data: hasData
+//         ? {
+//           labels,
+//           datasets: [{
+//             data,
+//             backgroundColor: colors,
+//             borderWidth: 0,
+//           }]
+//         }
+//         : {
+//           labels: ['No Data'],
+//           datasets: [{
+//             data: [1],
+//             backgroundColor: [isDarkMode ? '#444' : '#e5e7eb'],
+//             borderWidth: 0,
+//           }]
+//         },
+//       options: {
+//         cutout: '70%',
+//         plugins: {
+//           legend: { display: false, labels: { color: isDarkMode ? '#fff' : '#22223b' } },
+//           tooltip: {
+//             enabled: hasData,
+//             usePointStyle: true,
+//             callbacks: {
+//               labelPointStyle: () => ({
+//                 pointStyle: 'circle'
+//               }),
+//             }
+//           },
+//           datalabels: { display: false }
+//         }
+//       },
+//       plugins: [centerTextPlugin]
+//     });
+
+//     return () => {
+//       if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
+//     };
+//   }, [run, rows, isDarkMode, testColorMap]);
+
+//   // Only show legend if there is data
+//   let testCounts = [];
+//   if (run) {
+//     const testMap = {};
+//     (run.table_data || []).forEach(test => {
+//       const label = test.test_name?.trim();
+//       const value = Number(test.sample_count) || 0;
+//       if (label in testMap) {
+//         testMap[label] += value;
+//       } else {
+//         testMap[label] = value;
+//       }
+//     });
+//     testCounts = Object.entries(testMap).map(([label, value]) => ({
+//       label: getShortTestName(label),
+//       rawName: label,
+//       value
+//     }));
+//   }
+//   const total = testCounts.reduce((sum, t) => sum + t.value, 0);
+
+//   // FIX: Define colors here for use in JSX
+//   const colors = testCounts.map(t =>
+//     testColorMap && testColorMap[normalizeName(t.rawName)]
+//       ? testColorMap[normalizeName(t.rawName)]
+//       : '#6366f1'
+//   );
+
+//   return (
+//     <div style={{ width: 700, minHeight: 420, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+//       <div style={{ width: 340, height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+//         <canvas ref={chartRef} width={340} height={340} />
+//       </div>
+//       <div className="ml-8 flex flex-col justify-center items-start" style={{ width: 340 }}>
+//         <div className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+//           Expense Breakdown
+//         </div>
+//         <ul>
+//           {labels.map((label, i) => (
+//             <li key={label} className="flex items-center mb-2">
+//               <span className="inline-block w-4 h-4 rounded-full mr-3" style={{ background: colors[i % colors.length] }} />
+//               <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{label}</span>
+//               <span className={`ml-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+//                 (₹{dataArr[i].toLocaleString()} / {percentArr[i].toFixed(1)}%)
+//               </span>
+//             </li>
+//           ))}
+//         </ul>
+//       </div>
+//     </div>
+//   );
+// }
+
+const BestRunBreakdown = React.memo(function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
   const chartRef = useRef(null);
   const isDarkMode = document.documentElement.classList.contains('dark');
+
+  // Prepare testCounts, labels, dataArr, percentArr, colors for legend and chart
+  let testCounts = [];
+  if (run) {
+    const testMap = {};
+    (run.table_data || []).forEach(test => {
+      const label = test.test_name?.trim();
+      const value = Number(test.sample_count) || 0;
+      if (label in testMap) {
+        testMap[label] += value;
+      } else {
+        testMap[label] = value;
+      }
+    });
+    testCounts = Object.entries(testMap).map(([label, value]) => ({
+      label: getShortTestName(label),
+      rawName: label,
+      value
+    }));
+  }
+  const labels = testCounts.map(t => t.label);
+  const dataArr = testCounts.map(t => t.value);
+  const total = dataArr.reduce((sum, v) => sum + v, 0);
+  const percentArr = dataArr.map(v => total ? (v / total) * 100 : 0);
+  const colors = testCounts.map(t =>
+    testColorMap && testColorMap[normalizeName(t.rawName)]
+      ? testColorMap[normalizeName(t.rawName)]
+      : '#6366f1'
+  );
+
   useEffect(() => {
     if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
-
-    let testCounts = [];
-    if (run) {
-      const testMap = {};
-      (run.table_data || []).forEach(test => {
-        const label = test.test_name?.trim();
-        const value = Number(test.sample_count) || 0;
-        if (label in testMap) {
-          testMap[label] += value;
-        } else {
-          testMap[label] = value;
-        }
-      });
-      testCounts = Object.entries(testMap).map(([label, value]) => ({
-        label: getShortTestName(label),
-        rawName: label,
-        value
-      }));
-    }
-
-    const data = testCounts.map(t => t.value);
-    const labels = testCounts.map(t => t.label);
-    const colors = testCounts.map(t =>
-      testColorMap && testColorMap[normalizeName(t.rawName)]
-        ? testColorMap[normalizeName(t.rawName)]
-        : '#6366f1'
-    );
-    const hasData = data.length > 0 && data.some(v => v !== 0);
+    const hasData = dataArr.length > 0 && dataArr.some(v => v !== 0);
 
     // Center text plugin
     const centerTextPlugin = {
@@ -1982,7 +2146,7 @@ function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
         ? {
           labels,
           datasets: [{
-            data,
+            data: dataArr,
             backgroundColor: colors,
             borderWidth: 0,
           }]
@@ -2017,60 +2181,32 @@ function BestRunBreakdown({ run, rows, chartSize = 340, testColorMap }) {
     return () => {
       if (chartRef.current && chartRef.current._chart) chartRef.current._chart.destroy();
     };
-  }, [run, rows, isDarkMode, testColorMap]);
-
-  // Only show legend if there is data
-  let testCounts = [];
-  if (run) {
-    const testMap = {};
-    (run.table_data || []).forEach(test => {
-      const label = test.test_name?.trim();
-      const value = Number(test.sample_count) || 0;
-      if (label in testMap) {
-        testMap[label] += value;
-      } else {
-        testMap[label] = value;
-      }
-    });
-    testCounts = Object.entries(testMap).map(([label, value]) => ({
-      label: getShortTestName(label),
-      rawName: label,
-      value
-    }));
-  }
-  const total = testCounts.reduce((sum, t) => sum + t.value, 0);
-
-  // FIX: Define colors here for use in JSX
-  const colors = testCounts.map(t =>
-    testColorMap && testColorMap[normalizeName(t.rawName)]
-      ? testColorMap[normalizeName(t.rawName)]
-      : '#6366f1'
-  );
+  }, [run, rows, isDarkMode, testColorMap, labels, dataArr, colors]);
 
   return (
-    <div className="flex items-center" style={{ maxWidth: 800 }}>
-      <div className="flex-shrink-0">
-        <canvas ref={chartRef} width={chartSize} height={chartSize} />
+    <div style={{ width: 700, minHeight: 400, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+      <div style={{ width: 340, height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <canvas ref={chartRef} width={340} height={340} />
       </div>
-      {testCounts.length > 0 && total > 0 && (
-        <div className="ml-8">
-          <div className={`text-lg font-bold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-            Run Breakdown
-          </div>
-          <ul>
-            {testCounts.map((t, i) => (
-              <li key={t.label} className="flex items-center mb-1">
-                <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ background: colors[i % colors.length] }} />
-                <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{t.label}</span>
-                <span className={`ml-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>({((t.value / total) * 100).toFixed(1)}%)</span>
-              </li>
-            ))}
-          </ul>
+      <div className="ml-8 flex flex-col justify-center items-start" style={{ width: 340 }}>
+        <div className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+          Run Breakdown
         </div>
-      )}
+        <ul>
+          {labels.map((label, i) => (
+            <li key={label} className="flex items-center mb-2">
+              <span className="inline-block w-4 h-4 rounded-full mr-3" style={{ background: colors[i % colors.length] }} />
+              <span className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{label}</span>
+              <span className={`ml-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-500'}`}>
+                (₹{dataArr[i].toLocaleString()} / {percentArr[i].toFixed(1)}%)
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
-}
+});
 
 function AllRunsExpensePieChart({ runs, rows, flowcellInfoMap }) {
   const chartRef = useRef(null);
@@ -2186,11 +2322,11 @@ function AllRunsExpensePieChart({ runs, rows, flowcellInfoMap }) {
   }, [runs, rows, total, isDarkMode]);
 
   return (
-    <div className=" flex flex-row items-center justify-center" style={{ maxWidth: 900, minHeight: 420 }}>
-      <div className="flex-shrink-0 flex items-center justify-center" style={{ width: 340, height: 340 }}>
+    <div style={{ width: 700, minHeight: 420, display: 'flex', flexDirection: 'row', alignItems: 'center' }}>
+      <div style={{ width: 340, height: 340, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <canvas ref={chartRef} width={340} height={340} />
       </div>
-      <div className="ml-12 flex flex-col justify-center">
+      <div className="ml-8 flex flex-col justify-center items-start" style={{ width: 340 }}>
         <div className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           Expense Breakdown
         </div>
